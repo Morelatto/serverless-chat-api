@@ -118,22 +118,27 @@ class DatabaseInterface:
         if self.is_production:
             update_expr = "SET "
             expr_values = {}
+            expr_names = {}
 
             if response:
-                update_expr += "response = :response, "
+                update_expr += "#response = :response, "
                 expr_values[":response"] = response
+                expr_names["#response"] = "response"
             if model:
-                update_expr += "model = :model, "
+                update_expr += "#model = :model, "
                 expr_values[":model"] = model
+                expr_names["#model"] = "model"
             if tokens:
-                update_expr += "tokens = :tokens, "
+                update_expr += "#tokens = :tokens, "
                 expr_values[":tokens"] = str(tokens)
+                expr_names["#tokens"] = "tokens"
             if latency_ms:
                 update_expr += "latency_ms = :latency, "
                 expr_values[":latency"] = str(latency_ms)
             if error:
-                update_expr += "error = :error, "
+                update_expr += "#error = :error, "
                 expr_values[":error"] = error
+                expr_names["#error"] = "error"
 
             update_expr = update_expr.rstrip(", ")
 
@@ -141,6 +146,7 @@ class DatabaseInterface:
                 Key={"interaction_id": interaction_id},
                 UpdateExpression=update_expr,
                 ExpressionAttributeValues=expr_values,
+                ExpressionAttributeNames=expr_names if expr_names else None,
             )
         else:
             updates = []
