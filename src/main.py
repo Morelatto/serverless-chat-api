@@ -91,9 +91,9 @@ handler = Mangum(app, lifespan="off")
 def run() -> None:
     """Run the application locally with uvicorn."""
     import uvicorn
-    
+
     logger.info(f"Starting local server on {settings.API_HOST}:{settings.API_PORT}")
-    
+
     uvicorn.run(
         "src.main:app",
         host=settings.API_HOST,
