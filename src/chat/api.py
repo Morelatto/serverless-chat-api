@@ -1,4 +1,5 @@
 """Chat API endpoints with security and observability."""
+
 import hashlib
 import logging
 from datetime import UTC, datetime

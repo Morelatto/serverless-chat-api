@@ -1,4 +1,5 @@
 """Pydantic models for request/response validation."""
+
 import re
 from datetime import UTC, datetime
 

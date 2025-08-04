@@ -1,4 +1,5 @@
 """Configuration management with environment variables and AWS Secrets Manager."""
+
 import logging
 import os
 from functools import lru_cache

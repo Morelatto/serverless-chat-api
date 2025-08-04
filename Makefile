@@ -1,102 +1,49 @@
-# Project settings
-PROJECT_NAME = processo-itau-v3
-SRC_DIR = src
-DATA_DIR = data
-
-# Environment
-ENV_FILE = .env
-ENV_EXAMPLE = .env.example
-
-# Tools
-PYTHON = python
-PIP = pip
-DOCKER = docker
-DOCKER_COMPOSE = docker-compose
-
-# Docker
-DOCKER_IMAGE = $(PROJECT_NAME):latest
-DOCKER_SERVICE = api
-DOCKER_PORT = 8000
-
-# Clean patterns
-CLEAN_PATTERNS = __pycache__ .pytest_cache .mypy_cache .ruff_cache *.pyc .coverage
-CLEAN_FILES = chat_history.db .secrets.baseline
-
-# Default target
 .DEFAULT_GOAL := help
 
 .PHONY: help
-help: ## Show help message
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} \
-		/^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+help: ## Show this help message
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Available targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
 
-# Development setup
-.PHONY: setup
-setup: ## Setup environment configuration
-	@if [ ! -f $(ENV_FILE) ]; then \
-		cp $(ENV_EXAMPLE) $(ENV_FILE) && \
-		echo "✓ Created $(ENV_FILE)"; \
-	fi
+.PHONY: dev
+dev: ## Complete development setup
+	@echo "Setting up development environment..."
+	@[ -f .env ] || cp .env.example .env && echo "✓ Created .env file"
+	@pip install --no-user -e ".[dev]" && echo "✓ Installed dependencies"
+	@pre-commit install && echo "✓ Installed pre-commit hooks"
+	@echo "✅ Development environment ready!"
 
 .PHONY: clean
-clean: ## Clean cache and temporary files
+clean: ## Clean all temporary and cache files
+	@echo "Cleaning temporary files..."
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	@rm -rf .pytest_cache .mypy_cache .ruff_cache
-	@rm -f $(CLEAN_FILES) 2>/dev/null || true
+	@rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov/ 2>/dev/null || true
+	@rm -f chat_history.db .secrets.baseline 2>/dev/null || true
+	@echo "✅ Cleaned temporary files"
 
-# Installation
-.PHONY: install install-dev
-install: ## Install package
-	@$(PIP) install --no-user -e .
+.PHONY: docker-env
+docker-env: ## Full Docker environment setup
+	@echo "Setting up Docker environment..."
+	@docker build -t processo-itau-v3:latest .
+	@docker-compose up -d
+	@echo "✅ Running on http://localhost:8000"
+	@echo "   View logs: docker-compose logs -f api"
 
-install-dev: ## Install with dev dependencies
-	@$(PIP) install --no-user -e ".[dev]"
+.PHONY: docker-reset
+docker-reset: ## Complete Docker cleanup and data removal
+	@echo "Resetting Docker environment..."
+	@docker-compose down -v 2>/dev/null || true
+	@rm -rf data/ 2>/dev/null || true
+	@docker rmi processo-itau-v3:latest 2>/dev/null || true
+	@echo "✅ Docker environment reset"
 
-# Application
-.PHONY: run test test-unit test-integration
-run: ## Start application server
-	@$(PYTHON) -m $(SRC_DIR).main
-
-test: ## Run all tests with pytest
-	@pytest tests/ -v
-
-test-unit: ## Run unit tests only
-	@pytest tests/unit/ -v
-
-test-integration: ## Run integration tests only
-	@pytest tests/integration/ -v
-
-# Code quality (use pre-commit for linting/formatting/type checking)
-.PHONY: check pre-commit-install
-check: ## Run all pre-commit hooks (lint, format, typecheck, etc.)
-	@PIP_USER=false pre-commit run --all-files
-
-pre-commit-install: ## Install pre-commit hooks
-	@pre-commit install
-
-# Docker
-.PHONY: docker-build docker docker-down docker-logs docker-clean
-docker-build: ## Build Docker image
-	@$(DOCKER) build -t $(DOCKER_IMAGE) .
-
-docker: docker-build ## Build and start services
-	@$(DOCKER_COMPOSE) up -d
-	@echo "✓ Running on http://localhost:$(DOCKER_PORT)"
-
-docker-down: ## Stop services
-	@$(DOCKER_COMPOSE) down
-
-docker-logs: ## Show container logs
-	@$(DOCKER_COMPOSE) logs -f $(DOCKER_SERVICE)
-
-docker-clean: docker-down ## Clean Docker volumes
-	@$(DOCKER_COMPOSE) down -v
-	@rm -rf $(DATA_DIR)/
-
-# Compound targets
-.PHONY: dev full-clean test-cov
-dev: setup install-dev pre-commit-install ## Complete dev setup with pre-commit
-test-cov: ## Run tests with coverage
-	@pytest tests/ --cov=src --cov-report=term-missing
-full-clean: clean docker-clean ## Complete cleanup
+# Direct commands to use:
+#   pytest tests/                    # Run all tests
+#   pytest tests/unit/               # Run unit tests
+#   pytest tests/ --cov=src          # Run tests with coverage
+#   pre-commit run --all-files       # Run all code quality checks
+#   python -m src.main               # Start the application
+#   docker-compose logs -f           # View Docker logs

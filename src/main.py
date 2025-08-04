@@ -1,4 +1,5 @@
 """Main entry point for FastAPI and AWS Lambda deployment."""
+
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager

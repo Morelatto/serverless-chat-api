@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures"""
+
 import asyncio
 import os
 import sys

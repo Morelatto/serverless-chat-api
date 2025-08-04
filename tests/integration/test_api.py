@@ -2,6 +2,7 @@
 Integration tests for the API endpoints.
 Tests full request/response flow with mocked dependencies.
 """
+
 from unittest.mock import patch
 
 import pytest

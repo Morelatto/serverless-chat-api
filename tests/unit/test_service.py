@@ -2,6 +2,7 @@
 Unit tests for ChatService and related components.
 Tests caching, circuit breaker, and service orchestration.
 """
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -179,9 +180,11 @@ class TestChatService:
     @pytest.fixture
     def mock_dependencies(self):
         """Create mock dependencies for ChatService."""
-        with patch("src.chat.service.DatabaseInterface") as mock_db, patch(
-            "src.chat.service.LLMProviderFactory"
-        ) as mock_llm, patch("src.chat.service.settings") as mock_settings:
+        with (
+            patch("src.chat.service.DatabaseInterface") as mock_db,
+            patch("src.chat.service.LLMProviderFactory") as mock_llm,
+            patch("src.chat.service.settings") as mock_settings,
+        ):
             # Configure mock settings
             mock_settings.CACHE_TTL_SECONDS = 3600
             mock_settings.CIRCUIT_BREAKER_THRESHOLD = 5

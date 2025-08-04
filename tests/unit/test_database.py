@@ -2,6 +2,7 @@
 Unit tests for DatabaseInterface.
 Tests SQLite operations and DynamoDB mock operations.
 """
+
 import os
 import tempfile
 from unittest.mock import MagicMock, PropertyMock, patch

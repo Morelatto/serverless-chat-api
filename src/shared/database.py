@@ -1,4 +1,5 @@
 """Database interface supporting SQLite (local) and DynamoDB (production)."""
+
 import logging
 import os
 import sqlite3
