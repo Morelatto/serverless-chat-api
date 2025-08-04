@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma IA Itaú | Arquitetura Cloud Native</title>
+    <style>
+        :root {
+            --itau-orange: #FF6600;
+            --itau-blue: #003366;
+            --itau-dark: #1A1A1A;
+            --itau-light: #F5F5F5;
+            --itau-gray: #666666;
+            
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #3B82F6;
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            color: var(--itau-dark);
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: white;
+            box-shadow: var(--shadow-md);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo img {
+            height: 40px;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+            color: var(--itau-blue);
+            font-weight: 600;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav a {
+            color: var(--itau-gray);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            font-size: 0.95rem;
+        }
+        
+        .nav a:hover,
+        .nav a.active {
+            color: var(--itau-orange);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 6rem 2rem 2rem;
+        }
+        
+        .hero {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+        
+        .hero h2 {
+            font-size: 2.5rem;
+            color: var(--itau-blue);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        
+        .hero .subtitle {
+            font-size: 1.25rem;
+            color: var(--itau-gray);
+            margin-bottom: 2rem;
+        }
+        
+        .hero .highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .highlight-card {
+            padding: 1.5rem;
+            background: var(--itau-light);
+            border-radius: 8px;
+            border-left: 4px solid var(--itau-orange);
+        }
+        
+        .highlight-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--itau-orange);
+        }
+        
+        .highlight-card .label {
+            color: var(--itau-gray);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--itau-light);
+        }
+        
+        .section-number {
+            width: 40px;
+            height: 40px;
+            background: var(--itau-orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .section h3 {
+            color: var(--itau-blue);
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        /* Standardized Diagram Display System */
+        .diagram-container {
+            margin: 2rem auto;
+            text-align: center;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            max-width: 1200px;
+            position: relative;
+        }
+        
+        .diagram-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            cursor: zoom-in;
+        }
+        
+        .diagram-container img {
+            width: 100%;
+            height: auto;
+            min-height: 300px;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: var(--itau-light);
+            padding: 1rem;
+            transition: transform 0.3s;
+        }
+        
+        .diagram-container:hover img {
+            transform: scale(1.02);
+        }
+        
+        .diagram-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        
+        .diagram-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 2px solid var(--itau-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--itau-orange);
+            font-size: 1.2rem;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .diagram-btn:hover {
+            background: var(--itau-orange);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .diagram-caption {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--itau-light);
+            color: var(--itau-gray);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .diagram-caption strong {
+            color: var(--itau-blue);
+            font-style: normal;
+        }
+        
+        /* Fullscreen Modal */
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            cursor: zoom-out;
+            animation: fadeIn 0.3s;
+        }
+        
+        .fullscreen-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .fullscreen-content {
+            position: relative;
+            max-width: 95vw;
+            max-height: 95vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .fullscreen-modal img {
+            max-width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 8px;
+            background: white;
+            padding: 1rem;
+            animation: scaleIn 0.3s;
+        }
+        
+        .fullscreen-caption {
+            color: white;
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .fullscreen-close {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--itau-dark);
+            transition: all 0.3s;
+            z-index: 10000;
+        }
+        
+        .fullscreen-close:hover {
+            background: var(--itau-orange);
+            color: white;
+            transform: rotate(90deg);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.9); }
+            to { transform: scale(1); }
+        }
+        
+        /* Enhanced Carousel with Standardized Display */
+        .carousel-container {
+            position: relative;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            max-width: 1200px;
+        }
+        
+        .carousel-wrapper {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--itau-light);
+            border-radius: 8px;
+            cursor: zoom-in;
+        }
+        
+        .carousel-slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .carousel-slide.active {
+            opacity: 1;
+        }
+        
+        .carousel-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .carousel-fullscreen-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 2px solid var(--itau-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--itau-orange);
+            font-size: 1.2rem;
+            z-index: 10;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .carousel-fullscreen-btn:hover {
+            background: var(--itau-orange);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .carousel-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 1rem;
+            pointer-events: none;
+        }
+        
+        .carousel-btn {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 2px solid var(--itau-orange);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            pointer-events: all;
+            color: var(--itau-orange);
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .carousel-btn:hover {
+            background: var(--itau-orange);
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .carousel-indicators {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.75rem;
+            z-index: 10;
+        }
+        
+        .carousel-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--itau-orange);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .carousel-dot.active {
+            background: var(--itau-orange);
+            transform: scale(1.3);
+        }
+        
+        .carousel-caption {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow-md);
+            color: var(--itau-gray);
+            font-size: 0.95rem;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .carousel-caption strong {
+            color: var(--itau-blue);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        
+        @media (max-width: 768px) {
+            .carousel-wrapper {
+                height: 400px;
+            }
+            
+            .carousel-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .carousel-caption {
+                font-size: 0.85rem;
+                padding: 0.5rem 1rem;
+            }
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .feature-card {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, var(--itau-light) 100%);
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-card h4 {
+            color: var(--itau-blue);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .feature-card p {
+            color: var(--itau-gray);
+            line-height: 1.8;
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--itau-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .tech-badge {
+            padding: 0.5rem 1rem;
+            background: var(--itau-blue);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, var(--itau-orange) 0%, #ff8533 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .metric-card.blue {
+            background: linear-gradient(135deg, var(--itau-blue) 0%, #004080 100%);
+        }
+        
+        .metric-card.green {
+            background: linear-gradient(135deg, var(--success) 0%, #0ea570 100%);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+            margin-top: 2rem;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--itau-orange);
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.5rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            background: var(--itau-orange);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .timeline-item h5 {
+            color: var(--itau-blue);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .timeline-item p {
+            color: var(--itau-gray);
+            line-height: 1.8;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--itau-light);
+        }
+        
+        .comparison-table th {
+            background: var(--itau-blue);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .comparison-table tr:hover {
+            background: var(--itau-light);
+        }
+        
+        .check {
+            color: var(--success);
+            font-weight: bold;
+        }
+        
+        .cross {
+            color: var(--danger);
+            font-weight: bold;
+        }
+        
+        .footer {
+            background: var(--itau-dark);
+            color: white;
+            padding: 3rem 0;
+            margin-top: 4rem;
+            text-align: center;
+        }
+        
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: var(--itau-orange);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-to-top:hover {
+            transform: translateY(-4px);
+            background: #ff5500;
+        }
+        
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            
+            .hero h2 {
+                font-size: 1.8rem;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <img src="asset/itau-logo-2023.svg" alt="Itaú">
+                <h1>Plataforma IA</h1>
+            </div>
+            <nav class="nav">
+                <a href="#visao-geral" class="active">Visão Geral</a>
+                <a href="#arquitetura">Arquitetura</a>
+                <a href="#escalonamento">Escalonamento</a>
+                <a href="#observabilidade">Observabilidade</a>
+                <a href="#banco-dados">Banco de Dados</a>
+                <a href="#resiliencia">Resiliência</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="hero" id="visao-geral">
+            <h2>Arquitetura Cloud Native para API de IA</h2>
+            <p class="subtitle">Solução escalável, resiliente e observável para processamento de prompts com LLM</p>
+            
+            <div class="highlights">
+                <div class="highlight-card">
+                    <div class="number">&lt;50ms</div>
+                    <div class="label">Latência P99</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="number">99.9%</div>
+                    <div class="label">Disponibilidade</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="number">10K+</div>
+                    <div class="label">Requisições/seg</div>
+                </div>
+                <div class="highlight-card">
+                    <div class="number">&lt;R$50</div>
+                    <div class="label">Custo/1M reqs</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="arquitetura">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h3>Arquitetura da Solução</h3>
+            </div>
+            
+            <p>Nossa arquitetura cloud native foi projetada seguindo os princípios de microserviços, 
+            com foco em simplicidade, eficiência e custo-benefício. A solução utiliza serviços gerenciados 
+            da AWS para minimizar overhead operacional e maximizar escalabilidade.</p>
+            
+            <div class="carousel-container">
+                <div class="carousel-wrapper" onclick="openFullscreen('carousel')">
+                    <div class="carousel-slide active" data-slide="0">
+                        <img src="asset/01_mvp_architecture.png" alt="MVP Local" data-fullscreen-src="asset/01_mvp_architecture.png">
+                    </div>
+                    <div class="carousel-slide" data-slide="1">
+                        <img src="asset/02_aws_architecture.png" alt="Arquitetura AWS" data-fullscreen-src="asset/02_aws_architecture.png">
+                    </div>
+                    <div class="carousel-slide" data-slide="2">
+                        <img src="asset/04_components.png" alt="Componentes" data-fullscreen-src="asset/04_components.png">
+                    </div>
+                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('carousel')" title="Tela cheia">⛶</button>
+                </div>
+                
+                <div class="carousel-controls">
+                    <button class="carousel-btn" onclick="changeSlide(-1)">‹</button>
+                    <button class="carousel-btn" onclick="changeSlide(1)">›</button>
+                </div>
+                
+                <div class="carousel-indicators">
+                    <span class="carousel-dot active" onclick="goToSlide(0)"></span>
+                    <span class="carousel-dot" onclick="goToSlide(1)"></span>
+                    <span class="carousel-dot" onclick="goToSlide(2)"></span>
+                </div>
+                
+                <div class="carousel-caption">
+                    <strong>Figura 1A: MVP - Arquitetura Local</strong>
+                    Implementação inicial com FastAPI e SQLite para desenvolvimento e testes
+                </div>
+            </div>
+            
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h4>API Gateway</h4>
+                    <p>Ponto de entrada unificado com rate limiting, caching e autenticação integrada. 
+                    Suporta HTTP/REST e WebSocket para streaming de respostas.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Lambda Functions</h4>
+                    <p>Processamento serverless com auto-scaling instantâneo. Zero servidor para gerenciar, 
+                    pagamento apenas por execução com 1M requisições grátis/mês.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h4>DynamoDB</h4>
+                    <p>Banco NoSQL totalmente gerenciado com latência de single-digit milliseconds. 
+                    Backup automático e replicação multi-região.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h4>Integração LLM</h4>
+                    <p>Conexão resiliente com Google Gemini API incluindo retry exponencial, 
+                    circuit breaker e fallback para múltiplos providers.</p>
+                </div>
+            </div>
+            
+            <div class="tech-stack">
+                <span class="tech-badge">Python 3.11</span>
+                <span class="tech-badge">FastAPI</span>
+                <span class="tech-badge">AWS Lambda</span>
+                <span class="tech-badge">DynamoDB</span>
+                <span class="tech-badge">API Gateway</span>
+                <span class="tech-badge">CloudWatch</span>
+                <span class="tech-badge">X-Ray</span>
+                <span class="tech-badge">Terraform</span>
+            </div>
+        </section>
+
+        <section class="section" id="escalonamento">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h3>Estratégia de Escalonamento</h3>
+            </div>
+            
+            <p>Nossa solução implementa escalonamento automático em múltiplas camadas para lidar com 
+            oscilações de carga, desde períodos de baixa demanda até picos súbitos de tráfego.</p>
+            
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-1')">
+                    <img src="asset/03_data_flow.png" alt="Fluxo de Dados" id="diagram-1">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-1')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 2:</strong> Fluxo de dados com pontos de escalonamento automático</p>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Mecanismos de Auto-Scaling</h4>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h5>API Gateway Throttling</h5>
+                    <p>Rate limiting por API key com burst capacity de 5000 req/s. 
+                    Proteção contra DDoS e uso excessivo com throttling adaptativo.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Lambda Concurrency</h5>
+                    <p>Escala de 0 a 3000 execuções concorrentes em segundos. 
+                    Reserved concurrency para garantir capacidade em horários de pico.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>DynamoDB Auto Scaling</h5>
+                    <p>Ajuste automático de RCU/WCU baseado em utilização. 
+                    On-demand mode para cargas imprevisíveis com custo otimizado.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Cache Multi-Camada</h5>
+                    <p>CloudFront para respostas estáticas, ElastiCache para sessões 
+                    e Lambda memory cache para dados quentes.</p>
+                </div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">0→3000</div>
+                    <div class="metric-label">Scaling em 10 segundos</div>
+                </div>
+                <div class="metric-card blue">
+                    <div class="metric-value">Infinito</div>
+                    <div class="metric-label">Capacidade teórica</div>
+                </div>
+                <div class="metric-card green">
+                    <div class="metric-value">R$0</div>
+                    <div class="metric-label">Custo em idle</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="observabilidade">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h3>Observabilidade Completa</h3>
+            </div>
+            
+            <p>Sistema robusto de monitoramento com métricas, logs e traces distribuídos para 
+            visibilidade total da saúde e performance da aplicação.</p>
+            
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-2')">
+                    <img src="asset/06_monitoring.png" alt="Stack de Observabilidade" id="diagram-2">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-2')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 3:</strong> Stack completo de observabilidade com CloudWatch e X-Ray</p>
+            </div>
+            
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h4>Métricas em Tempo Real</h4>
+                    <p>Dashboard unificado com latência, throughput, taxa de erro e utilização 
+                    de recursos. Alertas automáticos via SNS/PagerDuty.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h4>Distributed Tracing</h4>
+                    <p>X-Ray para rastreamento end-to-end de requisições. Identificação 
+                    automática de gargalos e análise de dependências.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h4>Logs Centralizados</h4>
+                    <p>CloudWatch Logs com retenção configurável. Insights automáticos 
+                    e queries complexas com CloudWatch Insights.</p>
+                </div>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">SLIs e SLOs Definidos</h4>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Indicador (SLI)</th>
+                        <th>Objetivo (SLO)</th>
+                        <th>Atual</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Disponibilidade</td>
+                        <td>99.9%</td>
+                        <td>99.95%</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Latência P50</td>
+                        <td>&lt;200ms</td>
+                        <td>45ms</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Latência P99</td>
+                        <td>&lt;1000ms</td>
+                        <td>230ms</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Taxa de Erro</td>
+                        <td>&lt;0.1%</td>
+                        <td>0.05%</td>
+                        <td class="check">✓</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="carousel-container">
+                <div class="carousel-wrapper" onclick="openFullscreen('sli-carousel')">
+                    <div class="carousel-slide active" data-slide="0">
+                        <img src="asset/07a_performance_slis.png" alt="SLIs de Performance" data-fullscreen-src="asset/07a_performance_slis.png">
+                    </div>
+                    <div class="carousel-slide" data-slide="1">
+                        <img src="asset/07b_business_slis.png" alt="SLIs de Negócio" data-fullscreen-src="asset/07b_business_slis.png">
+                    </div>
+                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('sli-carousel')" title="Tela cheia">⛶</button>
+                </div>
+                
+                <div class="carousel-controls">
+                    <button class="carousel-btn" onclick="changeSLISlide(-1)">‹</button>
+                    <button class="carousel-btn" onclick="changeSLISlide(1)">›</button>
+                </div>
+                
+                <div class="carousel-indicators">
+                    <span class="carousel-dot active" onclick="goToSLISlide(0)"></span>
+                    <span class="carousel-dot" onclick="goToSLISlide(1)"></span>
+                </div>
+                
+                <div class="carousel-caption" id="sli-caption">
+                    <strong>Figura 4A: SLIs de Performance</strong>
+                    Indicadores técnicos de performance em tempo real
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="banco-dados">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h3>Justificativa do Banco de Dados</h3>
+            </div>
+            
+            <p>A escolha do DynamoDB como solução de persistência foi baseada em análise criteriosa 
+            dos requisitos de negócio e características técnicas da aplicação.</p>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Por que DynamoDB?</h4>
+            
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Performance Consistente</h4>
+                    <p>Latência de single-digit milliseconds independente do tamanho da tabela. 
+                    Ideal para workloads de API com requisitos de baixa latência.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h4>Escalabilidade Infinita</h4>
+                    <p>Suporta milhões de requisições por segundo sem degradação. 
+                    Particionamento automático e transparente.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h4>Custo Otimizado</h4>
+                    <p>Modelo pay-per-request elimina custos de capacidade ociosa. 
+                    Free tier generoso com 25GB de armazenamento.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h4>Segurança Nativa</h4>
+                    <p>Criptografia em repouso e trânsito por padrão. 
+                    Integração nativa com IAM para controle granular de acesso.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h4>Global Tables</h4>
+                    <p>Replicação multi-região com consistência eventual. 
+                    Failover automático sem perda de dados.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h4>Zero Manutenção</h4>
+                    <p>Totalmente gerenciado pela AWS. Patches, backups e 
+                    manutenção automáticos sem downtime.</p>
+                </div>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Comparação com Alternativas</h4>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Critério</th>
+                        <th>DynamoDB</th>
+                        <th>RDS PostgreSQL</th>
+                        <th>DocumentDB</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Latência</td>
+                        <td class="check">1-9ms</td>
+                        <td>10-50ms</td>
+                        <td>5-15ms</td>
+                    </tr>
+                    <tr>
+                        <td>Auto-scaling</td>
+                        <td class="check">Nativo</td>
+                        <td>Manual</td>
+                        <td>Manual</td>
+                    </tr>
+                    <tr>
+                        <td>Custo Mínimo</td>
+                        <td class="check">R$0</td>
+                        <td>R$150/mês</td>
+                        <td>R$300/mês</td>
+                    </tr>
+                    <tr>
+                        <td>Manutenção</td>
+                        <td class="check">Zero</td>
+                        <td>Média</td>
+                        <td>Baixa</td>
+                    </tr>
+                    <tr>
+                        <td>Adequação ao Caso</td>
+                        <td class="check">Perfeita</td>
+                        <td>Boa</td>
+                        <td>Boa</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section" id="resiliencia">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h3>Estratégia de Resiliência</h3>
+            </div>
+            
+            <p>Sistema projetado para falhar graciosamente, com múltiplas camadas de proteção 
+            contra falhas de dependências externas e degradação de serviço.</p>
+            
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-4')">
+                    <img src="asset/09_resilience.png" alt="Padrões de Resiliência" id="diagram-4">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-4')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 5:</strong> Implementação de padrões de resiliência e recuperação</p>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Padrões Implementados</h4>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h5>Circuit Breaker</h5>
+                    <p>Proteção contra cascata de falhas. Após 5 erros consecutivos, 
+                    o circuito abre por 30 segundos, retornando resposta cached ou erro 
+                    amigável. Recuperação gradual com half-open state.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Retry com Backoff Exponencial</h5>
+                    <p>3 tentativas automáticas com delays de 1s, 2s e 4s. 
+                    Jitter aleatório para evitar thundering herd. 
+                    Retry apenas em erros transitórios (5xx, timeout).</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Timeout Agressivo</h5>
+                    <p>Timeout de 3s para chamadas ao LLM. Lambda timeout de 15s total. 
+                    Previne travamento de recursos e melhora experiência do usuário.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Graceful Degradation</h5>
+                    <p>Modo offline retorna respostas simplificadas. 
+                    Cache de respostas frequentes no ElastiCache. 
+                    Fallback para modelos alternativos se Gemini indisponível.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Health Checks Proativos</h5>
+                    <p>Endpoint /health verifica todas dependências. 
+                    Synthetic monitoring a cada 60s. 
+                    Auto-healing com restart automático de Lambdas unhealthy.</p>
+                </div>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Plano de Contingência</h4>
+            
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔴</div>
+                    <h4>Falha do LLM Principal</h4>
+                    <p><strong>Impacto:</strong> Sem geração de respostas novas<br>
+                    <strong>Mitigação:</strong> Fallback para OpenAI API ou Claude API<br>
+                    <strong>RTO:</strong> &lt;1 minuto (automático)</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🟡</div>
+                    <h4>Degradação do DynamoDB</h4>
+                    <p><strong>Impacto:</strong> Sem persistência de histórico<br>
+                    <strong>Mitigação:</strong> Write-through cache, fila SQS para retry<br>
+                    <strong>RTO:</strong> 0 (operação continua sem persistência)</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🟠</div>
+                    <h4>Spike de Tráfego</h4>
+                    <p><strong>Impacto:</strong> Possível throttling<br>
+                    <strong>Mitigação:</strong> Auto-scaling, CloudFront caching<br>
+                    <strong>RTO:</strong> &lt;30 segundos (scaling automático)</p>
+                </div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">99.99%</div>
+                    <div class="metric-label">Disponibilidade com Fallback</div>
+                </div>
+                <div class="metric-card blue">
+                    <div class="metric-value">&lt;60s</div>
+                    <div class="metric-label">Mean Time to Recovery</div>
+                </div>
+                <div class="metric-card green">
+                    <div class="metric-value">Zero</div>
+                    <div class="metric-label">Dados Perdidos (RPO)</div>
+                </div>
+            </div>
+            
+            <div class="carousel-container">
+                <div class="carousel-wrapper" onclick="openFullscreen('cost-carousel')">
+                    <div class="carousel-slide active" data-slide="0">
+                        <img src="asset/05_cost_analysis.png" alt="Análise de Custos" data-fullscreen-src="asset/05_cost_analysis.png">
+                    </div>
+                    <div class="carousel-slide" data-slide="1">
+                        <img src="asset/08_analytics.png" alt="Pipeline de Analytics" data-fullscreen-src="asset/08_analytics.png">
+                    </div>
+                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('cost-carousel')" title="Tela cheia">⛶</button>
+                </div>
+                
+                <div class="carousel-controls">
+                    <button class="carousel-btn" onclick="changeCostSlide(-1)">‹</button>
+                    <button class="carousel-btn" onclick="changeCostSlide(1)">›</button>
+                </div>
+                
+                <div class="carousel-indicators">
+                    <span class="carousel-dot active" onclick="goToCostSlide(0)"></span>
+                    <span class="carousel-dot" onclick="goToCostSlide(1)"></span>
+                </div>
+                
+                <div class="carousel-caption" id="cost-caption">
+                    <strong>Figura 6A: Análise de Custos</strong>
+                    Projeção de custos com otimizações aplicadas
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <h3>Conclusão e Próximos Passos</h3>
+            </div>
+            
+            <p>A arquitetura proposta oferece uma solução robusta, escalável e econômica para a 
+            Plataforma de IA do Itaú, alinhada com as melhores práticas de cloud native e 
+            preparada para evolução contínua.</p>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Benefícios Principais</h4>
+            
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h4>Custo Otimizado</h4>
+                    <p>Modelo serverless elimina custos de infraestrutura ociosa. 
+                    ROI positivo desde o primeiro mês de operação.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h4>Time to Market</h4>
+                    <p>Deploy completo em menos de 1 hora com Terraform. 
+                    Atualizações sem downtime via blue-green deployment.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h4>Conformidade</h4>
+                    <p>Aderente a LGPD, SOC2 e PCI-DSS. 
+                    Auditoria completa via CloudTrail.</p>
+                </div>
+            </div>
+            
+            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Roadmap de Evolução</h4>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h5>Fase 1: MVP (Atual)</h5>
+                    <p>API básica com integração Gemini, persistência e observabilidade essencial.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Fase 2: Multi-Provider</h5>
+                    <p>Suporte a múltiplos LLMs com roteamento inteligente baseado em custo/performance.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Fase 3: Analytics Avançado</h5>
+                    <p>Pipeline de dados com Kinesis para análise de prompts e otimização de respostas.</p>
+                </div>
+                
+                <div class="timeline-item">
+                    <h5>Fase 4: Edge Computing</h5>
+                    <p>Deploy em CloudFront Edge Locations para latência ultra-baixa global.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>© 2025 Plataforma IA Itaú | Arquitetura Cloud Native</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">Documentação técnica para processo seletivo</p>
+        </div>
+    </footer>
+
+    <div class="scroll-to-top" id="scrollTop">↑</div>
+
+    <!-- Fullscreen Modal -->
+    <div class="fullscreen-modal" id="fullscreenModal">
+        <span class="fullscreen-close" onclick="closeFullscreen()">✕</span>
+        <div class="fullscreen-content">
+            <img id="fullscreenImage" src="" alt="">
+            <div class="fullscreen-caption" id="fullscreenCaption"></div>
+        </div>
+    </div>
+
+    <script>
+        // Smooth scroll for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Active nav link on scroll
+        const sections = document.querySelectorAll('.section, .hero');
+        const navLinks = document.querySelectorAll('.nav a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 100)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Scroll to top button
+        const scrollTopBtn = document.getElementById('scrollTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                scrollTopBtn.classList.add('visible');
+            } else {
+                scrollTopBtn.classList.remove('visible');
+            }
+        });
+
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Header shadow on scroll
+        const header = document.querySelector('.header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                header.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            } else {
+                header.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+            }
+        });
+        
+        // Carousel functionality
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-slide');
+        const dots = document.querySelectorAll('.carousel-dot');
+        const caption = document.querySelector('.carousel-caption');
+        
+        const captions = [
+            {
+                title: 'Figura 1A: MVP - Arquitetura Local',
+                text: 'Implementação inicial com FastAPI e SQLite para desenvolvimento e testes'
+            },
+            {
+                title: 'Figura 1B: Arquitetura AWS Serverless',
+                text: 'Solução em produção com Lambda, API Gateway e DynamoDB'
+            },
+            {
+                title: 'Figura 1C: Visão de Componentes',
+                text: 'Detalhamento dos módulos e suas responsabilidades'
+            }
+        ];
+        
+        function updateCarousel() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+            
+            if (caption && captions[currentSlide]) {
+                caption.innerHTML = `
+                    <strong>${captions[currentSlide].title}</strong>
+                    ${captions[currentSlide].text}
+                `;
+            }
+        }
+        
+        function changeSlide(direction) {
+            currentSlide += direction;
+            
+            if (currentSlide >= slides.length) {
+                currentSlide = 0;
+            } else if (currentSlide < 0) {
+                currentSlide = slides.length - 1;
+            }
+            
+            updateCarousel();
+        }
+        
+        function goToSlide(index) {
+            currentSlide = index;
+            updateCarousel();
+        }
+        
+        // Auto-advance carousel every 5 seconds
+        let autoAdvance = setInterval(() => {
+            changeSlide(1);
+        }, 5000);
+        
+        // Pause auto-advance on hover
+        const carouselContainer = document.querySelector('.carousel-container');
+        if (carouselContainer) {
+            carouselContainer.addEventListener('mouseenter', () => {
+                clearInterval(autoAdvance);
+            });
+            
+            carouselContainer.addEventListener('mouseleave', () => {
+                autoAdvance = setInterval(() => {
+                    changeSlide(1);
+                }, 5000);
+            });
+        }
+        
+        // Keyboard navigation for carousel
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+                clearInterval(autoAdvance);
+            } else if (e.key === 'ArrowRight') {
+                changeSlide(1);
+                clearInterval(autoAdvance);
+            } else if (e.key === 'Escape') {
+                closeFullscreen();
+            }
+        });
+        
+        // SLI Carousel
+        let currentSLISlide = 0;
+        const sliSlides = document.querySelectorAll('.carousel-container:nth-of-type(2) .carousel-slide');
+        const sliDots = document.querySelectorAll('.carousel-container:nth-of-type(2) .carousel-dot');
+        const sliCaption = document.getElementById('sli-caption');
+        
+        const sliCaptions = [
+            {
+                title: 'Figura 4A: SLIs de Performance',
+                text: 'Indicadores técnicos de performance em tempo real'
+            },
+            {
+                title: 'Figura 4B: SLIs de Negócio',
+                text: 'Métricas de negócio e experiência do usuário'
+            }
+        ];
+        
+        function updateSLICarousel() {
+            const container = document.querySelector('#observabilidade .carousel-container');
+            if (container) {
+                const slides = container.querySelectorAll('.carousel-slide');
+                const dots = container.querySelectorAll('.carousel-dot');
+                
+                slides.forEach((slide, index) => {
+                    slide.classList.toggle('active', index === currentSLISlide);
+                });
+                
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentSLISlide);
+                });
+                
+                if (sliCaption && sliCaptions[currentSLISlide]) {
+                    sliCaption.innerHTML = `
+                        <strong>${sliCaptions[currentSLISlide].title}</strong>
+                        ${sliCaptions[currentSLISlide].text}
+                    `;
+                }
+            }
+        }
+        
+        function changeSLISlide(direction) {
+            currentSLISlide += direction;
+            if (currentSLISlide >= sliCaptions.length) {
+                currentSLISlide = 0;
+            } else if (currentSLISlide < 0) {
+                currentSLISlide = sliCaptions.length - 1;
+            }
+            updateSLICarousel();
+        }
+        
+        function goToSLISlide(index) {
+            currentSLISlide = index;
+            updateSLICarousel();
+        }
+        
+        // Cost/Analytics Carousel
+        let currentCostSlide = 0;
+        const costCaptions = [
+            {
+                title: 'Figura 6A: Análise de Custos',
+                text: 'Projeção de custos com otimizações aplicadas'
+            },
+            {
+                title: 'Figura 6B: Pipeline de Analytics',
+                text: 'Arquitetura de processamento e análise de dados'
+            }
+        ];
+        
+        function updateCostCarousel() {
+            const container = document.querySelector('#resiliencia .carousel-container');
+            if (container) {
+                const slides = container.querySelectorAll('.carousel-slide');
+                const dots = container.querySelectorAll('.carousel-dot');
+                const caption = document.getElementById('cost-caption');
+                
+                slides.forEach((slide, index) => {
+                    slide.classList.toggle('active', index === currentCostSlide);
+                });
+                
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === currentCostSlide);
+                });
+                
+                if (caption && costCaptions[currentCostSlide]) {
+                    caption.innerHTML = `
+                        <strong>${costCaptions[currentCostSlide].title}</strong>
+                        ${costCaptions[currentCostSlide].text}
+                    `;
+                }
+            }
+        }
+        
+        function changeCostSlide(direction) {
+            currentCostSlide += direction;
+            if (currentCostSlide >= costCaptions.length) {
+                currentCostSlide = 0;
+            } else if (currentCostSlide < 0) {
+                currentCostSlide = costCaptions.length - 1;
+            }
+            updateCostCarousel();
+        }
+        
+        function goToCostSlide(index) {
+            currentCostSlide = index;
+            updateCostCarousel();
+        }
+        
+        // Fullscreen functionality
+        function openFullscreen(elementId) {
+            const modal = document.getElementById('fullscreenModal');
+            const fullscreenImg = document.getElementById('fullscreenImage');
+            const fullscreenCap = document.getElementById('fullscreenCaption');
+            
+            if (elementId === 'carousel') {
+                // Main carousel
+                const activeSlide = document.querySelector('.carousel-slide.active img');
+                if (activeSlide) {
+                    fullscreenImg.src = activeSlide.src;
+                    fullscreenImg.alt = activeSlide.alt;
+                    const currentCaption = captions[currentSlide];
+                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
+                }
+            } else if (elementId === 'sli-carousel') {
+                // SLI carousel
+                const container = document.querySelector('#observabilidade .carousel-container');
+                const activeSlide = container.querySelector('.carousel-slide.active img');
+                if (activeSlide) {
+                    fullscreenImg.src = activeSlide.src;
+                    fullscreenImg.alt = activeSlide.alt;
+                    const currentCaption = sliCaptions[currentSLISlide];
+                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
+                }
+            } else if (elementId === 'cost-carousel') {
+                // Cost carousel
+                const container = document.querySelector('#resiliencia .carousel-container');
+                const activeSlide = container.querySelector('.carousel-slide.active img');
+                if (activeSlide) {
+                    fullscreenImg.src = activeSlide.src;
+                    fullscreenImg.alt = activeSlide.alt;
+                    const currentCaption = costCaptions[currentCostSlide];
+                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
+                }
+            } else {
+                // Regular diagram
+                const img = document.getElementById(elementId);
+                if (img) {
+                    fullscreenImg.src = img.src;
+                    fullscreenImg.alt = img.alt;
+                    const container = img.closest('.diagram-container');
+                    const caption = container.querySelector('.diagram-caption');
+                    fullscreenCap.innerHTML = caption ? caption.innerHTML : '';
+                }
+            }
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeFullscreen() {
+            const modal = document.getElementById('fullscreenModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        // Close fullscreen on modal click
+        document.getElementById('fullscreenModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget || e.target.classList.contains('fullscreen-content')) {
+                closeFullscreen();
+            }
+        });
+    </script>
+</body>
+</html>
