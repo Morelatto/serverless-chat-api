@@ -53,13 +53,14 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Build Lambda Layer
         if: steps.check-aws.outputs.has_aws == 'true'
+        working-directory: iac/terraform
         run: |
-          # Install the package and export dependencies
-          cd ${{ github.workspace }}
+          # Install the package to get all dependencies
+          cd ../..
           pip install -e .
           
-          # Export dependencies from installed package (excluding dev dependencies)
-          pip freeze | grep -v "^-e" | grep -v "uvicorn" > requirements-lambda.txt
+          # Export dependencies (excluding dev and uvicorn)
+          pip freeze | grep -v "^-e" | grep -v "uvicorn" > iac/terraform/requirements-lambda.txt
           
           # Build Lambda layer
           cd iac/terraform
@@ -75,14 +76,11 @@ jobs:
             --only-binary=:all: \
             --upgrade
           
-          # Clean up unnecessary files to reduce layer size
+          # Clean up
+          rm requirements-lambda.txt
           find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
           find layer -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
           find layer -type d -name 'tests' -exec rm -rf {} + 2>/dev/null || true
-          find layer -type f -name '*.pyc' -delete 2>/dev/null || true
-          
-          # Clean up temp file
-          rm requirements-lambda.txt
       - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
