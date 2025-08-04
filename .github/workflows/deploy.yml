@@ -63,11 +63,17 @@ jobs:
         working-directory: iac/terraform
         run: terraform init -reconfigure
       
-      - name: Terraform Apply
+      - name: Terraform Apply (Infrastructure Only)
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
-          terraform apply -auto-approve \
+          # First apply only ECR and supporting infrastructure
+          terraform apply -auto-approve -target=aws_ecr_repository.lambda \
+            -target=aws_iam_role.lambda \
+            -target=aws_iam_role_policy_attachment.lambda_logs \
+            -target=aws_iam_role_policy.lambda_dynamodb \
+            -target=aws_dynamodb_table.main \
+            -target=aws_cloudwatch_log_group.lambda \
             -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
             -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || '' }}" \
             -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
@@ -87,6 +93,16 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      
+      - name: Terraform Apply (Lambda Function)
+        if: steps.check-aws.outputs.has_aws == 'true'
+        working-directory: iac/terraform
+        run: |
+          # Now apply Lambda function and URL
+          terraform apply -auto-approve \
+            -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
+            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || '' }}" \
+            -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
       
       - name: Update Lambda function
         if: steps.check-aws.outputs.has_aws == 'true'
