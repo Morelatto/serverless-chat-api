@@ -13,9 +13,9 @@ services:
       - REQUIRE_API_KEY=false
       - LLM_PROVIDER=mock
       - ENABLE_CACHE=true
-      - DATABASE_PATH=/app/data/chat_history.db
+      - DATABASE_PATH=chat_history.db
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
       interval: 30s
