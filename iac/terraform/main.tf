@@ -19,9 +19,22 @@ provider "aws" {
   }
 }
 
-# Simple Lambda function with inline code for now
+# Check if IAM role exists
+data "aws_iam_role" "existing_lambda" {
+  count = var.check_existing_resources ? 1 : 0
+  name  = "${var.project_name}-lambda-${var.environment}"
+}
+
+# Check if DynamoDB table exists
+data "aws_dynamodb_table" "existing_table" {
+  count = var.check_existing_resources ? 1 : 0
+  name  = "${var.project_name}-${var.environment}"
+}
+
+# Import existing or create new IAM role
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda-${var.environment}"
+  
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -32,6 +45,10 @@ resource "aws_iam_role" "lambda" {
       }
     }]
   })
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -53,7 +70,7 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         "dynamodb:Query",
         "dynamodb:Scan"
       ]
-      Resource = aws_dynamodb_table.main.arn
+      Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/${var.project_name}-${var.environment}"
     }]
   })
 }
@@ -136,8 +153,12 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       ENVIRONMENT = var.environment
-      TABLE_NAME  = aws_dynamodb_table.main.name
+      TABLE_NAME  = "${var.project_name}-${var.environment}"
     }
+  }
+  
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -166,9 +187,17 @@ resource "aws_dynamodb_table" "main" {
     attribute_name = "ttl"
     enabled        = true
   }
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
   retention_in_days = var.log_retention_days
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }

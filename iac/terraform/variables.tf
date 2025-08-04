@@ -21,3 +21,8 @@ variable "lambda_timeout" {
 variable "log_retention_days" {
   default = 7
 }
+
+variable "check_existing_resources" {
+  default = false
+  description = "Check for existing resources before creating"
+}

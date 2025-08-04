@@ -46,12 +46,18 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Terraform Init
+      - name: Terraform Init and Import
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
           terraform init
-          terraform workspace select dev || terraform workspace new dev
+          
+          # Try to import existing resources to avoid conflicts
+          echo "Checking for existing resources..."
+          terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || echo "IAM role doesn't exist or already imported"
+          terraform import aws_dynamodb_table.main serverless-chat-api-dev 2>/dev/null || echo "DynamoDB table doesn't exist or already imported"
+          terraform import aws_lambda_function.api serverless-chat-api-dev 2>/dev/null || echo "Lambda doesn't exist or already imported"
+          
       - name: Deploy to AWS
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
