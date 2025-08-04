@@ -3,6 +3,7 @@ Main entry point for both FastAPI local development and AWS Lambda deployment.
 Handles application initialization and request routing.
 """
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
     # Startup
     logger.info({
         "event": "application_startup",
@@ -53,7 +54,7 @@ app.add_middleware(
 
 # Global exception handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle unexpected exceptions gracefully."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
@@ -68,7 +69,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Root endpoint
 @app.get("/")
-async def root():
+async def root() -> dict[str, str | None]:
     """Root endpoint with API information."""
     return {
         "name": "Chat API",

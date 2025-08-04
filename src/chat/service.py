@@ -5,9 +5,9 @@ Orchestrates the flow between API, database and LLM providers.
 import hashlib
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 from src.shared.config import settings
 from src.shared.database import DatabaseInterface
@@ -29,13 +29,13 @@ class CircuitBreaker:
         self.failure_count = 0
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
-        self.last_failure_time = None
+        self.last_failure_time: datetime | None = None
         self.state = CircuitState.CLOSED
 
-    async def call(self, func, *args, **kwargs):
+    async def call(self, func: Any, *args: Any, **kwargs: Any) -> Any:
         """Execute function with circuit breaker protection."""
         if self.state == CircuitState.OPEN:
-            if datetime.now(timezone.utc).replace(tzinfo=None) - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
+            if self.last_failure_time and datetime.now(UTC).replace(tzinfo=None) - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
                 self.state = CircuitState.HALF_OPEN
                 logger.info("Circuit breaker entering HALF_OPEN state")
             else:
@@ -50,7 +50,7 @@ class CircuitBreaker:
             return result
         except Exception as e:
             self.failure_count += 1
-            self.last_failure_time = datetime.now(timezone.utc).replace(tzinfo=None)
+            self.last_failure_time = datetime.now(UTC).replace(tzinfo=None)
 
             if self.failure_count >= self.failure_threshold:
                 self.state = CircuitState.OPEN
@@ -63,7 +63,7 @@ class ResponseCache:
     """Simple in-memory cache for responses."""
 
     def __init__(self, ttl_seconds: int = 3600):
-        self.cache = {}
+        self.cache: dict[str, dict[str, Any]] = {}
         self.ttl = ttl_seconds
 
     def _get_key(self, prompt: str) -> str:
@@ -76,19 +76,19 @@ class ResponseCache:
         key = self._get_key(prompt)
         if key in self.cache:
             entry = self.cache[key]
-            if datetime.now(timezone.utc).replace(tzinfo=None) - entry['time'] < timedelta(seconds=self.ttl):
+            if datetime.now(UTC).replace(tzinfo=None) - entry['time'] < timedelta(seconds=self.ttl):
                 logger.info(f"Cache hit for key {key[:8]}")
-                return entry['response']
+                return str(entry['response'])
             else:
                 del self.cache[key]
         return None
 
-    def set(self, prompt: str, response: str):
+    def set(self, prompt: str, response: str) -> None:
         """Cache a response."""
         key = self._get_key(prompt)
         self.cache[key] = {
             'response': response,
-            'time': datetime.now(timezone.utc).replace(tzinfo=None)
+            'time': datetime.now(UTC).replace(tzinfo=None)
         }
 
         # Limit cache size
@@ -100,7 +100,7 @@ class ResponseCache:
 class ChatService:
     """Main service orchestrating chat functionality."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = DatabaseInterface()
         self.llm_factory = LLMProviderFactory()
         self.cache = ResponseCache(ttl_seconds=settings.CACHE_TTL_SECONDS)
@@ -128,7 +128,7 @@ class ChatService:
                 "interaction_id": interaction_id,
                 "response": cached_response,
                 "model": "cache",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "cached": True,
                 "latency_ms": int((time.time() - start_time) * 1000)
             }
@@ -179,7 +179,7 @@ class ChatService:
                 "interaction_id": interaction_id,
                 "response": llm_result["response"],
                 "model": llm_result["model"],
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "cached": False,
                 "latency_ms": latency_ms
             }

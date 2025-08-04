@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Settings:
     """Application settings with environment variable support."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize settings from environment variables."""
         # API Configuration
         self.API_PORT = int(os.getenv("API_PORT", "8000"))
@@ -81,14 +81,14 @@ class Settings:
 
                 value = response['Parameter']['Value']
                 logger.info(f"Retrieved secret {key} from SSM")
-                return value
+                return str(value)
 
             except Exception as e:
                 logger.warning(f"Failed to get secret {key} from SSM: {e}")
 
         return None
 
-    def _configure_logging(self):
+    def _configure_logging(self) -> None:
         """Configure application logging based on settings."""
         log_level = getattr(logging, self.LOG_LEVEL.upper(), logging.INFO)
 
@@ -97,7 +97,7 @@ class Settings:
             import json
 
             class JsonFormatter(logging.Formatter):
-                def format(self, record):
+                def format(self, record: logging.LogRecord) -> str:
                     log_obj = {
                         "timestamp": self.formatTime(record),
                         "level": record.levelname,
@@ -126,7 +126,7 @@ class Settings:
         """Get a configuration value by key."""
         return getattr(self, key, default)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Export settings as dictionary (excluding secrets)."""
         return {
             k: v for k, v in self.__dict__.items()

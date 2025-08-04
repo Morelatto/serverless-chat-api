@@ -4,7 +4,7 @@ Handles all HTTP requests and responses for the chat feature.
 """
 import hashlib
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["chat"])
 
 # Rate limiting storage (in-memory for simplicity)
-rate_limit_storage = {}
+rate_limit_storage: dict[str, list[datetime]] = {}
 
 
 async def verify_api_key(x_api_key: str | None = Header(None)) -> str:
@@ -41,7 +41,7 @@ async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
     from datetime import timedelta
 
     user_key = f"{request.userId}:{api_key_hash}"
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(UTC)
 
     if user_key not in rate_limit_storage:
         rate_limit_storage[user_key] = []
@@ -60,7 +60,7 @@ async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(
+async def chat_endpoint(  # type: ignore[no-untyped-def]
     request: ChatRequest,
     req: Request,
     api_key_hash: str = Depends(verify_api_key)
@@ -117,16 +117,16 @@ async def chat_endpoint(
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check():
+async def health_check() -> HealthResponse:
     """Liveness probe for container/lambda."""
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.now(timezone.utc).isoformat()
+        timestamp=datetime.now(UTC).isoformat()
     )
 
 
 @router.get("/ready")
-async def readiness_check():
+async def readiness_check() -> JSONResponse:
     """Readiness probe checking dependencies."""
     service = ChatService()
     checks = await service.check_dependencies()
@@ -138,7 +138,13 @@ async def readiness_check():
         content={
             "ready": all_ready,
             "checks": checks,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         },
         status_code=status_code
     )
+
+# /history/{user_id}
+# /v1/metrics
+# /v1/models
+# /v1/session/*
+# endpoints for conversation context

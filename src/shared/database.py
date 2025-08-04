@@ -5,7 +5,7 @@ Handles all persistence operations with automatic environment detection.
 import logging
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class DatabaseInterface:
     """Unified interface for database operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize database based on environment."""
         self.is_production = os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None
 
@@ -24,7 +24,7 @@ class DatabaseInterface:
         else:
             self._init_sqlite()
 
-    def _init_sqlite(self):
+    def _init_sqlite(self) -> None:
         """Initialize SQLite for local development."""
         db_path = os.getenv("DATABASE_PATH", "chat_history.db")
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -54,7 +54,7 @@ class DatabaseInterface:
 
         logger.info("SQLite database initialized")
 
-    def _init_dynamodb(self):
+    def _init_dynamodb(self) -> None:
         """Initialize DynamoDB for production."""
         import boto3
 
@@ -72,7 +72,7 @@ class DatabaseInterface:
     ) -> str:
         """Save a new interaction to the database."""
         interaction_id = str(uuid4())
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
 
         if self.is_production:
             # DynamoDB
@@ -111,7 +111,7 @@ class DatabaseInterface:
         tokens: int | None = None,
         latency_ms: int | None = None,
         error: str | None = None
-    ):
+    ) -> None:
         """Update an existing interaction with response data."""
         if self.is_production:
             # DynamoDB update
@@ -126,10 +126,10 @@ class DatabaseInterface:
                 expr_values[':model'] = model
             if tokens:
                 update_expr += "tokens = :tokens, "
-                expr_values[':tokens'] = tokens
+                expr_values[':tokens'] = str(tokens)
             if latency_ms:
                 update_expr += "latency_ms = :latency, "
-                expr_values[':latency'] = latency_ms
+                expr_values[':latency'] = str(latency_ms)
             if error:
                 update_expr += "error = :error, "
                 expr_values[':error'] = error
@@ -155,10 +155,10 @@ class DatabaseInterface:
                 params.append(model)
             if tokens:
                 updates.append("tokens = ?")
-                params.append(tokens)
+                params.append(str(tokens))
             if latency_ms:
                 updates.append("latency_ms = ?")
-                params.append(latency_ms)
+                params.append(str(latency_ms))
             if error:
                 updates.append("error = ?")
                 params.append(error)
@@ -175,7 +175,7 @@ class DatabaseInterface:
         """Retrieve a specific interaction by ID."""
         if self.is_production:
             response = self.table.get_item(Key={'interaction_id': interaction_id})
-            return response.get('Item')
+            return dict(response.get('Item', {})) if response.get('Item') else None
         else:
             cursor = self.conn.execute(
                 "SELECT * FROM interactions WHERE interaction_id = ?",
@@ -184,7 +184,7 @@ class DatabaseInterface:
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    async def get_user_interactions(self, user_id: str, limit: int = 10) -> list:
+    async def get_user_interactions(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent interactions for a user."""
         if self.is_production:
             response = self.table.query(
@@ -194,7 +194,7 @@ class DatabaseInterface:
                 Limit=limit,
                 ScanIndexForward=False
             )
-            return response.get('Items', [])
+            return list(response.get('Items', []))
         else:
             cursor = self.conn.execute("""
                 SELECT * FROM interactions

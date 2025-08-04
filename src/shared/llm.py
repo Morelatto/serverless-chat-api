@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class LLMProviderFactory:
     """Factory for creating and managing LLM providers."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize available providers based on API keys."""
         self.providers = {}
         self.primary_provider = os.getenv("LLM_PROVIDER", "gemini")
@@ -31,12 +31,12 @@ class LLMProviderFactory:
         # Initialize OpenRouter if API key exists
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if openrouter_key:
-            self.providers["openrouter"] = OpenRouterProvider(openrouter_key)
+            self.providers["openrouter"] = OpenRouterProvider(openrouter_key)  # type: ignore[assignment]
             logger.info("OpenRouter provider initialized")
 
         # Mock provider for testing without API keys
         if not self.providers:
-            self.providers["mock"] = MockProvider()
+            self.providers["mock"] = MockProvider()  # type: ignore[assignment]
             logger.warning("No LLM API keys found, using mock provider")
 
     async def generate(self, prompt: str, trace_id: str | None = None) -> dict[str, Any]:
@@ -106,8 +106,8 @@ class GeminiProvider:
         self.api_key = api_key
         # Lazy import to avoid dependency if not used
         import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        genai.configure(api_key=api_key)  # type: ignore[attr-defined]
+        self.model = genai.GenerativeModel('gemini-pro')  # type: ignore[attr-defined]
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
     async def generate(self, prompt: str) -> dict[str, Any]:
