@@ -49,10 +49,10 @@ data "archive_file" "lambda_package" {
 }
 
 # Create a Lambda layer for dependencies
-# In CI/CD, the layer directory is created by the workflow
-# Locally, build the layer using the package dependencies
+# The layer directory should be created by CI/CD or locally before running Terraform
+# This resource is optional and only runs if the layer directory doesn't exist
 resource "null_resource" "lambda_layer" {
-  count = fileexists("${path.module}/layer/python") ? 0 : 1
+  count = 0  # Disabled - layer should be built before Terraform runs
   
   triggers = {
     pyproject = fileexists("${path.module}/../../pyproject.toml") ? filemd5("${path.module}/../../pyproject.toml") : "default"
