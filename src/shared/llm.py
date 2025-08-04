@@ -1,13 +1,9 @@
-"""
-Multi-provider LLM integration with fallback support.
-Supports Gemini and OpenRouter with automatic failover.
-"""
+"""Multi-provider LLM integration with automatic failover."""
 import logging
 import os
 import time
 from typing import Any
 
-import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
@@ -22,22 +18,18 @@ class LLMProviderFactory:
         self.primary_provider = os.getenv("LLM_PROVIDER", "gemini")
         self.fallback_enabled = os.getenv("LLM_FALLBACK", "true").lower() == "true"
 
-        # Initialize Gemini if API key exists
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
             self.providers["gemini"] = GeminiProvider(gemini_key)
             logger.info("Gemini provider initialized")
 
-        # Initialize OpenRouter if API key exists
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if openrouter_key:
             self.providers["openrouter"] = OpenRouterProvider(openrouter_key)  # type: ignore[assignment]
             logger.info("OpenRouter provider initialized")
 
-        # Mock provider for testing without API keys
         if not self.providers:
-            self.providers["mock"] = MockProvider()  # type: ignore[assignment]
-            logger.warning("No LLM API keys found, using mock provider")
+            logger.error("No LLM API keys found - at least one provider must be configured")
 
     async def generate(self, prompt: str, trace_id: str | None = None) -> dict[str, Any]:
         """Generate response with automatic fallback."""
@@ -49,12 +41,14 @@ class LLMProviderFactory:
                 result = await self.providers[self.primary_provider].generate(prompt)
                 result["latency_ms"] = int((time.time() - start_time) * 1000)
 
-                logger.info({
-                    "event": "llm_success",
-                    "provider": self.primary_provider,
-                    "trace_id": trace_id,
-                    "latency_ms": result["latency_ms"]
-                })
+                logger.info(
+                    {
+                        "event": "llm_success",
+                        "provider": self.primary_provider,
+                        "trace_id": trace_id,
+                        "latency_ms": result["latency_ms"],
+                    }
+                )
 
                 return result
 
@@ -73,12 +67,14 @@ class LLMProviderFactory:
                     result["latency_ms"] = int((time.time() - start_time) * 1000)
                     result["fallback"] = True
 
-                    logger.info({
-                        "event": "llm_fallback_success",
-                        "provider": name,
-                        "trace_id": trace_id,
-                        "latency_ms": result["latency_ms"]
-                    })
+                    logger.info(
+                        {
+                            "event": "llm_fallback_success",
+                            "provider": name,
+                            "trace_id": trace_id,
+                            "latency_ms": result["latency_ms"],
+                        }
+                    )
 
                     return result
 
@@ -104,10 +100,10 @@ class GeminiProvider:
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-        # Lazy import to avoid dependency if not used
         import google.generativeai as genai
+
         genai.configure(api_key=api_key)  # type: ignore[attr-defined]
-        self.model = genai.GenerativeModel('gemini-pro')  # type: ignore[attr-defined]
+        self.model = genai.GenerativeModel("gemini-pro")  # type: ignore[attr-defined]
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
     async def generate(self, prompt: str) -> dict[str, Any]:
@@ -118,7 +114,9 @@ class GeminiProvider:
             return {
                 "response": response.text,
                 "model": "gemini-pro",
-                "tokens": getattr(response.usage_metadata, 'total_token_count', 0) if hasattr(response, 'usage_metadata') else 0
+                "tokens": getattr(response.usage_metadata, "total_token_count", 0)
+                if hasattr(response, "usage_metadata")
+                else 0,
             }
         except Exception as e:
             logger.error(f"Gemini generation failed: {e}")
@@ -134,74 +132,42 @@ class GeminiProvider:
 
 
 class OpenRouterProvider:
-    """OpenRouter API provider for multiple models."""
+    """OpenRouter API provider using OpenAI SDK."""
 
     def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.base_url = "https://openrouter.ai/api/v1"
-        self.default_model = os.getenv("OPENROUTER_MODEL", "google/gemini-pro")
+        from openai import AsyncOpenAI
+
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={"HTTP-Referer": "https://github.com/itau-processo"},
+        )
+        self.model = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
     async def generate(self, prompt: str) -> dict[str, Any]:
         """Generate response from OpenRouter."""
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "HTTP-Referer": "https://github.com/itau-processo",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": self.default_model,
-                        "messages": [
-                            {"role": "user", "content": prompt}
-                        ],
-                        "temperature": 0.7,
-                        "max_tokens": 1000
-                    },
-                    timeout=30.0
-                )
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=1000,
+            )
 
-                response.raise_for_status()
-                data = response.json()
-
-                return {
-                    "response": data["choices"][0]["message"]["content"],
-                    "model": data.get("model", self.default_model),
-                    "tokens": data.get("usage", {}).get("total_tokens", 0)
-                }
-
-            except Exception as e:
-                logger.error(f"OpenRouter generation failed: {e}")
-                raise e
+            return {
+                "response": response.choices[0].message.content,
+                "model": response.model,
+                "tokens": response.usage.total_tokens if response.usage else 0,
+            }
+        except Exception as e:
+            logger.error(f"OpenRouter generation failed: {e}")
+            raise
 
     async def health_check(self) -> bool:
         """Check OpenRouter availability."""
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{self.base_url}/models",
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    timeout=5.0
-                )
-                return response.status_code == 200
-            except Exception:
-                return False
-
-
-class MockProvider:
-    """Mock provider for testing without API keys."""
-
-    async def generate(self, prompt: str) -> dict[str, Any]:
-        """Generate mock response for testing."""
-        return {
-            "response": f"Mock response for: '{prompt[:50]}...' This is a test response generated without an actual LLM API.",
-            "model": "mock",
-            "tokens": len(prompt.split())
-        }
-
-    async def health_check(self) -> bool:
-        """Mock provider is always healthy."""
-        return True
+        try:
+            await self.client.models.list()
+            return True
+        except Exception:
+            return False

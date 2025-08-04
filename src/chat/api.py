@@ -1,7 +1,4 @@
-"""
-Chat API endpoints with security and observability.
-Handles all HTTP requests and responses for the chat feature.
-"""
+"""Chat API endpoints with security and observability."""
 import hashlib
 import logging
 from datetime import UTC, datetime
@@ -17,12 +14,11 @@ from src.shared.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["chat"])
 
-# Rate limiting storage (in-memory for simplicity)
 rate_limit_storage: dict[str, list[datetime]] = {}
 
 
 async def verify_api_key(x_api_key: str | None = Header(None)) -> str:
-    """Simple API key verification for MVP."""
+    """Verify API key."""
     if not settings.REQUIRE_API_KEY:
         return "dev-mode"
 
@@ -48,9 +44,7 @@ async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
 
     # Clean old requests (older than 1 minute)
     minute_ago = current_time - timedelta(minutes=1)
-    rate_limit_storage[user_key] = [
-        t for t in rate_limit_storage[user_key] if t > minute_ago
-    ]
+    rate_limit_storage[user_key] = [t for t in rate_limit_storage[user_key] if t > minute_ago]
 
     # Check limit
     if len(rate_limit_storage[user_key]) >= settings.RATE_LIMIT_PER_MINUTE:
@@ -61,20 +55,20 @@ async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(  # type: ignore[no-untyped-def]
-    request: ChatRequest,
-    req: Request,
-    api_key_hash: str = Depends(verify_api_key)
+    request: ChatRequest, req: Request, api_key_hash: str = Depends(verify_api_key)
 ):
     """Process chat prompt and return LLM response."""
     trace_id = req.headers.get("X-Trace-Id", str(uuid4()))
 
-    logger.info({
-        "event": "chat_request",
-        "trace_id": trace_id,
-        "user_id": request.userId,
-        "prompt_length": len(request.prompt),
-        "api_key_hash": api_key_hash
-    })
+    logger.info(
+        {
+            "event": "chat_request",
+            "trace_id": trace_id,
+            "user_id": request.userId,
+            "prompt_length": len(request.prompt),
+            "api_key_hash": api_key_hash,
+        }
+    )
 
     # Rate limiting
     await check_rate_limit(request, api_key_hash)
@@ -83,9 +77,7 @@ async def chat_endpoint(  # type: ignore[no-untyped-def]
     service = ChatService()
     try:
         result = await service.process_prompt(
-            user_id=request.userId,
-            prompt=request.prompt,
-            trace_id=trace_id
+            user_id=request.userId, prompt=request.prompt, trace_id=trace_id
         )
 
         response = ChatResponse(
@@ -95,39 +87,34 @@ async def chat_endpoint(  # type: ignore[no-untyped-def]
             response=result["response"],
             model=result["model"],
             timestamp=result["timestamp"],
-            cached=result.get("cached", False)
+            cached=result.get("cached", False),
         )
 
-        logger.info({
-            "event": "chat_success",
-            "trace_id": trace_id,
-            "interaction_id": result["interaction_id"],
-            "latency_ms": result.get("latency_ms", 0)
-        })
+        logger.info(
+            {
+                "event": "chat_success",
+                "trace_id": trace_id,
+                "interaction_id": result["interaction_id"],
+                "latency_ms": result.get("latency_ms", 0),
+            }
+        )
 
         return response
 
     except Exception as e:
-        logger.error({
-            "event": "chat_error",
-            "trace_id": trace_id,
-            "error": str(e)
-        })
+        logger.error({"event": "chat_error", "trace_id": trace_id, "error": str(e)})
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """Liveness probe for container/lambda."""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.now(UTC).isoformat()
-    )
+    """Health check endpoint."""
+    return HealthResponse(status="healthy", timestamp=datetime.now(UTC).isoformat())
 
 
 @router.get("/ready")
 async def readiness_check() -> JSONResponse:
-    """Readiness probe checking dependencies."""
+    """Readiness check with dependencies."""
     service = ChatService()
     checks = await service.check_dependencies()
 
@@ -135,13 +122,10 @@ async def readiness_check() -> JSONResponse:
     status_code = 200 if all_ready else 503
 
     return JSONResponse(
-        content={
-            "ready": all_ready,
-            "checks": checks,
-            "timestamp": datetime.now(UTC).isoformat()
-        },
-        status_code=status_code
+        content={"ready": all_ready, "checks": checks, "timestamp": datetime.now(UTC).isoformat()},
+        status_code=status_code,
     )
+
 
 # /history/{user_id}
 # /v1/metrics

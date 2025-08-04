@@ -1,7 +1,7 @@
 # ADR-001: Arquitetura Minimalista com Feature Única
 
-**Status:** Aceito  
-**Data:** 2025-01-04  
+**Status:** Aceito
+**Data:** 2025-01-04
 
 ## Contexto
 
@@ -14,7 +14,7 @@ Estrutura minimalista com uma única feature (chat) e componentes compartilhados
 ```
 src/
 ├── chat/           # Domínio único
-├── shared/         # Infraestrutura compartilhada  
+├── shared/         # Infraestrutura compartilhada
 └── main.py         # Entry point
 ```
 

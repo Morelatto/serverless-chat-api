@@ -1,7 +1,4 @@
-"""
-Pydantic models for request/response validation and sanitization.
-Ensures data integrity and security through automatic validation.
-"""
+"""Pydantic models for request/response validation."""
 import re
 from datetime import UTC, datetime
 
@@ -11,40 +8,32 @@ from pydantic import BaseModel, Field, field_validator
 class ChatRequest(BaseModel):
     """Request model for chat endpoint with validation."""
 
-    userId: str = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        description="Unique user identifier"
-    )
-    prompt: str = Field(
-        ...,
-        min_length=1,
-        max_length=4000,
-        description="User's prompt to the LLM"
-    )
+    userId: str = Field(..., min_length=1, max_length=100, description="Unique user identifier")
+    prompt: str = Field(..., min_length=1, max_length=4000, description="User's prompt to the LLM")
 
-    @field_validator('userId')
+    @field_validator("userId")
     @classmethod
     def validate_user_id(cls, v: str) -> str:
         """Ensure userId contains only safe characters."""
-        if not re.match(r'^[a-zA-Z0-9\-_]+$', v):
-            raise ValueError("userId must contain only alphanumeric characters, hyphens, and underscores")
+        if not re.match(r"^[a-zA-Z0-9\-_]+$", v):
+            raise ValueError(
+                "userId must contain only alphanumeric characters, hyphens, and underscores"
+            )
         return v
 
-    @field_validator('prompt')
+    @field_validator("prompt")
     @classmethod
     def sanitize_prompt(cls, v: str) -> str:
         """Remove potential security threats and PII from prompt."""
         # Remove potential SQL injection patterns
         dangerous_patterns = [
-            r'(?i)(DROP\s+TABLE)',
-            r'(?i)(DELETE\s+FROM)',
-            r'(?i)(INSERT\s+INTO)',
-            r'(?i)(UPDATE\s+.*\s+SET)',
-            r'(?i)<script.*?>.*?</script>',
-            r'(?i)(javascript:)',
-            r'(?i)(onclick|onerror|onload)='
+            r"(?i)(DROP\s+TABLE)",
+            r"(?i)(DELETE\s+FROM)",
+            r"(?i)(INSERT\s+INTO)",
+            r"(?i)(UPDATE\s+.*\s+SET)",
+            r"(?i)<script.*?>.*?</script>",
+            r"(?i)(javascript:)",
+            r"(?i)(onclick|onerror|onload)=",
         ]
 
         for pattern in dangerous_patterns:
@@ -53,16 +42,16 @@ class ChatRequest(BaseModel):
 
         # Remove PII patterns (Brazilian context)
         # CPF pattern: XXX.XXX.XXX-XX
-        v = re.sub(r'\d{3}\.\d{3}\.\d{3}-\d{2}', '[CPF_REMOVED]', v)
+        v = re.sub(r"\d{3}\.\d{3}\.\d{3}-\d{2}", "[CPF_REMOVED]", v)
 
         # Email pattern
-        v = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL_REMOVED]', v)
+        v = re.sub(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL_REMOVED]", v)
 
         # Phone pattern (Brazilian): (XX) XXXXX-XXXX or (XX) XXXX-XXXX
-        v = re.sub(r'\(\d{2}\)\s?\d{4,5}-\d{4}', '[PHONE_REMOVED]', v)
+        v = re.sub(r"\(\d{2}\)\s?\d{4,5}-\d{4}", "[PHONE_REMOVED]", v)
 
         # Credit card pattern: XXXX XXXX XXXX XXXX
-        v = re.sub(r'\d{4}\s?\d{4}\s?\d{4}\s?\d{4}', '[CARD_REMOVED]', v)
+        v = re.sub(r"\d{4}\s?\d{4}\s?\d{4}\s?\d{4}", "[CARD_REMOVED]", v)
 
         return v.strip()
 
@@ -87,7 +76,7 @@ class ChatResponse(BaseModel):
                 "response": "I don't have access to real-time weather data...",
                 "model": "gemini-pro",
                 "timestamp": "2024-01-15T10:30:00Z",
-                "cached": False
+                "cached": False,
             }
         }
 

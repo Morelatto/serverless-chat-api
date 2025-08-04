@@ -1,13 +1,10 @@
-"""
-Chat service with business logic, resilience patterns and observability.
-Orchestrates the flow between API, database and LLM providers.
-"""
+"""Chat service with business logic and resilience patterns."""
 import hashlib
 import logging
 import time
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from src.shared.config import settings
 from src.shared.database import DatabaseInterface
@@ -33,9 +30,11 @@ class CircuitBreaker:
         self.state = CircuitState.CLOSED
 
     async def call(self, func: Any, *args: Any, **kwargs: Any) -> Any:
-        """Execute function with circuit breaker protection."""
+        """Execute with circuit breaker."""
         if self.state == CircuitState.OPEN:
-            if self.last_failure_time and datetime.now(UTC).replace(tzinfo=None) - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
+            if self.last_failure_time and datetime.now(UTC).replace(
+                tzinfo=None
+            ) - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
                 self.state = CircuitState.HALF_OPEN
                 logger.info("Circuit breaker entering HALF_OPEN state")
             else:
@@ -67,33 +66,30 @@ class ResponseCache:
         self.ttl = ttl_seconds
 
     def _get_key(self, prompt: str) -> str:
-        """Generate cache key from prompt."""
+        """Generate cache key."""
         normalized = prompt.lower().strip()
         return hashlib.md5(normalized.encode()).hexdigest()
 
     def get(self, prompt: str) -> str | None:
-        """Get cached response if available and not expired."""
+        """Get cached response."""
         key = self._get_key(prompt)
         if key in self.cache:
             entry = self.cache[key]
-            if datetime.now(UTC).replace(tzinfo=None) - entry['time'] < timedelta(seconds=self.ttl):
+            if datetime.now(UTC).replace(tzinfo=None) - entry["time"] < timedelta(seconds=self.ttl):
                 logger.info(f"Cache hit for key {key[:8]}")
-                return str(entry['response'])
+                return str(entry["response"])
             else:
                 del self.cache[key]
         return None
 
     def set(self, prompt: str, response: str) -> None:
-        """Cache a response."""
+        """Cache response."""
         key = self._get_key(prompt)
-        self.cache[key] = {
-            'response': response,
-            'time': datetime.now(UTC).replace(tzinfo=None)
-        }
+        self.cache[key] = {"response": response, "time": datetime.now(UTC).replace(tzinfo=None)}
 
         # Limit cache size
         if len(self.cache) > 1000:
-            oldest_key = min(self.cache.items(), key=lambda x: x[1]['time'])[0]
+            oldest_key = min(self.cache.items(), key=lambda x: x[1]["time"])[0]
             del self.cache[oldest_key]
 
 
@@ -106,11 +102,11 @@ class ChatService:
         self.cache = ResponseCache(ttl_seconds=settings.CACHE_TTL_SECONDS)
         self.circuit_breaker = CircuitBreaker(
             failure_threshold=settings.CIRCUIT_BREAKER_THRESHOLD,
-            recovery_timeout=settings.CIRCUIT_BREAKER_TIMEOUT
+            recovery_timeout=settings.CIRCUIT_BREAKER_TIMEOUT,
         )
 
     async def process_prompt(self, user_id: str, prompt: str, trace_id: str) -> dict[str, Any]:
-        """Process a chat prompt with full resilience and observability."""
+        """Process chat prompt with resilience."""
         start_time = time.time()
 
         # Check cache first
@@ -121,7 +117,7 @@ class ChatService:
                 prompt=prompt,
                 response=cached_response,
                 model="cache",
-                trace_id=trace_id
+                trace_id=trace_id,
             )
 
             return {
@@ -130,24 +126,18 @@ class ChatService:
                 "model": "cache",
                 "timestamp": datetime.now(UTC).isoformat(),
                 "cached": True,
-                "latency_ms": int((time.time() - start_time) * 1000)
+                "latency_ms": int((time.time() - start_time) * 1000),
             }
 
         # Save prompt to database
         interaction_id = await self.db.save_interaction(
-            user_id=user_id,
-            prompt=prompt,
-            response=None,
-            model=None,
-            trace_id=trace_id
+            user_id=user_id, prompt=prompt, response=None, model=None, trace_id=trace_id
         )
 
         try:
             # Call LLM with circuit breaker
             llm_result = await self.circuit_breaker.call(
-                self.llm_factory.generate,
-                prompt=prompt,
-                trace_id=trace_id
+                self.llm_factory.generate, prompt=prompt, trace_id=trace_id
             )
 
             # Update database with response
@@ -156,7 +146,7 @@ class ChatService:
                 response=llm_result["response"],
                 model=llm_result["model"],
                 tokens=llm_result.get("tokens", 0),
-                latency_ms=llm_result.get("latency_ms", 0)
+                latency_ms=llm_result.get("latency_ms", 0),
             )
 
             # Cache successful response
@@ -165,15 +155,17 @@ class ChatService:
 
             # Log metrics
             latency_ms = int((time.time() - start_time) * 1000)
-            logger.info({
-                "event": "prompt_processed",
-                "trace_id": trace_id,
-                "interaction_id": interaction_id,
-                "model": llm_result["model"],
-                "tokens": llm_result.get("tokens", 0),
-                "latency_ms": latency_ms,
-                "cached": False
-            })
+            logger.info(
+                {
+                    "event": "prompt_processed",
+                    "trace_id": trace_id,
+                    "interaction_id": interaction_id,
+                    "model": llm_result["model"],
+                    "tokens": llm_result.get("tokens", 0),
+                    "latency_ms": latency_ms,
+                    "cached": False,
+                }
+            )
 
             return {
                 "interaction_id": interaction_id,
@@ -181,33 +173,32 @@ class ChatService:
                 "model": llm_result["model"],
                 "timestamp": datetime.now(UTC).isoformat(),
                 "cached": False,
-                "latency_ms": latency_ms
+                "latency_ms": latency_ms,
             }
 
         except Exception as e:
             # Log error and update database
-            logger.error({
-                "event": "prompt_failed",
-                "trace_id": trace_id,
-                "interaction_id": interaction_id,
-                "error": str(e)
-            })
+            logger.error(
+                {
+                    "event": "prompt_failed",
+                    "trace_id": trace_id,
+                    "interaction_id": interaction_id,
+                    "error": str(e),
+                }
+            )
 
             await self.db.update_interaction(
-                interaction_id=interaction_id,
-                response=None,
-                model="error",
-                error=str(e)
+                interaction_id=interaction_id, response=None, model="error", error=str(e)
             )
 
             raise e
 
     async def check_dependencies(self) -> dict[str, bool]:
-        """Check health of all dependencies."""
+        """Check dependencies health."""
         checks = {
             "database": False,
             "llm_provider": False,
-            "cache": True  # Always healthy as it's in-memory
+            "cache": True,  # Always healthy as it's in-memory
         }
 
         # Check database

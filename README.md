@@ -216,6 +216,6 @@ Projeto desenvolvido para processo seletivo Itaú - Comunidade IA.
 
 ---
 
-**Autor**: Candidato ao processo seletivo  
-**Data**: Janeiro 2025  
+**Autor**: Candidato ao processo seletivo
+**Data**: Janeiro 2025
 **Versão**: 3.0.0

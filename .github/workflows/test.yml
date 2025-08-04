@@ -1,0 +1,46 @@
+name: Test Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run: { type: boolean, default: true, description: 'Dry run (plan only)' }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: pip }
+
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: '1.5.0' }
+
+      - name: Test package creation
+        working-directory: iac/terraform
+        run: |
+          pip install -e ../../
+          zip -r lambda_function.zip ../../src/ -x "**/__pycache__/*"
+          ls -la lambda_function.zip
+          echo "✅ Lambda package created successfully"
+
+      - name: Terraform validate
+        working-directory: iac/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+          terraform fmt -check
+          echo "✅ Terraform configuration valid"
+
+      - name: Terraform plan (dry run)
+        if: inputs.dry_run
+        working-directory: iac/terraform
+        run: |
+          terraform plan -var-file="terraform.tfvars.dev"
+          echo "✅ Terraform plan successful"
+
+      - name: Test Docker build
+        run: |
+          docker build -t test-image .
+          echo "✅ Docker build successful"

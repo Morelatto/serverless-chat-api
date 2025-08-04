@@ -1,70 +1,113 @@
-.PHONY: help clean setup install install-dev run test test-suite lint lint-fix typecheck docker-build docker docker-down docker-logs docker-clean
+# Project settings
+PROJECT_NAME = processo-itau-v3
+SRC_DIR = src
+DATA_DIR = data
 
-help: ## Show this help message
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+# Environment
+ENV_FILE = .env
+ENV_EXAMPLE = .env.example
 
-clean: ## Clean cache and temp files  
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	rm -f chat_history.db
-	rm -rf .pytest_cache .mypy_cache .ruff_cache
-	rm -rf reports/*.log reports/*.json
+# Tools
+PYTHON = python
+PIP = pip
+DOCKER = docker
+DOCKER_COMPOSE = docker-compose
+RUFF = ruff
+MYPY = mypy
 
-setup: ## Setup development environment
-	@echo "Setting up environment..."
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		echo "✓ Created .env from .env.example"; \
-	else \
-		echo "✓ .env already exists"; \
+# Docker
+DOCKER_IMAGE = $(PROJECT_NAME):latest
+DOCKER_SERVICE = api
+DOCKER_PORT = 8000
+
+# Clean patterns
+CLEAN_PATTERNS = __pycache__ .pytest_cache .mypy_cache .ruff_cache *.pyc .coverage
+CLEAN_FILES = chat_history.db .secrets.baseline
+
+# Default target
+.DEFAULT_GOAL := help
+
+.PHONY: help
+help: ## Show help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} \
+		/^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+# Development setup
+.PHONY: setup
+setup: ## Setup environment configuration
+	@if [ ! -f $(ENV_FILE) ]; then \
+		cp $(ENV_EXAMPLE) $(ENV_FILE) && \
+		echo "✓ Created $(ENV_FILE)"; \
 	fi
-	@echo "✓ Setup complete. Edit .env to add your API keys."
 
-install: ## Install package in editable mode
-	pip install --no-user -e .
+.PHONY: clean
+clean: ## Clean cache and temporary files
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@rm -rf .pytest_cache .mypy_cache .ruff_cache
+	@rm -f $(CLEAN_FILES) 2>/dev/null || true
 
-install-dev: ## Install package with dev dependencies
-	pip install --no-user -e ".[dev]"
+# Installation
+.PHONY: install install-dev
+install: ## Install package
+	@$(PIP) install --no-user -e .
 
-run: ## Start the server
-	python -m src.main
+install-dev: ## Install with dev dependencies
+	@$(PIP) install --no-user -e ".[dev]"
 
-test: ## Run simple server test
-	python test_server.py
+# Application
+.PHONY: run test test-unit test-integration
+run: ## Start application server
+	@$(PYTHON) -m $(SRC_DIR).main
 
-test-suite: ## Run complete test suite
-	python test_suite.py
+test: ## Run all tests with pytest
+	@pytest tests/ -v
 
+test-unit: ## Run unit tests only
+	@pytest tests/unit/ -v
+
+test-integration: ## Run integration tests only
+	@pytest tests/integration/ -v
+
+# Code quality
+.PHONY: lint lint-fix typecheck check pre-commit
 lint: ## Run linter (check only)
-	ruff check src/
+	@$(RUFF) check $(SRC_DIR)/ tests/
 
 lint-fix: ## Run linter with auto-fix
-	ruff check src/ --fix
+	@$(RUFF) check $(SRC_DIR)/ tests/ --fix
 
 typecheck: ## Run type checker
-	mypy src/ --strict
+	@$(MYPY) $(SRC_DIR)/ --strict
 
+check: lint typecheck ## Run all code quality checks
+
+pre-commit: ## Run pre-commit hooks on all files
+	@PIP_USER=false pre-commit run --all-files
+
+# Docker
+.PHONY: docker-build docker docker-down docker-logs docker-clean
 docker-build: ## Build Docker image
-	@echo "Building Docker image..."
-	docker build -t processo-itau-v3:latest .
-	@echo "✓ Docker image built successfully"
+	@$(DOCKER) build -t $(DOCKER_IMAGE) .
 
-docker: ## Start services with docker-compose
-	@echo "Starting Docker services..."
-	docker-compose up -d
-	@echo "✓ Services running on http://localhost:8000"
-	@echo "✓ Health check: http://localhost:8000/v1/health"
+docker: docker-build ## Build and start services
+	@$(DOCKER_COMPOSE) up -d
+	@echo "✓ Running on http://localhost:$(DOCKER_PORT)"
 
-docker-down: ## Stop and remove Docker services
-	@echo "Stopping Docker services..."
-	docker-compose down
-	@echo "✓ Services stopped"
+docker-down: ## Stop services
+	@$(DOCKER_COMPOSE) down
 
-docker-logs: ## Show Docker container logs
-	docker-compose logs -f api
+docker-logs: ## Show container logs
+	@$(DOCKER_COMPOSE) logs -f $(DOCKER_SERVICE)
 
-docker-clean: ## Remove Docker volumes and clean data
-	@echo "Cleaning Docker volumes and data..."
-	docker-compose down -v
-	rm -rf data/
-	@echo "✓ Docker volumes and data cleaned"
+docker-clean: docker-down ## Clean Docker volumes
+	@$(DOCKER_COMPOSE) down -v
+	@rm -rf $(DATA_DIR)/
+
+# Compound targets
+.PHONY: dev all-tests full-clean test-cov
+dev: setup install-dev ## Complete dev setup
+all-tests: test ## Run all tests
+test-cov: ## Run tests with coverage
+	@pytest tests/ --cov=src --cov-report=term-missing
+full-clean: clean docker-clean ## Complete cleanup

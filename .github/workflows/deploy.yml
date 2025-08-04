@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+    inputs:
+      environment: { type: choice, options: [dev, staging, prod], default: dev }
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - env: dev
+            condition: ${{ github.ref == 'refs/heads/main' || inputs.environment == 'dev' }}
+          - env: staging
+            condition: ${{ inputs.environment == 'staging' }}
+          - env: prod
+            condition: ${{ inputs.environment == 'prod' }}
+    if: ${{ matrix.condition }}
+    environment: ${{ matrix.env }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11', cache: pip }
+
+      - name: Install and test
+        run: |
+          pip install -e ".[dev,test]"
+          ruff check src/
+          pytest tests/ --cov=src --cov-fail-under=70
+
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: '1.5.0' }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ matrix.env == 'prod' && secrets.AWS_ACCESS_KEY_ID_PROD || secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ matrix.env == 'prod' && secrets.AWS_SECRET_ACCESS_KEY_PROD || secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy
+        working-directory: iac/terraform
+        run: |
+          zip -r lambda_function.zip ../../src/ -x "**/__pycache__/*"
+          terraform init
+          terraform apply -var-file="terraform.tfvars.${{ matrix.env }}" -auto-approve
+          echo "url=$(terraform output -raw api_endpoint)" >> $GITHUB_OUTPUT
+        id: deploy
+
+      - name: Health check
+        run: curl -f "${{ steps.deploy.outputs.url }}/v1/health"

@@ -1,7 +1,7 @@
 # ADR-002: Features Completas do Sistema
 
-**Status:** Aceito  
-**Data:** 2025-01-04  
+**Status:** Aceito
+**Data:** 2025-01-04
 
 ## Contexto
 

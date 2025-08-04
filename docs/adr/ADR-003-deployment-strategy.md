@@ -1,7 +1,7 @@
 # ADR-003: Estratégia de Deploy e Infraestrutura
 
-**Status:** Aceito  
-**Data:** 2025-01-04  
+**Status:** Aceito
+**Data:** 2025-01-04
 
 ## Contexto
 
