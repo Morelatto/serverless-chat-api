@@ -5,7 +5,7 @@ Orchestrates the flow between API, database and LLM providers.
 import hashlib
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 
@@ -35,7 +35,7 @@ class CircuitBreaker:
     async def call(self, func, *args, **kwargs):
         """Execute function with circuit breaker protection."""
         if self.state == CircuitState.OPEN:
-            if datetime.utcnow() - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
+            if datetime.now(timezone.utc).replace(tzinfo=None) - self.last_failure_time > timedelta(seconds=self.recovery_timeout):
                 self.state = CircuitState.HALF_OPEN
                 logger.info("Circuit breaker entering HALF_OPEN state")
             else:
@@ -50,7 +50,7 @@ class CircuitBreaker:
             return result
         except Exception as e:
             self.failure_count += 1
-            self.last_failure_time = datetime.utcnow()
+            self.last_failure_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             if self.failure_count >= self.failure_threshold:
                 self.state = CircuitState.OPEN
@@ -76,7 +76,7 @@ class ResponseCache:
         key = self._get_key(prompt)
         if key in self.cache:
             entry = self.cache[key]
-            if datetime.utcnow() - entry['time'] < timedelta(seconds=self.ttl):
+            if datetime.now(timezone.utc).replace(tzinfo=None) - entry['time'] < timedelta(seconds=self.ttl):
                 logger.info(f"Cache hit for key {key[:8]}")
                 return entry['response']
             else:
@@ -88,7 +88,7 @@ class ResponseCache:
         key = self._get_key(prompt)
         self.cache[key] = {
             'response': response,
-            'time': datetime.utcnow()
+            'time': datetime.now(timezone.utc).replace(tzinfo=None)
         }
 
         # Limit cache size
@@ -128,7 +128,7 @@ class ChatService:
                 "interaction_id": interaction_id,
                 "response": cached_response,
                 "model": "cache",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "cached": True,
                 "latency_ms": int((time.time() - start_time) * 1000)
             }
@@ -179,7 +179,7 @@ class ChatService:
                 "interaction_id": interaction_id,
                 "response": llm_result["response"],
                 "model": llm_result["model"],
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "cached": False,
                 "latency_ms": latency_ms
             }

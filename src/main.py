@@ -3,6 +3,7 @@ Main entry point for both FastAPI local development and AWS Lambda deployment.
 Handles application initialization and request routing.
 """
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,13 +16,29 @@ from src.shared.config import settings
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info({
+        "event": "application_startup",
+        "environment": "lambda" if settings.AWS_LAMBDA_FUNCTION_NAME else "local",
+        "settings": settings.to_dict()
+    })
+    yield
+    # Shutdown
+    logger.info("Application shutting down")
+
+
 # Create FastAPI application
 app = FastAPI(
     title="Chat API - Itaú AI Platform",
     description="Microservice for processing prompts with LLM integration",
     version="1.0.0",
     docs_url="/docs" if not settings.AWS_LAMBDA_FUNCTION_NAME else None,
-    redoc_url="/redoc" if not settings.AWS_LAMBDA_FUNCTION_NAME else None
+    redoc_url="/redoc" if not settings.AWS_LAMBDA_FUNCTION_NAME else None,
+    lifespan=lifespan
 )
 
 # Configure CORS
@@ -64,24 +81,6 @@ async def root():
 
 # Include chat routes
 app.include_router(chat_router)
-
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application on startup."""
-    logger.info({
-        "event": "application_startup",
-        "environment": "lambda" if settings.AWS_LAMBDA_FUNCTION_NAME else "local",
-        "settings": settings.to_dict()
-    })
-
-
-# Shutdown event
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown."""
-    logger.info("Application shutting down")
 
 
 # Lambda handler for AWS deployment

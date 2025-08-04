@@ -4,7 +4,7 @@ Handles all HTTP requests and responses for the chat feature.
 """
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -41,7 +41,7 @@ async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
     from datetime import timedelta
 
     user_key = f"{request.userId}:{api_key_hash}"
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
 
     if user_key not in rate_limit_storage:
         rate_limit_storage[user_key] = []
@@ -121,7 +121,7 @@ async def health_check():
     """Liveness probe for container/lambda."""
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
 
 
@@ -138,7 +138,7 @@ async def readiness_check():
         content={
             "ready": all_ready,
             "checks": checks,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         },
         status_code=status_code
     )
