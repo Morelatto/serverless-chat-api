@@ -27,7 +27,7 @@ clean: ## Clean all temporary and cache files
 .PHONY: docker-env
 docker-env: ## Full Docker environment setup
 	@echo "Setting up Docker environment..."
-	@docker build -t processo-itau-v3:latest .
+	@docker build -t serverless-chat-api:latest .
 	@docker-compose up -d
 	@echo "✅ Running on http://localhost:8000"
 	@echo "   View logs: docker-compose logs -f api"
@@ -37,7 +37,7 @@ docker-reset: ## Complete Docker cleanup and data removal
 	@echo "Resetting Docker environment..."
 	@docker-compose down -v 2>/dev/null || true
 	@rm -rf data/ 2>/dev/null || true
-	@docker rmi processo-itau-v3:latest 2>/dev/null || true
+	@docker rmi serverless-chat-api:latest 2>/dev/null || true
 	@echo "✅ Docker environment reset"
 
 # Direct commands to use:
