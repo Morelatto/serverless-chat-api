@@ -50,7 +50,7 @@ data "archive_file" "lambda_package" {
 
 # Create a Lambda layer for dependencies
 # In CI/CD, the layer directory is created by the workflow
-# Locally, it can be created using build_layer.sh
+# Locally, build the layer using the package dependencies
 resource "null_resource" "lambda_layer" {
   count = fileexists("${path.module}/layer/python") ? 0 : 1
   
@@ -60,25 +60,31 @@ resource "null_resource" "lambda_layer" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      rm -rf ${path.module}/layer
-      mkdir -p ${path.module}/layer/python
+      cd ${path.module}/../..
       
-      # Install core Lambda dependencies
-      pip install \
-        fastapi==0.104.1 \
-        mangum==0.17.0 \
-        pydantic==2.5.0 \
-        pydantic-settings==2.1.0 \
-        google-generativeai==0.7.2 \
-        openai==1.3.0 \
-        tenacity==8.2.3 \
-        boto3==1.34.0 \
-        python-dotenv==1.0.0 \
-        httpx==0.25.2 \
-        -t ${path.module}/layer/python \
+      # Install the package to get all dependencies
+      pip install -e . --quiet
+      
+      # Export dependencies (excluding dev and the package itself)
+      pip freeze | grep -v "^-e" | grep -v "uvicorn" > /tmp/lambda-deps.txt
+      
+      # Build layer
+      cd ${path.module}
+      rm -rf layer
+      mkdir -p layer/python
+      
+      # Install dependencies for Lambda
+      pip install -r /tmp/lambda-deps.txt \
+        -t layer/python \
         --platform manylinux2014_x86_64 \
         --only-binary=:all: \
-        --upgrade
+        --upgrade \
+        --quiet
+      
+      # Clean up
+      rm /tmp/lambda-deps.txt
+      find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+      find layer -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
     EOT
   }
 }

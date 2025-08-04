@@ -47,24 +47,20 @@ destroy: ## Destroy Terraform resources
 
 build-layer: ## Build Lambda layer with dependencies
 	@echo "Building Lambda layer for Python $(PYTHON_VERSION)..."
+	@cd ../.. && pip install -e . --quiet
+	@pip freeze | grep -v "^-e" | grep -v "uvicorn" > /tmp/lambda-deps.txt
 	@rm -rf layer lambda_layer.zip
 	@mkdir -p layer/python
-	@pip install \
-		fastapi==0.104.1 \
-		mangum==0.17.0 \
-		pydantic==2.5.0 \
-		pydantic-settings==2.1.0 \
-		google-generativeai==0.7.2 \
-		openai==1.3.0 \
-		tenacity==8.2.3 \
-		boto3==1.34.0 \
-		python-dotenv==1.0.0 \
-		httpx==0.25.2 \
+	@pip install -r /tmp/lambda-deps.txt \
 		-t layer/python \
 		--platform manylinux2014_x86_64 \
 		--only-binary=:all: \
-		--upgrade
-	@echo "Layer built successfully"
+		--upgrade \
+		--quiet
+	@rm /tmp/lambda-deps.txt
+	@find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+	@find layer -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
+	@echo "Layer built: $$(du -sh layer | cut -f1)"
 
 test-local: ## Test Lambda function locally
 	@echo "Testing Lambda function locally..."
