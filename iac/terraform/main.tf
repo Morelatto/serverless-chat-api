@@ -10,6 +10,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+  
   default_tags {
     tags = {
       Project     = var.project_name
@@ -18,13 +19,7 @@ provider "aws" {
   }
 }
 
-data "archive_file" "lambda_package" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../src"
-  output_path = "${path.module}/lambda.zip"
-  excludes    = ["__pycache__", "*.pyc", "*.db"]
-}
-
+# Simple Lambda function with inline code for now
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda-${var.environment}"
   assume_role_policy = jsonencode({
@@ -32,7 +27,9 @@ resource "aws_iam_role" "lambda" {
     Statement = [{
       Action    = "sts:AssumeRole"
       Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
     }]
   })
 }
@@ -42,9 +39,10 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_role_policy" "lambda" {
+resource "aws_iam_role_policy" "lambda_dynamodb" {
   name = "${var.project_name}-lambda-policy"
   role = aws_iam_role.lambda.id
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -60,11 +58,76 @@ resource "aws_iam_role_policy" "lambda" {
   })
 }
 
+# Create a simple ZIP file with Python code
+data "archive_file" "lambda_package" {
+  type        = "zip"
+  output_path = "${path.module}/lambda_function.zip"
+  
+  source {
+    content = <<EOF
+import json
+
+def handler(event, context):
+    """Simple Lambda handler for testing"""
+    
+    # Parse the incoming event
+    path = event.get('rawPath', '/')
+    method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
+    
+    # Handle health check
+    if path == '/v1/health':
+        return {
+            'statusCode': 200,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                'status': 'healthy',
+                'version': '1.0.0',
+                'environment': 'dev'
+            })
+        }
+    
+    # Handle chat endpoint
+    if path == '/v1/chat' and method == 'POST':
+        try:
+            body = json.loads(event.get('body', '{}'))
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
+                    'id': 'test-123',
+                    'userId': body.get('userId', 'unknown'),
+                    'prompt': body.get('prompt', ''),
+                    'response': 'This is a test response from Lambda',
+                    'model': 'lambda-test'
+                })
+            }
+        except Exception as e:
+            return {
+                'statusCode': 400,
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({'error': str(e)})
+            }
+    
+    # Default response
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps({
+            'message': 'Serverless Chat API',
+            'path': path,
+            'method': method
+        })
+    }
+EOF
+    filename = "lambda_function.py"
+  }
+}
+
 resource "aws_lambda_function" "api" {
   filename         = data.archive_file.lambda_package.output_path
   function_name    = "${var.project_name}-${var.environment}"
   role             = aws_iam_role.lambda.arn
-  handler          = "main.handler"
+  handler          = "lambda_function.handler"
   source_code_hash = data.archive_file.lambda_package.output_base64sha256
   runtime          = "python3.11"
   memory_size      = var.lambda_memory_size
@@ -90,9 +153,9 @@ resource "aws_lambda_function_url" "api" {
 }
 
 resource "aws_dynamodb_table" "main" {
-  name         = "${var.project_name}-${var.environment}"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
+  name           = "${var.project_name}-${var.environment}"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "id"
 
   attribute {
     name = "id"
@@ -100,8 +163,8 @@ resource "aws_dynamodb_table" "main" {
   }
 
   ttl {
-    enabled        = true
     attribute_name = "ttl"
+    enabled        = true
   }
 }
 
