@@ -57,6 +57,8 @@ jobs:
           terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || echo "IAM role doesn't exist or already imported"
           terraform import aws_dynamodb_table.main serverless-chat-api-dev 2>/dev/null || echo "DynamoDB table doesn't exist or already imported"
           terraform import aws_lambda_function.api serverless-chat-api-dev 2>/dev/null || echo "Lambda doesn't exist or already imported"
+          terraform import aws_lambda_function_url.api serverless-chat-api-dev 2>/dev/null || echo "Lambda URL doesn't exist or already imported"
+          terraform import aws_cloudwatch_log_group.lambda /aws/lambda/serverless-chat-api-dev 2>/dev/null || echo "Log group doesn't exist or already imported"
           
       - name: Deploy to AWS
         if: steps.check-aws.outputs.has_aws == 'true'
