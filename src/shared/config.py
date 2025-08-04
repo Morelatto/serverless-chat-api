@@ -15,7 +15,7 @@ class Settings:
         """Initialize settings from environment variables."""
         self.API_PORT = int(os.getenv("API_PORT", "8000"))
         self.API_HOST = os.getenv("API_HOST", "0.0.0.0")
-        self.API_KEYS = os.getenv("API_KEYS", "dev-key-123")
+        self.API_KEYS = os.getenv("API_KEY", os.getenv("API_KEYS", "dev-key-123"))
         self.REQUIRE_API_KEY = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
         self.AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
         self.AWS_LAMBDA_FUNCTION_NAME = os.getenv("AWS_LAMBDA_FUNCTION_NAME")
@@ -25,7 +25,7 @@ class Settings:
         self.OPENROUTER_API_KEY = self._get_secret("OPENROUTER_API_KEY")
         self.OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-pro")
         self.DATABASE_PATH = os.getenv("DATABASE_PATH", "chat_history.db")
-        self.DYNAMODB_TABLE = os.getenv("DYNAMODB_TABLE", "chat-interactions")
+        self.DYNAMODB_TABLE = os.getenv("TABLE_NAME", os.getenv("DYNAMODB_TABLE", "chat-interactions"))
         self.RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
         self.ENABLE_CACHE = os.getenv("ENABLE_CACHE", "true").lower() == "true"
         self.CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
