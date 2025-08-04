@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
 }
 
@@ -26,6 +30,53 @@ provider "aws" {
       Environment = var.environment
     }
   }
+}
+
+# Create Lambda deployment package directly from source
+data "archive_file" "lambda_package" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../src"
+  output_path = "${path.module}/lambda_function.zip"
+  
+  excludes = [
+    "__pycache__",
+    "*.pyc",
+    ".pytest_cache",
+    "*.egg-info",
+    ".env",
+    "tests",
+  ]
+}
+
+# Create a Lambda layer for dependencies
+# In CI/CD, the layer directory is created by the workflow
+# Locally, it can be created using build_layer.sh or the null_resource
+resource "null_resource" "lambda_layer" {
+  count = fileexists("${path.module}/layer/python") ? 0 : 1
+  
+  triggers = {
+    requirements = filemd5("${path.module}/../../requirements.txt")
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      rm -rf ${path.module}/layer
+      mkdir -p ${path.module}/layer/python
+      pip install -r ${path.module}/../../requirements.txt \
+        -t ${path.module}/layer/python \
+        --platform manylinux2014_x86_64 \
+        --only-binary=:all: \
+        --upgrade
+    EOT
+  }
+}
+
+data "archive_file" "lambda_layer" {
+  type        = "zip"
+  source_dir  = "${path.module}/layer"
+  output_path = "${path.module}/lambda_layer.zip"
+  
+  depends_on = [null_resource.lambda_layer]
 }
 
 # IAM role for Lambda
@@ -42,10 +93,6 @@ resource "aws_iam_role" "lambda" {
       }
     }]
   })
-  
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -65,111 +112,80 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         "dynamodb:PutItem",
         "dynamodb:GetItem",
         "dynamodb:Query",
-        "dynamodb:Scan"
+        "dynamodb:Scan",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem"
       ]
-      Resource = "arn:aws:dynamodb:${var.aws_region}:*:table/${var.project_name}-${var.environment}"
+      Resource = [
+        aws_dynamodb_table.main.arn,
+        "${aws_dynamodb_table.main.arn}/index/*"
+      ]
     }]
   })
 }
 
-# Create a simple ZIP file with Python code
-data "archive_file" "lambda_package" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_function.zip"
+# Lambda layer for dependencies
+resource "aws_lambda_layer_version" "dependencies" {
+  filename            = data.archive_file.lambda_layer.output_path
+  layer_name          = "${var.project_name}-deps-${var.environment}"
+  source_code_hash    = data.archive_file.lambda_layer.output_base64sha256
+  compatible_runtimes = ["python3.11"]
   
-  source {
-    content = <<EOF
-import json
-
-def handler(event, context):
-    """Simple Lambda handler for testing"""
-    
-    # Parse the incoming event
-    path = event.get('rawPath', '/')
-    method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
-    
-    # Handle health check
-    if path == '/v1/health':
-        return {
-            'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'status': 'healthy',
-                'version': '1.0.0',
-                'environment': 'dev'
-            })
-        }
-    
-    # Handle chat endpoint
-    if path == '/v1/chat' and method == 'POST':
-        try:
-            body = json.loads(event.get('body', '{}'))
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({
-                    'id': 'test-123',
-                    'userId': body.get('userId', 'unknown'),
-                    'prompt': body.get('prompt', ''),
-                    'response': 'This is a test response from Lambda',
-                    'model': 'lambda-test'
-                })
-            }
-        except Exception as e:
-            return {
-                'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': str(e)})
-            }
-    
-    # Default response
-    return {
-        'statusCode': 200,
-        'headers': {'Content-Type': 'application/json'},
-        'body': json.dumps({
-            'message': 'Serverless Chat API',
-            'path': path,
-            'method': method
-        })
-    }
-EOF
-    filename = "lambda_function.py"
-  }
+  description = "Dependencies for ${var.project_name}"
 }
 
+# Lambda function using the existing Mangum handler in main.py
 resource "aws_lambda_function" "api" {
   filename         = data.archive_file.lambda_package.output_path
   function_name    = "${var.project_name}-${var.environment}"
   role             = aws_iam_role.lambda.arn
-  handler          = "lambda_function.handler"
+  handler          = "main.handler"  # Uses the existing handler in src/main.py
   source_code_hash = data.archive_file.lambda_package.output_base64sha256
   runtime          = "python3.11"
   memory_size      = var.lambda_memory_size
   timeout          = var.lambda_timeout
+  
+  layers = [aws_lambda_layer_version.dependencies.arn]
 
   environment {
     variables = {
-      ENVIRONMENT = var.environment
-      TABLE_NAME  = "${var.project_name}-${var.environment}"
+      # Application settings
+      ENVIRONMENT      = var.environment
+      AWS_LAMBDA_FUNCTION_NAME = "true"  # This tells the app it's running in Lambda
+      
+      # Database configuration  
+      DATABASE_TYPE    = "dynamodb"
+      TABLE_NAME       = aws_dynamodb_table.main.name
+      
+      # LLM configuration
+      LLM_PROVIDER     = var.llm_provider
+      GEMINI_API_KEY   = var.gemini_api_key
+      OPENROUTER_API_KEY = var.openrouter_api_key
+      
+      # Security
+      REQUIRE_API_KEY  = var.require_api_key ? "true" : "false"
+      API_KEY          = var.api_key
+      
+      # Logging
+      LOG_LEVEL        = var.log_level
     }
-  }
-  
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
+# Lambda Function URL
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
   authorization_type = "NONE"
 
   cors {
-    allow_origins = ["*"]
-    allow_methods = ["*"]
+    allow_origins = var.cors_origins
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     allow_headers = ["*"]
+    max_age       = 3600
   }
 }
 
+# DynamoDB table for session storage
 resource "aws_dynamodb_table" "main" {
   name           = "${var.project_name}-${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
@@ -179,22 +195,77 @@ resource "aws_dynamodb_table" "main" {
     name = "id"
     type = "S"
   }
+  
+  # Optional: Add user_id as a global secondary index for querying by user
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+  
+  global_secondary_index {
+    name            = "user_id_index"
+    hash_key        = "user_id"
+    projection_type = "ALL"
+  }
 
   ttl {
     attribute_name = "ttl"
     enabled        = true
   }
   
-  lifecycle {
-    create_before_destroy = true
+  point_in_time_recovery {
+    enabled = var.enable_point_in_time_recovery
+  }
+  
+  tags = {
+    Name        = "${var.project_name}-${var.environment}"
+    Environment = var.environment
   }
 }
 
+# CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
   retention_in_days = var.log_retention_days
   
-  lifecycle {
-    create_before_destroy = true
+  kms_key_id = var.kms_key_id  # Optional: encrypt logs with KMS
+}
+
+# Optional: CloudWatch Alarms
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  count = var.enable_monitoring ? 1 : 0
+  
+  alarm_name          = "${var.project_name}-${var.environment}-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors lambda errors"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.api.function_name
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
+  count = var.enable_monitoring ? 1 : 0
+  
+  alarm_name          = "${var.project_name}-${var.environment}-throttles"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors lambda throttles"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.api.function_name
   }
 }

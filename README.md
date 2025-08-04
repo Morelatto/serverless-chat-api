@@ -68,31 +68,33 @@ docker run -p 8000:8000 --env-file .env serverless-chat-api
 ## 🏗️ Arquitetura
 
 ```mermaid
-graph LR
-    Cliente[Cliente] --> Gateway[API Gateway]
-    Gateway --> Lambda[AWS Lambda]
+graph TB
+    %% Estilo minimalista monocromático
+    classDef node fill:#fff,stroke:#374151,stroke-width:2px,color:#374151
+    classDef focus fill:#374151,stroke:#374151,stroke-width:2px,color:#fff
+    classDef external fill:#fff,stroke:#374151,stroke-width:2px,stroke-dasharray:5 5,color:#374151
     
-    Lambda --> DynamoDB[(DynamoDB)]
-    Lambda --> Gemini[Gemini API]
-    Lambda --> OpenRouter[OpenRouter API]
+    %% Arquitetura
+    Client(Cliente):::node
+    Gateway(API Gateway):::node
+    Lambda(Lambda Function):::focus
+    DB[(DynamoDB)]:::node
+    LLM(LLM Providers<br/>━━━━━<br/>Gemini & OpenRouter):::external
     
-    subgraph AWS
+    %% Conexões
+    Client --> Gateway
+    Gateway --> Lambda
+    Lambda --> DB
+    Lambda --> LLM
+    
+    %% Contexto AWS
+    subgraph cloud[AWS Cloud]
         Gateway
         Lambda
-        DynamoDB
+        DB
     end
     
-    subgraph LLM Providers
-        Gemini
-        OpenRouter
-    end
-    
-    style Cliente fill:#e1f5fe
-    style Gateway fill:#fff3e0
-    style Lambda fill:#f3e5f5
-    style DynamoDB fill:#e8f5e9
-    style Gemini fill:#fce4ec
-    style OpenRouter fill:#fce4ec
+    style cloud fill:#f9fafb,stroke:#d1d5db,stroke-width:1px
 ```
 
 ## 🛠️ Configuração
