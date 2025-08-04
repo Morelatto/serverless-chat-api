@@ -141,7 +141,7 @@ class OpenRouterProvider:
         self.client = AsyncOpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
-            default_headers={"HTTP-Referer": "https://github.com/itau-processo"},
+            default_headers={"HTTP-Referer": "https://github.com/Morelatto/AWSDeployTest"},
         )
         self.model = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
 

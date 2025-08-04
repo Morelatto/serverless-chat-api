@@ -1,1 +1,1 @@
-"""Test suite for ProcessoItauSimple v3"""
+"""Test suite for Serverless Chat API"""

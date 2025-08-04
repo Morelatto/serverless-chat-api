@@ -152,7 +152,7 @@ class TestOpenRouterProvider:
             mock_client_class.assert_called_once_with(
                 api_key="test-api-key",
                 base_url="https://openrouter.ai/api/v1",
-                default_headers={"HTTP-Referer": "https://github.com/itau-processo"},
+                default_headers={"HTTP-Referer": "https://github.com/Morelatto/AWSDeployTest"},
             )
             assert provider.model == "openai/gpt-3.5-turbo"
 

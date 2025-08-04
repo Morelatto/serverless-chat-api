@@ -1,5 +1,5 @@
 variable "project_name" {
-  default = "processo-itau"
+  default = "serverless-chat-api"
 }
 
 variable "environment" {

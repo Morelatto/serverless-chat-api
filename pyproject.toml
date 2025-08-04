@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "chat-api-itau"
+name = "serverless-chat-api"
 version = "3.0.0"
 description = "Microservice for processing prompts with LLM integration"
 readme = "README.md"
