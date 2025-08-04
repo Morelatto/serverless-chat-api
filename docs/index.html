@@ -1415,13 +1415,143 @@
             }
         });
         
-        // Carousel functionality
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.carousel-slide');
-        const dots = document.querySelectorAll('.carousel-dot');
-        const caption = document.querySelector('.carousel-caption');
+        // Enhanced Carousel System with proper isolation
+        class CarouselManager {
+            constructor(containerId, captions) {
+                this.container = document.querySelector(containerId);
+                if (!this.container) return;
+                
+                this.carouselWrapper = this.container.querySelector('.carousel-container');
+                if (!this.carouselWrapper) return;
+                
+                this.slides = this.carouselWrapper.querySelectorAll('.carousel-slide');
+                this.dots = this.carouselWrapper.querySelectorAll('.carousel-dot');
+                this.caption = this.carouselWrapper.querySelector('.carousel-caption');
+                this.captions = captions;
+                this.currentSlide = 0;
+                this.autoAdvanceTimer = null;
+                this.autoAdvanceDelay = 5000;
+                
+                this.init();
+            }
+            
+            init() {
+                if (this.slides.length === 0) return;
+                
+                // Set up controls
+                const prevBtn = this.carouselWrapper.querySelector('.carousel-btn:first-child');
+                const nextBtn = this.carouselWrapper.querySelector('.carousel-btn:last-child');
+                
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.changeSlide(-1);
+                    });
+                }
+                
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.changeSlide(1);
+                    });
+                }
+                
+                // Set up dots
+                this.dots.forEach((dot, index) => {
+                    dot.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.goToSlide(index);
+                    });
+                });
+                
+                // Set up hover pause
+                this.carouselWrapper.addEventListener('mouseenter', () => {
+                    this.stopAutoAdvance();
+                });
+                
+                this.carouselWrapper.addEventListener('mouseleave', () => {
+                    this.startAutoAdvance();
+                });
+                
+                // Initialize display
+                this.updateCarousel();
+                this.startAutoAdvance();
+            }
+            
+            updateCarousel() {
+                this.slides.forEach((slide, index) => {
+                    slide.classList.toggle('active', index === this.currentSlide);
+                });
+                
+                this.dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === this.currentSlide);
+                });
+                
+                if (this.caption && this.captions[this.currentSlide]) {
+                    this.caption.innerHTML = `
+                        <strong>${this.captions[this.currentSlide].title}</strong>
+                        ${this.captions[this.currentSlide].text}
+                    `;
+                }
+            }
+            
+            changeSlide(direction) {
+                this.currentSlide += direction;
+                
+                if (this.currentSlide >= this.slides.length) {
+                    this.currentSlide = 0;
+                } else if (this.currentSlide < 0) {
+                    this.currentSlide = this.slides.length - 1;
+                }
+                
+                this.updateCarousel();
+                this.resetAutoAdvance();
+            }
+            
+            goToSlide(index) {
+                if (index >= 0 && index < this.slides.length) {
+                    this.currentSlide = index;
+                    this.updateCarousel();
+                    this.resetAutoAdvance();
+                }
+            }
+            
+            startAutoAdvance() {
+                if (this.slides.length <= 1) return;
+                this.stopAutoAdvance();
+                this.autoAdvanceTimer = setInterval(() => {
+                    this.changeSlide(1);
+                }, this.autoAdvanceDelay);
+            }
+            
+            stopAutoAdvance() {
+                if (this.autoAdvanceTimer) {
+                    clearInterval(this.autoAdvanceTimer);
+                    this.autoAdvanceTimer = null;
+                }
+            }
+            
+            resetAutoAdvance() {
+                this.stopAutoAdvance();
+                this.startAutoAdvance();
+            }
+            
+            getCurrentSlide() {
+                return this.currentSlide;
+            }
+            
+            getActiveImage() {
+                const activeSlide = this.slides[this.currentSlide];
+                return activeSlide ? activeSlide.querySelector('img') : null;
+            }
+            
+            getCurrentCaption() {
+                return this.captions[this.currentSlide] || null;
+            }
+        }
         
-        const captions = [
+        // Initialize carousels
+        const mainCarousel = new CarouselManager('#arquitetura', [
             {
                 title: 'Figura 1A: MVP - Arquitetura Local',
                 text: 'Implementação inicial com FastAPI e SQLite para desenvolvimento e testes'
@@ -1434,81 +1564,9 @@
                 title: 'Figura 1C: Visão de Componentes',
                 text: 'Detalhamento dos módulos e suas responsabilidades'
             }
-        ];
+        ]);
         
-        function updateCarousel() {
-            slides.forEach((slide, index) => {
-                slide.classList.toggle('active', index === currentSlide);
-            });
-            
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index === currentSlide);
-            });
-            
-            if (caption && captions[currentSlide]) {
-                caption.innerHTML = `
-                    <strong>${captions[currentSlide].title}</strong>
-                    ${captions[currentSlide].text}
-                `;
-            }
-        }
-        
-        function changeSlide(direction) {
-            currentSlide += direction;
-            
-            if (currentSlide >= slides.length) {
-                currentSlide = 0;
-            } else if (currentSlide < 0) {
-                currentSlide = slides.length - 1;
-            }
-            
-            updateCarousel();
-        }
-        
-        function goToSlide(index) {
-            currentSlide = index;
-            updateCarousel();
-        }
-        
-        // Auto-advance carousel every 5 seconds
-        let autoAdvance = setInterval(() => {
-            changeSlide(1);
-        }, 5000);
-        
-        // Pause auto-advance on hover
-        const carouselContainer = document.querySelector('.carousel-container');
-        if (carouselContainer) {
-            carouselContainer.addEventListener('mouseenter', () => {
-                clearInterval(autoAdvance);
-            });
-            
-            carouselContainer.addEventListener('mouseleave', () => {
-                autoAdvance = setInterval(() => {
-                    changeSlide(1);
-                }, 5000);
-            });
-        }
-        
-        // Keyboard navigation for carousel
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                changeSlide(-1);
-                clearInterval(autoAdvance);
-            } else if (e.key === 'ArrowRight') {
-                changeSlide(1);
-                clearInterval(autoAdvance);
-            } else if (e.key === 'Escape') {
-                closeFullscreen();
-            }
-        });
-        
-        // SLI Carousel
-        let currentSLISlide = 0;
-        const sliSlides = document.querySelectorAll('.carousel-container:nth-of-type(2) .carousel-slide');
-        const sliDots = document.querySelectorAll('.carousel-container:nth-of-type(2) .carousel-dot');
-        const sliCaption = document.getElementById('sli-caption');
-        
-        const sliCaptions = [
+        const sliCarousel = new CarouselManager('#observabilidade', [
             {
                 title: 'Figura 4A: SLIs de Performance',
                 text: 'Indicadores técnicos de performance em tempo real'
@@ -1517,49 +1575,9 @@
                 title: 'Figura 4B: SLIs de Negócio',
                 text: 'Métricas de negócio e experiência do usuário'
             }
-        ];
+        ]);
         
-        function updateSLICarousel() {
-            const container = document.querySelector('#observabilidade .carousel-container');
-            if (container) {
-                const slides = container.querySelectorAll('.carousel-slide');
-                const dots = container.querySelectorAll('.carousel-dot');
-                
-                slides.forEach((slide, index) => {
-                    slide.classList.toggle('active', index === currentSLISlide);
-                });
-                
-                dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === currentSLISlide);
-                });
-                
-                if (sliCaption && sliCaptions[currentSLISlide]) {
-                    sliCaption.innerHTML = `
-                        <strong>${sliCaptions[currentSLISlide].title}</strong>
-                        ${sliCaptions[currentSLISlide].text}
-                    `;
-                }
-            }
-        }
-        
-        function changeSLISlide(direction) {
-            currentSLISlide += direction;
-            if (currentSLISlide >= sliCaptions.length) {
-                currentSLISlide = 0;
-            } else if (currentSLISlide < 0) {
-                currentSLISlide = sliCaptions.length - 1;
-            }
-            updateSLICarousel();
-        }
-        
-        function goToSLISlide(index) {
-            currentSLISlide = index;
-            updateSLICarousel();
-        }
-        
-        // Cost/Analytics Carousel
-        let currentCostSlide = 0;
-        const costCaptions = [
+        const costCarousel = new CarouselManager('#resiliencia', [
             {
                 title: 'Figura 6A: Análise de Custos',
                 text: 'Projeção de custos com otimizações aplicadas'
@@ -1568,107 +1586,109 @@
                 title: 'Figura 6B: Pipeline de Analytics',
                 text: 'Arquitetura de processamento e análise de dados'
             }
-        ];
+        ]);
         
-        function updateCostCarousel() {
-            const container = document.querySelector('#resiliencia .carousel-container');
-            if (container) {
-                const slides = container.querySelectorAll('.carousel-slide');
-                const dots = container.querySelectorAll('.carousel-dot');
-                const caption = document.getElementById('cost-caption');
-                
-                slides.forEach((slide, index) => {
-                    slide.classList.toggle('active', index === currentCostSlide);
-                });
-                
-                dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === currentCostSlide);
-                });
-                
-                if (caption && costCaptions[currentCostSlide]) {
-                    caption.innerHTML = `
-                        <strong>${costCaptions[currentCostSlide].title}</strong>
-                        ${costCaptions[currentCostSlide].text}
-                    `;
-                }
-            }
+        // Legacy function mappings for onclick handlers
+        function changeSlide(direction) {
+            if (mainCarousel) mainCarousel.changeSlide(direction);
+        }
+        
+        function goToSlide(index) {
+            if (mainCarousel) mainCarousel.goToSlide(index);
+        }
+        
+        function changeSLISlide(direction) {
+            if (sliCarousel) sliCarousel.changeSlide(direction);
+        }
+        
+        function goToSLISlide(index) {
+            if (sliCarousel) sliCarousel.goToSlide(index);
         }
         
         function changeCostSlide(direction) {
-            currentCostSlide += direction;
-            if (currentCostSlide >= costCaptions.length) {
-                currentCostSlide = 0;
-            } else if (currentCostSlide < 0) {
-                currentCostSlide = costCaptions.length - 1;
-            }
-            updateCostCarousel();
+            if (costCarousel) costCarousel.changeSlide(direction);
         }
         
         function goToCostSlide(index) {
-            currentCostSlide = index;
-            updateCostCarousel();
+            if (costCarousel) costCarousel.goToSlide(index);
         }
         
-        // Fullscreen functionality
+        // Fullscreen functionality with error handling
         function openFullscreen(elementId) {
             const modal = document.getElementById('fullscreenModal');
             const fullscreenImg = document.getElementById('fullscreenImage');
             const fullscreenCap = document.getElementById('fullscreenCaption');
             
-            if (elementId === 'carousel') {
-                // Main carousel
-                const activeSlide = document.querySelector('.carousel-slide.active img');
-                if (activeSlide) {
-                    fullscreenImg.src = activeSlide.src;
-                    fullscreenImg.alt = activeSlide.alt;
-                    const currentCaption = captions[currentSlide];
-                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
-                }
-            } else if (elementId === 'sli-carousel') {
-                // SLI carousel
-                const container = document.querySelector('#observabilidade .carousel-container');
-                const activeSlide = container.querySelector('.carousel-slide.active img');
-                if (activeSlide) {
-                    fullscreenImg.src = activeSlide.src;
-                    fullscreenImg.alt = activeSlide.alt;
-                    const currentCaption = sliCaptions[currentSLISlide];
-                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
-                }
-            } else if (elementId === 'cost-carousel') {
-                // Cost carousel
-                const container = document.querySelector('#resiliencia .carousel-container');
-                const activeSlide = container.querySelector('.carousel-slide.active img');
-                if (activeSlide) {
-                    fullscreenImg.src = activeSlide.src;
-                    fullscreenImg.alt = activeSlide.alt;
-                    const currentCaption = costCaptions[currentCostSlide];
-                    fullscreenCap.innerHTML = `<strong>${currentCaption.title}</strong><br>${currentCaption.text}`;
-                }
-            } else {
-                // Regular diagram
-                const img = document.getElementById(elementId);
-                if (img) {
-                    fullscreenImg.src = img.src;
-                    fullscreenImg.alt = img.alt;
-                    const container = img.closest('.diagram-container');
-                    const caption = container.querySelector('.diagram-caption');
-                    fullscreenCap.innerHTML = caption ? caption.innerHTML : '';
-                }
-            }
+            if (!modal || !fullscreenImg || !fullscreenCap) return;
             
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            try {
+                if (elementId === 'carousel') {
+                    // Main carousel
+                    const img = mainCarousel ? mainCarousel.getActiveImage() : null;
+                    const caption = mainCarousel ? mainCarousel.getCurrentCaption() : null;
+                    if (img && caption) {
+                        fullscreenImg.src = img.src;
+                        fullscreenImg.alt = img.alt;
+                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
+                    }
+                } else if (elementId === 'sli-carousel') {
+                    // SLI carousel
+                    const img = sliCarousel ? sliCarousel.getActiveImage() : null;
+                    const caption = sliCarousel ? sliCarousel.getCurrentCaption() : null;
+                    if (img && caption) {
+                        fullscreenImg.src = img.src;
+                        fullscreenImg.alt = img.alt;
+                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
+                    }
+                } else if (elementId === 'cost-carousel') {
+                    // Cost carousel
+                    const img = costCarousel ? costCarousel.getActiveImage() : null;
+                    const caption = costCarousel ? costCarousel.getCurrentCaption() : null;
+                    if (img && caption) {
+                        fullscreenImg.src = img.src;
+                        fullscreenImg.alt = img.alt;
+                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
+                    }
+                } else {
+                    // Regular diagram
+                    const img = document.getElementById(elementId);
+                    if (img) {
+                        fullscreenImg.src = img.src;
+                        fullscreenImg.alt = img.alt;
+                        const container = img.closest('.diagram-container');
+                        const caption = container ? container.querySelector('.diagram-caption') : null;
+                        fullscreenCap.innerHTML = caption ? caption.innerHTML : '';
+                    }
+                }
+                
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } catch (error) {
+                console.error('Error opening fullscreen:', error);
+            }
         }
         
         function closeFullscreen() {
             const modal = document.getElementById('fullscreenModal');
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
         }
         
         // Close fullscreen on modal click
-        document.getElementById('fullscreenModal').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget || e.target.classList.contains('fullscreen-content')) {
+        const fullscreenModal = document.getElementById('fullscreenModal');
+        if (fullscreenModal) {
+            fullscreenModal.addEventListener('click', (e) => {
+                if (e.target === e.currentTarget || e.target.classList.contains('fullscreen-content')) {
+                    closeFullscreen();
+                }
+            });
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 closeFullscreen();
             }
         });
