@@ -61,7 +61,7 @@ class DatabaseInterface:
         import boto3
 
         self.dynamodb = boto3.resource("dynamodb")
-        self.table = self.dynamodb.Table(os.getenv("DYNAMODB_TABLE", "chat-interactions"))
+        self.table = self.dynamodb.Table(os.getenv("TABLE_NAME", os.getenv("DYNAMODB_TABLE", "chat-interactions")))
         logger.info("DynamoDB initialized")
 
     async def save_interaction(
