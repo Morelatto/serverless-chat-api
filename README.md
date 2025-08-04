@@ -69,6 +69,38 @@ Retorna status, versão e timestamp.
 ## Deploy
 
 ### Arquitetura
+
+```mermaid
+graph TB
+    %% Estilo minimalista monocromático
+    classDef node fill:#fff,stroke:#374151,stroke-width:2px,color:#374151
+    classDef focus fill:#374151,stroke:#374151,stroke-width:2px,color:#fff
+    classDef external fill:#fff,stroke:#374151,stroke-width:2px,stroke-dasharray:5 5,color:#374151
+    
+    %% Arquitetura
+    Client(Cliente):::node
+    Gateway(API Gateway):::node
+    Lambda(Lambda Function):::focus
+    DB[(DynamoDB)]:::node
+    LLM(LLM Providers<br/>━━━━━<br/>Gemini & OpenRouter):::external
+    
+    %% Conexões
+    Client --> Gateway
+    Gateway --> Lambda
+    Lambda --> DB
+    Lambda --> LLM
+    
+    %% Contexto AWS
+    subgraph cloud[AWS Cloud]
+        Gateway
+        Lambda
+        DB
+    end
+    
+    style cloud fill:#f9fafb,stroke:#d1d5db,stroke-width:1px
+```
+
+### Componentes
 - **Lambda com Container Images**: Supera limite de 250MB das layers tradicionais
 - **ECR**: Armazenamento de imagens Docker (até 10GB)
 - **DynamoDB**: Persistência serverless com Global Secondary Index
@@ -107,7 +139,7 @@ Push para `main` executa:
 
 ### Estrutura do Projeto
 ```
-ProcessoItauSimple-v3/
+serverless-chat-api/
 ├── src/                    # Código fonte
 │   ├── main.py            # FastAPI app com Mangum handler
 │   ├── routes/            # Endpoints da API
