@@ -130,7 +130,7 @@ class TestOpenRouterProvider:
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
             mock_response.choices[0].message.content = "OpenRouter response"
-            mock_response.model = "openai/gpt-3.5-turbo"
+            mock_response.model = "google/gemini-2.5-flash"
             mock_response.usage = MagicMock()
             mock_response.usage.total_tokens = 150
 
@@ -154,7 +154,7 @@ class TestOpenRouterProvider:
                 base_url="https://openrouter.ai/api/v1",
                 default_headers={"HTTP-Referer": "https://github.com/Morelatto/AWSDeployTest"},
             )
-            assert provider.model == "openai/gpt-3.5-turbo"
+            assert provider.model == "google/gemini-2.5-flash"
 
     def test_openrouter_custom_model(self):
         """Test OpenRouter with custom model from env."""
@@ -174,12 +174,12 @@ class TestOpenRouterProvider:
         result = await provider.generate("Test prompt")
 
         assert result["response"] == "OpenRouter response"
-        assert result["model"] == "openai/gpt-3.5-turbo"
+        assert result["model"] == "google/gemini-2.5-flash"
         assert result["tokens"] == 150
 
         # Verify API call
         mock_openai.chat.completions.create.assert_called_with(
-            model="openai/gpt-3.5-turbo",
+            model="google/gemini-2.5-flash",
             messages=[{"role": "user", "content": "Test prompt"}],
             temperature=0.7,
             max_tokens=1000,
