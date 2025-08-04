@@ -67,6 +67,13 @@ jobs:
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
+          # Determine LLM provider based on available keys
+          if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
+            LLM_PROVIDER="openrouter"
+          else
+            LLM_PROVIDER="gemini"
+          fi
+          
           # First apply only ECR and supporting infrastructure (not Lambda)
           terraform apply -auto-approve \
             -target=aws_ecr_repository.lambda \
@@ -74,8 +81,9 @@ jobs:
             -target=aws_iam_role_policy_attachment.lambda_logs \
             -target=aws_iam_role_policy.lambda_dynamodb \
             -target=aws_dynamodb_table.main \
+            -var="llm_provider=$LLM_PROVIDER" \
             -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
-            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || '' }}" \
+            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || 'dummy-key' }}" \
             -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
       
       - name: Login to Amazon ECR
@@ -98,10 +106,18 @@ jobs:
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
+          # Determine LLM provider based on available keys
+          if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
+            LLM_PROVIDER="openrouter"
+          else
+            LLM_PROVIDER="gemini"
+          fi
+          
           # Now apply Lambda function and URL
           terraform apply -auto-approve \
+            -var="llm_provider=$LLM_PROVIDER" \
             -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
-            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || '' }}" \
+            -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || 'dummy-key' }}" \
             -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
       
       - name: Update Lambda function
