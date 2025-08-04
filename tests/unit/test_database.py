@@ -28,14 +28,14 @@ class TestDatabaseSQLite:
         # Cleanup
         try:
             os.unlink(db_path)
-        except:
+        except:  # noqa: E722
             pass
         finally:
             if "DATABASE_PATH" in os.environ:
                 del os.environ["DATABASE_PATH"]
 
     @pytest.fixture
-    def db_interface(self, temp_db):
+    def db_interface(self, temp_db):  # noqa: ARG002
         """Create a DatabaseInterface instance with SQLite."""
         # Ensure we're not in production mode
         if "AWS_LAMBDA_FUNCTION_NAME" in os.environ:
@@ -43,7 +43,7 @@ class TestDatabaseSQLite:
 
         return DatabaseInterface()
 
-    def test_sqlite_initialization(self, db_interface, temp_db):
+    def test_sqlite_initialization(self, db_interface, temp_db):  # noqa: ARG002
         """Test SQLite database initialization."""
         assert db_interface.is_production is False
         assert db_interface.conn is not None
@@ -217,7 +217,7 @@ class TestDatabaseSQLite:
         # Close the connection to simulate failure
         db_interface.conn.close()
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await db_interface.health_check()
 
     @pytest.mark.asyncio
@@ -268,7 +268,7 @@ class TestDatabaseDynamoDB:
         os.environ["AWS_LAMBDA_FUNCTION_NAME"] = "test-function"
 
         # Mock the boto3 import that happens inside _init_dynamodb
-        with patch.object(DatabaseInterface, "_init_dynamodb") as mock_init:
+        with patch.object(DatabaseInterface, "_init_dynamodb"):  # noqa: F841
             db = DatabaseInterface()
             # Manually set the attributes that _init_dynamodb would set
             db.dynamodb = MagicMock()
@@ -279,7 +279,7 @@ class TestDatabaseDynamoDB:
 
         return db
 
-    def test_dynamodb_initialization(self, db_interface_prod, mock_dynamodb):
+    def test_dynamodb_initialization(self, db_interface_prod, mock_dynamodb):  # noqa: ARG002
         """Test DynamoDB initialization."""
         assert db_interface_prod.is_production is True
         assert hasattr(db_interface_prod, "table")
@@ -362,7 +362,7 @@ class TestDatabaseDynamoDB:
         assert call_args["Limit"] == 5
 
     @pytest.mark.asyncio
-    async def test_health_check_dynamodb_success(self, db_interface_prod, mock_dynamodb):
+    async def test_health_check_dynamodb_success(self, db_interface_prod, mock_dynamodb):  # noqa: ARG002
         """Test DynamoDB health check success."""
         result = await db_interface_prod.health_check()
         assert result is True

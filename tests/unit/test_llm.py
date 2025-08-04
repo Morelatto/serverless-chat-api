@@ -237,13 +237,13 @@ class TestLLMProviderFactory:
             elif var in os.environ:
                 del os.environ[var]
 
-    def test_factory_with_no_keys(self, clean_env):
+    def test_factory_with_no_keys(self, clean_env):  # noqa: ARG002
         """Test factory initialization with no API keys."""
         factory = LLMProviderFactory()
 
         assert len(factory.providers) == 0
 
-    def test_factory_with_gemini_key(self, clean_env):
+    def test_factory_with_gemini_key(self, clean_env):  # noqa: ARG002
         """Test factory initialization with Gemini key."""
         os.environ["GEMINI_API_KEY"] = "test-gemini-key"  # pragma: allowlist secret
 
@@ -255,7 +255,7 @@ class TestLLMProviderFactory:
             assert "gemini" in factory.providers
             mock_gemini_class.assert_called_once_with("test-gemini-key")
 
-    def test_factory_with_openrouter_key(self, clean_env):
+    def test_factory_with_openrouter_key(self, clean_env):  # noqa: ARG002
         """Test factory initialization with OpenRouter key."""
         os.environ["OPENROUTER_API_KEY"] = "test-openrouter-key"  # pragma: allowlist secret
 
@@ -267,7 +267,7 @@ class TestLLMProviderFactory:
             assert "openrouter" in factory.providers
             mock_or_class.assert_called_once_with("test-openrouter-key")
 
-    def test_factory_with_multiple_keys(self, clean_env):
+    def test_factory_with_multiple_keys(self, clean_env):  # noqa: ARG002
         """Test factory with multiple provider keys."""
         os.environ["GEMINI_API_KEY"] = "test-gemini-key"  # pragma: allowlist secret
         os.environ["OPENROUTER_API_KEY"] = "test-openrouter-key"  # pragma: allowlist secret
@@ -278,14 +278,14 @@ class TestLLMProviderFactory:
             assert "gemini" in factory.providers
             assert "openrouter" in factory.providers
 
-    def test_factory_primary_provider_setting(self, clean_env):
+    def test_factory_primary_provider_setting(self, clean_env):  # noqa: ARG002
         """Test setting primary provider via environment."""
         os.environ["LLM_PROVIDER"] = "openrouter"
 
         factory = LLMProviderFactory()
         assert factory.primary_provider == "openrouter"
 
-    def test_factory_fallback_setting(self, clean_env):
+    def test_factory_fallback_setting(self, clean_env):  # noqa: ARG002
         """Test fallback enable/disable via environment."""
         # Default is true
         factory = LLMProviderFactory()
@@ -297,7 +297,7 @@ class TestLLMProviderFactory:
         assert factory.fallback_enabled is False
 
     @pytest.mark.asyncio
-    async def test_generate_with_primary_success(self, clean_env):
+    async def test_generate_with_primary_success(self, clean_env):  # noqa: ARG002
         """Test generate with successful primary provider."""
         factory = LLMProviderFactory()
 
@@ -318,7 +318,7 @@ class TestLLMProviderFactory:
         mock_provider.generate.assert_called_once_with("Test prompt")
 
     @pytest.mark.asyncio
-    async def test_generate_with_fallback(self, clean_env):
+    async def test_generate_with_fallback(self, clean_env):  # noqa: ARG002
         """Test generate with primary failure and fallback."""
         factory = LLMProviderFactory()
 
@@ -347,7 +347,7 @@ class TestLLMProviderFactory:
         fallback_provider.generate.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_no_fallback(self, clean_env):
+    async def test_generate_no_fallback(self, clean_env):  # noqa: ARG002
         """Test generate with fallback disabled."""
         factory = LLMProviderFactory()
         factory.fallback_enabled = False
@@ -362,7 +362,7 @@ class TestLLMProviderFactory:
             await factory.generate("Test prompt")
 
     @pytest.mark.asyncio
-    async def test_generate_all_providers_fail(self, clean_env):
+    async def test_generate_all_providers_fail(self, clean_env):  # noqa: ARG002
         """Test when all providers fail."""
         factory = LLMProviderFactory()
 
@@ -380,7 +380,7 @@ class TestLLMProviderFactory:
             await factory.generate("Test prompt")
 
     @pytest.mark.asyncio
-    async def test_health_check_success(self, clean_env):
+    async def test_health_check_success(self, clean_env):  # noqa: ARG002
         """Test health check with at least one healthy provider."""
         factory = LLMProviderFactory()
 
@@ -396,7 +396,7 @@ class TestLLMProviderFactory:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_health_check_all_fail(self, clean_env):
+    async def test_health_check_all_fail(self, clean_env):  # noqa: ARG002
         """Test health check when all providers are unhealthy."""
         factory = LLMProviderFactory()
 

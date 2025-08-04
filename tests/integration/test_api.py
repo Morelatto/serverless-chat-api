@@ -86,7 +86,7 @@ class TestChatEndpoint:
         assert call_args["user_id"] == "user123"
         assert call_args["prompt"] == "Test prompt"
 
-    def test_should_accept_optional_parameters(self, client, mock_dependencies):
+    def test_should_accept_optional_parameters(self, client, mock_dependencies):  # noqa: ARG002
         """Chat endpoint should accept optional parameters."""
         request_data = {"prompt": "Test prompt", "userId": "user123"}
 
@@ -192,7 +192,7 @@ class TestChatEndpoint:
         # FastAPI automatically handles OPTIONS for CORS
         assert response.status_code in [200, 405]
 
-    def test_should_handle_multiple_requests_within_rate_limit(self, client, mock_dependencies):
+    def test_should_handle_multiple_requests_within_rate_limit(self, client, mock_dependencies):  # noqa: ARG002
         """API should handle multiple requests within rate limit."""
         # This would require actual rate limiting middleware
         # For now, just test that multiple requests work
@@ -214,7 +214,7 @@ class TestChatEndpoint:
         call_args = mock_dependencies.process_prompt.call_args[1]
         assert "trace_id" in call_args
 
-    def test_should_handle_concurrent_requests(self, client, mock_dependencies):
+    def test_should_handle_concurrent_requests(self, client, mock_dependencies):  # noqa: ARG002
         """API should handle concurrent requests correctly."""
         import threading
 

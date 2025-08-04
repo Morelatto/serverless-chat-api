@@ -12,8 +12,6 @@ PYTHON = python
 PIP = pip
 DOCKER = docker
 DOCKER_COMPOSE = docker-compose
-RUFF = ruff
-MYPY = mypy
 
 # Docker
 DOCKER_IMAGE = $(PROJECT_NAME):latest
@@ -69,21 +67,13 @@ test-unit: ## Run unit tests only
 test-integration: ## Run integration tests only
 	@pytest tests/integration/ -v
 
-# Code quality
-.PHONY: lint lint-fix typecheck check pre-commit
-lint: ## Run linter (check only)
-	@$(RUFF) check $(SRC_DIR)/ tests/
-
-lint-fix: ## Run linter with auto-fix
-	@$(RUFF) check $(SRC_DIR)/ tests/ --fix
-
-typecheck: ## Run type checker
-	@$(MYPY) $(SRC_DIR)/ --strict
-
-check: lint typecheck ## Run all code quality checks
-
-pre-commit: ## Run pre-commit hooks on all files
+# Code quality (use pre-commit for linting/formatting/type checking)
+.PHONY: check pre-commit-install
+check: ## Run all pre-commit hooks (lint, format, typecheck, etc.)
 	@PIP_USER=false pre-commit run --all-files
+
+pre-commit-install: ## Install pre-commit hooks
+	@pre-commit install
 
 # Docker
 .PHONY: docker-build docker docker-down docker-logs docker-clean
@@ -105,9 +95,8 @@ docker-clean: docker-down ## Clean Docker volumes
 	@rm -rf $(DATA_DIR)/
 
 # Compound targets
-.PHONY: dev all-tests full-clean test-cov
-dev: setup install-dev ## Complete dev setup
-all-tests: test ## Run all tests
+.PHONY: dev full-clean test-cov
+dev: setup install-dev pre-commit-install ## Complete dev setup with pre-commit
 test-cov: ## Run tests with coverage
 	@pytest tests/ --cov=src --cov-report=term-missing
 full-clean: clean docker-clean ## Complete cleanup

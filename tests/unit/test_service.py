@@ -111,19 +111,19 @@ class TestCircuitBreaker:
             raise Exception("Test failure")
 
         # First failure
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await cb.call(failing_func)
         assert cb.failure_count == 1
         assert cb.state == CircuitState.CLOSED
 
         # Second failure
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await cb.call(failing_func)
         assert cb.failure_count == 2
         assert cb.state == CircuitState.CLOSED
 
         # Third failure - should open circuit
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await cb.call(failing_func)
         assert cb.failure_count == 3
         assert cb.state == CircuitState.OPEN
@@ -137,7 +137,7 @@ class TestCircuitBreaker:
             raise Exception("Test failure")
 
         # Open the circuit
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await cb.call(failing_func)
         assert cb.state == CircuitState.OPEN
 
@@ -159,7 +159,7 @@ class TestCircuitBreaker:
             return "success"
 
         # Open the circuit
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await cb.call(failing_func)
         assert cb.state == CircuitState.OPEN
 
@@ -211,7 +211,7 @@ class TestChatService:
             yield {"db": mock_db_instance, "llm": mock_llm_instance, "settings": mock_settings}
 
     @pytest.mark.asyncio
-    async def test_service_initialization(self, mock_dependencies):
+    async def test_service_initialization(self, mock_dependencies):  # noqa: ARG002
         """Test ChatService initializes correctly."""
         service = ChatService()
 
@@ -341,11 +341,11 @@ class TestChatService:
         mock_dependencies["llm"].generate.side_effect = Exception("LLM Error")
 
         # First failure
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await service.process_prompt("user123", "prompt1", "trace1")
 
         # Second failure - should open circuit
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await service.process_prompt("user123", "prompt2", "trace2")
 
         # Third call should be rejected by circuit breaker

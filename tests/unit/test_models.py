@@ -22,7 +22,7 @@ class TestChatRequest:
 
     def test_should_reject_userid_with_special_characters(self):
         """Should reject userId containing special characters."""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError):
             ChatRequest(prompt="Test prompt", userId="user@123")
 
     def test_should_reject_empty_prompt(self):
