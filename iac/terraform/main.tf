@@ -3,7 +3,7 @@ terraform {
   
   backend "s3" {
     bucket         = "serverless-chat-api-terraform-state"
-    key            = "terraform.tfstate"
+    key            = "container/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
@@ -13,10 +13,6 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
-    }
-    archive = {
-      source  = "hashicorp/archive"
-      version = "~> 2.4"
     }
   }
 }
@@ -32,69 +28,16 @@ provider "aws" {
   }
 }
 
-# Create Lambda deployment package directly from source
-data "archive_file" "lambda_package" {
-  type        = "zip"
-  source_dir  = "${path.module}/../../src"
-  output_path = "${path.module}/lambda_function.zip"
+# ECR repository for Lambda container
+resource "aws_ecr_repository" "lambda" {
+  name                 = "${var.project_name}-${var.environment}"
+  image_tag_mutability = "MUTABLE"
   
-  excludes = [
-    "__pycache__",
-    "*.pyc",
-    ".pytest_cache",
-    "*.egg-info",
-    ".env",
-    "tests",
-  ]
-}
-
-# Create a Lambda layer for dependencies
-# The layer directory should be created by CI/CD or locally before running Terraform
-# This resource is optional and only runs if the layer directory doesn't exist
-resource "null_resource" "lambda_layer" {
-  count = 0  # Disabled - layer should be built before Terraform runs
-  
-  triggers = {
-    pyproject = fileexists("${path.module}/../../pyproject.toml") ? filemd5("${path.module}/../../pyproject.toml") : "default"
+  image_scanning_configuration {
+    scan_on_push = true
   }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      cd ${path.module}/../..
-      
-      # Install the package to get all dependencies
-      pip install -e . --quiet
-      
-      # Export dependencies (excluding dev and the package itself)
-      pip freeze | grep -v "^-e" | grep -v "uvicorn" > /tmp/lambda-deps.txt
-      
-      # Build layer
-      cd ${path.module}
-      rm -rf layer
-      mkdir -p layer/python
-      
-      # Install dependencies for Lambda
-      pip install -r /tmp/lambda-deps.txt \
-        -t layer/python \
-        --platform manylinux2014_x86_64 \
-        --only-binary=:all: \
-        --upgrade \
-        --quiet
-      
-      # Clean up
-      rm /tmp/lambda-deps.txt
-      find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
-      find layer -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
-    EOT
-  }
-}
-
-data "archive_file" "lambda_layer" {
-  type        = "zip"
-  source_dir  = "${path.module}/layer"
-  output_path = "${path.module}/lambda_layer.zip"
   
-  depends_on = [null_resource.lambda_layer]
+  force_delete = true
 }
 
 # IAM role for Lambda
@@ -142,52 +85,44 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   })
 }
 
-# Lambda layer for dependencies
-resource "aws_lambda_layer_version" "dependencies" {
-  filename            = data.archive_file.lambda_layer.output_path
-  layer_name          = "${var.project_name}-deps-${var.environment}"
-  source_code_hash    = data.archive_file.lambda_layer.output_base64sha256
-  compatible_runtimes = ["python3.11"]
-  
-  description = "Dependencies for ${var.project_name}"
-}
-
-# Lambda function using the existing Mangum handler in main.py
+# Lambda function using container image
 resource "aws_lambda_function" "api" {
-  filename         = data.archive_file.lambda_package.output_path
-  function_name    = "${var.project_name}-${var.environment}"
-  role             = aws_iam_role.lambda.arn
-  handler          = "main.handler"  # Uses the existing handler in src/main.py
-  source_code_hash = data.archive_file.lambda_package.output_base64sha256
-  runtime          = "python3.11"
-  memory_size      = var.lambda_memory_size
-  timeout          = var.lambda_timeout
+  function_name = "${var.project_name}-${var.environment}"
+  role          = aws_iam_role.lambda.arn
   
-  layers = [aws_lambda_layer_version.dependencies.arn]
+  # Container image configuration
+  package_type = "Image"
+  image_uri    = "${aws_ecr_repository.lambda.repository_url}:latest"
+  
+  memory_size = var.lambda_memory_size
+  timeout     = var.lambda_timeout
 
   environment {
     variables = {
       # Application settings
-      ENVIRONMENT      = var.environment
-      AWS_LAMBDA_FUNCTION_NAME = "true"  # This tells the app it's running in Lambda
+      ENVIRONMENT = var.environment
       
       # Database configuration  
-      DATABASE_TYPE    = "dynamodb"
-      TABLE_NAME       = aws_dynamodb_table.main.name
+      DATABASE_TYPE = "dynamodb"
+      TABLE_NAME    = aws_dynamodb_table.main.name
       
       # LLM configuration
-      LLM_PROVIDER     = var.llm_provider
-      GEMINI_API_KEY   = var.gemini_api_key
+      LLM_PROVIDER       = var.llm_provider
+      GEMINI_API_KEY     = var.gemini_api_key
       OPENROUTER_API_KEY = var.openrouter_api_key
       
       # Security
-      REQUIRE_API_KEY  = var.require_api_key ? "true" : "false"
-      API_KEY          = var.api_key
+      REQUIRE_API_KEY = var.require_api_key ? "true" : "false"
+      API_KEY         = var.api_key
       
       # Logging
-      LOG_LEVEL        = var.log_level
+      LOG_LEVEL = var.log_level
     }
   }
+  
+  depends_on = [
+    aws_ecr_repository.lambda
+  ]
 }
 
 # Lambda Function URL
@@ -197,7 +132,7 @@ resource "aws_lambda_function_url" "api" {
 
   cors {
     allow_origins = var.cors_origins
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_methods = ["*"]
     allow_headers = ["*"]
     max_age       = 3600
   }
@@ -214,7 +149,6 @@ resource "aws_dynamodb_table" "main" {
     type = "S"
   }
   
-  # Optional: Add user_id as a global secondary index for querying by user
   attribute {
     name = "user_id"
     type = "S"
@@ -246,44 +180,40 @@ resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
   retention_in_days = var.log_retention_days
   
-  kms_key_id = var.kms_key_id  # Optional: encrypt logs with KMS
+  kms_key_id = var.kms_key_id
 }
 
-# Optional: CloudWatch Alarms
-resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
-  count = var.enable_monitoring ? 1 : 0
-  
-  alarm_name          = "${var.project_name}-${var.environment}-errors"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "Errors"
-  namespace           = "AWS/Lambda"
-  period              = "60"
-  statistic           = "Sum"
-  threshold           = "5"
-  alarm_description   = "This metric monitors lambda errors"
-  treat_missing_data  = "notBreaching"
-
-  dimensions = {
-    FunctionName = aws_lambda_function.api.function_name
-  }
+# Outputs
+output "ecr_repository_url" {
+  description = "ECR repository URL"
+  value       = aws_ecr_repository.lambda.repository_url
 }
 
-resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
-  count = var.enable_monitoring ? 1 : 0
-  
-  alarm_name          = "${var.project_name}-${var.environment}-throttles"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "Throttles"
-  namespace           = "AWS/Lambda"
-  period              = "60"
-  statistic           = "Sum"
-  threshold           = "5"
-  alarm_description   = "This metric monitors lambda throttles"
-  treat_missing_data  = "notBreaching"
+output "lambda_function_url" {
+  description = "Lambda Function URL"
+  value       = aws_lambda_function_url.api.function_url
+}
 
-  dimensions = {
-    FunctionName = aws_lambda_function.api.function_name
-  }
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = aws_lambda_function.api.function_name
+}
+
+output "dynamodb_table_name" {
+  description = "DynamoDB table name"
+  value       = aws_dynamodb_table.main.name
+}
+
+output "deployment_commands" {
+  description = "Commands to deploy the container"
+  value = <<-EOT
+    # Build and push Docker image:
+    aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.lambda.repository_url}
+    docker build --build-arg TARGET=lambda -t ${var.project_name} ../..
+    docker tag ${var.project_name}:latest ${aws_ecr_repository.lambda.repository_url}:latest
+    docker push ${aws_ecr_repository.lambda.repository_url}:latest
+    
+    # Update Lambda function:
+    aws lambda update-function-code --function-name ${aws_lambda_function.api.function_name} --image-uri ${aws_ecr_repository.lambda.repository_url}:latest
+  EOT
 }

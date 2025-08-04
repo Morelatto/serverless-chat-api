@@ -1,0 +1,7 @@
+# Terraform
+*.tfvars
+!terraform.tfvars.example
+cleanup-all.sh
+*.tfstate*
+.terraform/
+.terraform.lock.hcl

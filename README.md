@@ -2,205 +2,87 @@
 
 [![CI](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-API serverless pronta para produção com suporte a múltiplos LLMs, otimizada para AWS Lambda.
+API serverless multi-LLM otimizada para AWS Lambda com fallback automático, circuit breakers e 95%+ cobertura de testes.
 
-## 🎯 Principais Funcionalidades
-
-- **Suporte Multi-LLM** - Gemini, OpenRouter com fallback automático
-- **Serverless** - Otimizada para AWS Lambda/API Gateway
-- **Nível Empresarial** - Circuit breakers, rate limiting, rastreamento distribuído
-- **Banco de Dados Flexível** - SQLite (desenvolvimento), DynamoDB (produção)
-- **Totalmente Testada** - 95%+ de cobertura, testes E2E, carga e resiliência
-
-## 🚀 Início Rápido
-
-### Desenvolvimento Local
+## Início Rápido
 
 ```bash
-# Clonar e configurar
+# Setup
 git clone https://github.com/Morelatto/AWSDeployTest.git
-cd AWSDeployTest
-make setup
+cd AWSDeployTest && make dev
+cp .env.example .env  # Configure suas API keys
 
-# Configurar ambiente
-cp .env.example .env
-# Edite o .env com suas chaves de API
+# Executar
+python -m src.main     # Local
+make docker-env        # Docker
 
-# Executar localmente
-make run
-# ou com Docker
-make docker
-```
-
-### Testar a API
-
-```bash
-# Verificação de saúde
-curl http://localhost:8000/v1/health
-
-# Enviar requisição de chat
-curl -X POST http://localhost:8000/v1/chat \
+# Testar
+curl localhost:8000/v1/health
+curl -X POST localhost:8000/v1/chat \
   -H "Content-Type: application/json" \
-  -d '{"userId": "user123", "prompt": "Olá, mundo!"}'
+  -d '{"userId": "user123", "prompt": "Olá!"}'
 ```
 
-## 📦 Instalação
+## Configuração
 
-### Usando pip
-```bash
-pip install -e .
-```
+### Essencial
+- `GEMINI_API_KEY` - **Obrigatório**
+- `OPENROUTER_API_KEY` - Opcional (fallback)
+- `LLM_PROVIDER` - `gemini` | `openrouter` | `mock`
 
-### Usando uv (recomendado)
-```bash
-uv pip install -e .
-```
+### Avançado
+- `DATABASE_PATH` - SQLite local (default: `chat_history.db`)
+- `DYNAMODB_TABLE` - Produção (default: `chat-interactions`)
+- `REQUIRE_API_KEY` + `API_KEYS` - Autenticação
+- `RATE_LIMIT_PER_MINUTE` - Default: 60
 
-### Usando Docker
-```bash
-docker build -t serverless-chat-api .
-docker run -p 8000:8000 --env-file .env serverless-chat-api
-```
+## API
 
-## 🏗️ Arquitetura
+**Documentação interativa disponível em `/docs` (Swagger) e `/redoc`**
 
-```mermaid
-graph TB
-    %% Estilo minimalista monocromático
-    classDef node fill:#fff,stroke:#374151,stroke-width:2px,color:#374151
-    classDef focus fill:#374151,stroke:#374151,stroke-width:2px,color:#fff
-    classDef external fill:#fff,stroke:#374151,stroke-width:2px,stroke-dasharray:5 5,color:#374151
-    
-    %% Arquitetura
-    Client(Cliente):::node
-    Gateway(API Gateway):::node
-    Lambda(Lambda Function):::focus
-    DB[(DynamoDB)]:::node
-    LLM(LLM Providers<br/>━━━━━<br/>Gemini & OpenRouter):::external
-    
-    %% Conexões
-    Client --> Gateway
-    Gateway --> Lambda
-    Lambda --> DB
-    Lambda --> LLM
-    
-    %% Contexto AWS
-    subgraph cloud[AWS Cloud]
-        Gateway
-        Lambda
-        DB
-    end
-    
-    style cloud fill:#f9fafb,stroke:#d1d5db,stroke-width:1px
-```
-
-## 🛠️ Configuração
-
-### Variáveis de Ambiente
-
-| Variável | Descrição | Padrão | Obrigatório |
-|----------|-----------|--------|-------------|
-| `GEMINI_API_KEY` | Chave da API do Google Gemini | - | Sim |
-| `OPENROUTER_API_KEY` | Chave da API do OpenRouter | - | Não |
-| `LLM_PROVIDER` | Provedor LLM principal | `gemini` | Não |
-| `DATABASE_TYPE` | Tipo de banco de dados | `sqlite` | Não |
-| `LOG_LEVEL` | Nível de log | `INFO` | Não |
-| `REQUIRE_API_KEY` | Habilitar autenticação por API key | `false` | Não |
-
-### Provedores LLM Suportados
-
-| Provedor | Modelos | Preço | Melhor Para |
-|----------|---------|-------|-------------|
-| **Gemini** | gemini-pro, gemini-flash | Gratuito: 60 RPM | Desenvolvimento, baixo volume |
-| **OpenRouter** | 100+ modelos | Pago por token | Produção, alto volume |
-| **Mock** | Respostas de teste | Gratuito | Testes, CI/CD |
-
-## 🧪 Testes
-
-```bash
-# Executar todos os testes
-make test
-
-# Executar com cobertura
-make test-coverage
-
-# Executar suítes específicas
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/e2e/
-```
-
-## 📊 Performance
-
-- **Latência**: < 200ms p50, < 500ms p99
-- **Taxa de Transferência**: 10.000+ requisições/seg
-- **Disponibilidade**: 99.9% SLA
-- **Custo**: < R$250 por milhão de requisições
-
-## 🚢 Deploy
-
-### AWS Lambda
-
-```bash
-# Deploy para desenvolvimento
-make deploy-dev
-
-# Deploy para produção
-make deploy-prod
-```
-
-### Terraform
-
-```bash
-cd iac/terraform
-terraform init
-terraform apply
-```
-
-### GitHub Actions
-
-Deploy automatizado ao fazer push para a branch `main`. Veja `.github/workflows/deploy.yml`.
-
-## 📖 Documentação da API
-
-### POST /v1/chat
-
-Envia uma mensagem de chat para o LLM.
-
-**Requisição:**
+### `POST /v1/chat`
 ```json
-{
-  "userId": "string",
-  "prompt": "string"
-}
-```
+// Request
+{"userId": "string", "prompt": "string"}
 
-**Resposta:**
-```json
+// Response
 {
   "id": "uuid",
   "userId": "string",
   "prompt": "string",
   "response": "string",
   "model": "string",
-  "timestamp": "2024-01-01T00:00:00Z"
+  "timestamp": "ISO-8601"
 }
 ```
 
-### GET /v1/health
+### `GET /v1/health`
+Retorna status, versão e timestamp.
 
-Endpoint de verificação de saúde.
+## Deploy
 
-**Resposta:**
-```json
-{
-  "status": "healthy",
-  "version": "1.0.0",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
+```bash
+make deploy ENV=dev    # AWS Lambda
+cd iac/terraform && terraform apply    # Terraform
+```
+
+Push para `main` dispara deploy automático via GitHub Actions.
+
+## Performance
+- Latência: < 200ms p50, < 500ms p99
+- Taxa: 10.000+ req/s
+- SLA: 99.9%
+- Custo: < R$250/milhão req
+
+## Desenvolvimento
+
+```bash
+pytest tests/              # Todos os testes
+pytest tests/ --cov=src    # Com cobertura
+make lint                  # Verificação de código
 ```
 
 ## 🤝 Contribuindo
@@ -214,13 +96,3 @@ Endpoint de verificação de saúde.
 ## 📄 Licença
 
 Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-## 🔗 Links
-
-- [Documentação](https://morelatto.github.io/AWSDeployTest/)
-- [Issues](https://github.com/Morelatto/AWSDeployTest/issues)
-- [Discussões](https://github.com/Morelatto/AWSDeployTest/discussions)
-
-## 🙏 Agradecimentos
-
-Construído com FastAPI, AWS Lambda e amor pela arquitetura serverless.

@@ -14,23 +14,27 @@ env:
   PYTHON_VERSION: '3.11'
   TERRAFORM_VERSION: '1.5.0'
   AWS_REGION: 'us-east-1'
+  ECR_REPOSITORY: serverless-chat-api-dev
 
 jobs:
-  deploy-dev:
+  deploy:
     if: github.event_name == 'push' || github.event.inputs.environment == 'dev'
     runs-on: ubuntu-latest
     environment: dev
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+      
       - name: Install and test
         run: |
           pip install -e ".[dev,test]"
           ruff check src/
           pytest tests/ --cov=src --cov-fail-under=70
+      
       - name: Check AWS credentials
         id: check-aws
         run: |
@@ -41,74 +45,81 @@ jobs:
             echo "has_aws=false" >> $GITHUB_OUTPUT
             echo "⚠️ AWS credentials not configured - skipping deployment"
           fi
+      
       - uses: hashicorp/setup-terraform@v3
         if: steps.check-aws.outputs.has_aws == 'true'
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
       - uses: aws-actions/configure-aws-credentials@v4
         if: steps.check-aws.outputs.has_aws == 'true'
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: Build Lambda Layer
-        if: steps.check-aws.outputs.has_aws == 'true'
-        working-directory: iac/terraform
-        run: |
-          # Install the package to get all dependencies
-          cd ../..
-          pip install -e .
-          
-          # Export dependencies (excluding dev and uvicorn)
-          pip freeze | grep -v "^-e" | grep -v "uvicorn" > iac/terraform/requirements-lambda.txt
-          
-          # Build Lambda layer
-          cd iac/terraform
-          rm -rf layer lambda_layer.zip
-          mkdir -p layer/python
-          
-          # Install dependencies for Lambda runtime
-          pip install -r requirements-lambda.txt \
-            -t layer/python \
-            --platform manylinux2014_x86_64 \
-            --implementation cp \
-            --python-version 311 \
-            --only-binary=:all: \
-            --upgrade
-          
-          # Clean up
-          rm requirements-lambda.txt
-          find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
-          find layer -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true
-          find layer -type d -name 'tests' -exec rm -rf {} + 2>/dev/null || true
+      
       - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
-        run: |
-          terraform init -reconfigure
-      - name: Deploy to AWS
+        run: terraform init -reconfigure
+      
+      - name: Terraform Apply
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
-          # Create tfvars file if it doesn't exist
-          if [ ! -f terraform.tfvars.dev ]; then
-            cat > terraform.tfvars.dev <<EOF
-          environment = "dev"
-          EOF
-          fi
-          
-          terraform apply -var-file="terraform.tfvars.dev" \
-            -var="gemini_api_key=${{ secrets.GEMINI_API_KEY }}" \
+          terraform apply -auto-approve \
+            -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
             -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || '' }}" \
-            -var="api_key=${{ secrets.API_KEY || '' }}" \
-            -auto-approve
-          echo "url=$(terraform output -raw lambda_function_url 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
-        id: deploy
-      - name: Health check
-        if: steps.check-aws.outputs.has_aws == 'true' && steps.deploy.outputs.url != ''
+            -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
+      
+      - name: Login to Amazon ECR
+        if: steps.check-aws.outputs.has_aws == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build and push Docker image
+        if: steps.check-aws.outputs.has_aws == 'true'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          sleep 5
-          curl -f "${{ steps.deploy.outputs.url }}v1/health" || echo "Health check failed but continuing"
+          docker build --build-arg TARGET=lambda -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      
+      - name: Update Lambda function
+        if: steps.check-aws.outputs.has_aws == 'true'
+        run: |
+          aws lambda update-function-code \
+            --function-name serverless-chat-api-dev \
+            --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
+            --region ${{ env.AWS_REGION }}
+          
+          # Wait for update to complete
+          aws lambda wait function-updated \
+            --function-name serverless-chat-api-dev \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Get Lambda URL
+        if: steps.check-aws.outputs.has_aws == 'true'
+        id: get-url
+        run: |
+          FUNCTION_URL=$(aws lambda get-function-url-config \
+            --function-name serverless-chat-api-dev \
+            --query 'FunctionUrl' \
+            --output text 2>/dev/null || echo '')
+          echo "function_url=$FUNCTION_URL" >> $GITHUB_OUTPUT
+          if [ -n "$FUNCTION_URL" ]; then
+            echo "🚀 Lambda deployed at: $FUNCTION_URL"
+          fi
+      
+      - name: Test deployment
+        if: steps.check-aws.outputs.has_aws == 'true' && steps.get-url.outputs.function_url != ''
+        run: |
+          sleep 10
+          echo "Testing Lambda at: ${{ steps.get-url.outputs.function_url }}"
+          curl -f "${{ steps.get-url.outputs.function_url }}v1/health" || echo "Health check failed but continuing"
 
   deploy-staging:
     if: github.event.inputs.environment == 'staging'
