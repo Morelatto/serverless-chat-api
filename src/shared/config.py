@@ -25,7 +25,9 @@ class Settings:
         self.OPENROUTER_API_KEY = self._get_secret("OPENROUTER_API_KEY")
         self.OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-pro")
         self.DATABASE_PATH = os.getenv("DATABASE_PATH", "chat_history.db")
-        self.DYNAMODB_TABLE = os.getenv("TABLE_NAME", os.getenv("DYNAMODB_TABLE", "chat-interactions"))
+        self.DYNAMODB_TABLE = os.getenv(
+            "TABLE_NAME", os.getenv("DYNAMODB_TABLE", "chat-interactions")
+        )
         self.RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
         self.ENABLE_CACHE = os.getenv("ENABLE_CACHE", "true").lower() == "true"
         self.CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "3600"))

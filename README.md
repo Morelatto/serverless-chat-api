@@ -5,7 +5,7 @@
 [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-API serverless multi-LLM otimizada para AWS Lambda com fallback automático, circuit breakers e 95%+ cobertura de testes.
+API serverless multi-LLM em container Docker no AWS Lambda, com suporte a OpenRouter/Gemini, DynamoDB e deploy automático via GitHub Actions.
 
 ## Início Rápido
 
@@ -28,15 +28,19 @@ curl -X POST localhost:8000/v1/chat \
 
 ## Configuração
 
-### Essencial
-- `GEMINI_API_KEY` - **Obrigatório**
-- `OPENROUTER_API_KEY` - Opcional (fallback)
-- `LLM_PROVIDER` - `gemini` | `openrouter` | `mock`
+### LLM Providers (Uma das opções abaixo)
+- `OPENROUTER_API_KEY` - Para usar OpenRouter (recomendado)
+- `GEMINI_API_KEY` - Para usar Google Gemini diretamente
+- `LLM_PROVIDER` - `openrouter` | `gemini` | `mock` (auto-detectado)
 
-### Avançado
-- `DATABASE_PATH` - SQLite local (default: `chat_history.db`)
-- `DYNAMODB_TABLE` - Produção (default: `chat-interactions`)
-- `REQUIRE_API_KEY` + `API_KEYS` - Autenticação
+### Database
+- **Local**: SQLite (`DATABASE_PATH` - default: `chat_history.db`)
+- **Produção**: DynamoDB com `interaction_id` como chave primária
+- `TABLE_NAME` ou `DYNAMODB_TABLE` - Nome da tabela DynamoDB
+
+### Segurança
+- `REQUIRE_API_KEY` - Habilitar autenticação (default: `false`)
+- `API_KEY` ou `API_KEYS` - Chaves de API válidas
 - `RATE_LIMIT_PER_MINUTE` - Default: 60
 
 ## API
@@ -50,7 +54,7 @@ curl -X POST localhost:8000/v1/chat \
 
 // Response
 {
-  "id": "uuid",
+  "interaction_id": "uuid",
   "userId": "string",
   "prompt": "string",
   "response": "string",
@@ -64,25 +68,62 @@ Retorna status, versão e timestamp.
 
 ## Deploy
 
+### Arquitetura
+- **Lambda com Container Images**: Supera limite de 250MB das layers tradicionais
+- **ECR**: Armazenamento de imagens Docker (até 10GB)
+- **DynamoDB**: Persistência serverless com Global Secondary Index
+- **GitHub Actions**: CI/CD automático em push para `main`
+
+### Deploy Manual
 ```bash
-make deploy ENV=dev    # AWS Lambda
-cd iac/terraform && terraform apply    # Terraform
+# Via Terraform
+cd iac/terraform
+terraform init
+terraform apply
+
+# Build e push Docker
+aws ecr get-login-password | docker login --username AWS --password-stdin [ECR_URL]
+docker build --build-arg TARGET=lambda -t serverless-chat-api .
+docker tag serverless-chat-api:latest [ECR_URL]:latest
+docker push [ECR_URL]:latest
 ```
 
-Push para `main` dispara deploy automático via GitHub Actions.
+### Deploy Automático
+Push para `main` executa:
+1. Testes e linting
+2. Build da imagem Docker
+3. Push para ECR
+4. Deploy do Lambda via Terraform
+5. Teste de saúde do endpoint
 
 ## Performance
-- Latência: < 200ms p50, < 500ms p99
-- Taxa: 10.000+ req/s
-- SLA: 99.9%
-- Custo: < R$250/milhão req
+- **Latência**: < 200ms p50, < 500ms p99 (cold start ~1-2s com container)
+- **Concorrência**: 1000 execuções simultâneas
+- **Memória**: 512MB configurável
+- **Timeout**: 30s configurável
+- **Custo estimado**: ~$0.20/milhão requisições + ECR storage
 
 ## Desenvolvimento
 
+### Estrutura do Projeto
+```
+ProcessoItauSimple-v3/
+├── src/                    # Código fonte
+│   ├── main.py            # FastAPI app com Mangum handler
+│   ├── routes/            # Endpoints da API
+│   └── shared/            # Config, database, LLM providers
+├── iac/terraform/         # Infraestrutura como código
+├── tests/                 # 98 testes com 91% cobertura
+├── Dockerfile            # Multi-stage para local e Lambda
+└── pyproject.toml        # Dependências e configuração
+```
+
+### Comandos
 ```bash
-pytest tests/              # Todos os testes
-pytest tests/ --cov=src    # Com cobertura
-make lint                  # Verificação de código
+pytest tests/              # Executa todos os 98 testes
+pytest tests/ --cov=src    # Com relatório de cobertura (91%)
+ruff check src/           # Linting e formatação
+make docker-env           # Desenvolvimento local com Docker
 ```
 
 ## 🤝 Contribuindo

@@ -143,7 +143,7 @@ class OpenRouterProvider:
             base_url="https://openrouter.ai/api/v1",
             default_headers={"HTTP-Referer": "https://github.com/Morelatto/AWSDeployTest"},
         )
-        self.model = os.getenv("OPENROUTER_MODEL", "openai/gpt-3.5-turbo")
+        self.model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=2, max=10))
     async def generate(self, prompt: str) -> dict[str, Any]:
