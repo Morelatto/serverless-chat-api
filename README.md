@@ -1,115 +1,131 @@
-# Serverless Chat API
+# API de Chat Serverless
 
 [![CI](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml)
 [![Deploy](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-Production-ready serverless API for LLM chat interactions with multi-provider support, built for AWS Lambda.
+API serverless pronta para produção com suporte a múltiplos LLMs, otimizada para AWS Lambda.
 
-## 🎯 Key Features
+## 🎯 Principais Funcionalidades
 
-- **Multi-LLM Support** - Gemini, OpenRouter with automatic fallback
-- **Serverless Ready** - Optimized for AWS Lambda/API Gateway
-- **Enterprise Grade** - Circuit breakers, rate limiting, distributed tracing
-- **Database Agnostic** - SQLite (dev), DynamoDB (prod)
-- **Fully Tested** - 95%+ coverage, E2E, load and resilience tests
+- **Suporte Multi-LLM** - Gemini, OpenRouter com fallback automático
+- **Serverless** - Otimizada para AWS Lambda/API Gateway
+- **Nível Empresarial** - Circuit breakers, rate limiting, rastreamento distribuído
+- **Banco de Dados Flexível** - SQLite (desenvolvimento), DynamoDB (produção)
+- **Totalmente Testada** - 95%+ de cobertura, testes E2E, carga e resiliência
 
-## 🚀 Quick Start
+## 🚀 Início Rápido
 
-### Local Development
+### Desenvolvimento Local
 
 ```bash
-# Clone and setup
+# Clonar e configurar
 git clone https://github.com/Morelatto/AWSDeployTest.git
 cd AWSDeployTest
 make setup
 
-# Configure environment
+# Configurar ambiente
 cp .env.example .env
-# Edit .env with your API keys
+# Edite o .env com suas chaves de API
 
-# Run locally
+# Executar localmente
 make run
-# or with Docker
+# ou com Docker
 make docker
 ```
 
-### Test the API
+### Testar a API
 
 ```bash
-# Health check
+# Verificação de saúde
 curl http://localhost:8000/v1/health
 
-# Send chat request
+# Enviar requisição de chat
 curl -X POST http://localhost:8000/v1/chat \
   -H "Content-Type: application/json" \
-  -d '{"userId": "user123", "prompt": "Hello, world!"}'
+  -d '{"userId": "user123", "prompt": "Olá, mundo!"}'
 ```
 
-## 📦 Installation
+## 📦 Instalação
 
-### Using pip
+### Usando pip
 ```bash
 pip install -e .
 ```
 
-### Using uv (recommended)
+### Usando uv (recomendado)
 ```bash
 uv pip install -e .
 ```
 
-### Using Docker
+### Usando Docker
 ```bash
 docker build -t serverless-chat-api .
 docker run -p 8000:8000 --env-file .env serverless-chat-api
 ```
 
-## 🏗️ Architecture
+## 🏗️ Arquitetura
 
+```mermaid
+graph LR
+    Cliente[Cliente] --> Gateway[API Gateway]
+    Gateway --> Lambda[AWS Lambda]
+    
+    Lambda --> DynamoDB[(DynamoDB)]
+    Lambda --> Gemini[Gemini API]
+    Lambda --> OpenRouter[OpenRouter API]
+    
+    subgraph AWS
+        Gateway
+        Lambda
+        DynamoDB
+    end
+    
+    subgraph LLM Providers
+        Gemini
+        OpenRouter
+    end
+    
+    style Cliente fill:#e1f5fe
+    style Gateway fill:#fff3e0
+    style Lambda fill:#f3e5f5
+    style DynamoDB fill:#e8f5e9
+    style Gemini fill:#fce4ec
+    style OpenRouter fill:#fce4ec
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│   Client    │────▶│  API Gateway │────▶│   Lambda    │
-└─────────────┘     └──────────────┘     └─────────────┘
-                                                 │
-                    ┌────────────────────────────┼────────────────┐
-                    │                            │                │
-              ┌─────▼────┐            ┌─────────▼──────┐  ┌──────▼──────┐
-              │ DynamoDB │            │  Gemini API    │  │ OpenRouter  │
-              └──────────┘            └────────────────┘  └─────────────┘
-```
 
-## 🛠️ Configuration
+## 🛠️ Configuração
 
-### Environment Variables
+### Variáveis de Ambiente
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `GEMINI_API_KEY` | Google Gemini API key | - | Yes |
-| `OPENROUTER_API_KEY` | OpenRouter API key | - | No |
-| `LLM_PROVIDER` | Primary LLM provider | `gemini` | No |
-| `DATABASE_TYPE` | Database backend | `sqlite` | No |
-| `LOG_LEVEL` | Logging verbosity | `INFO` | No |
-| `REQUIRE_API_KEY` | Enable API key auth | `false` | No |
+| Variável | Descrição | Padrão | Obrigatório |
+|----------|-----------|--------|-------------|
+| `GEMINI_API_KEY` | Chave da API do Google Gemini | - | Sim |
+| `OPENROUTER_API_KEY` | Chave da API do OpenRouter | - | Não |
+| `LLM_PROVIDER` | Provedor LLM principal | `gemini` | Não |
+| `DATABASE_TYPE` | Tipo de banco de dados | `sqlite` | Não |
+| `LOG_LEVEL` | Nível de log | `INFO` | Não |
+| `REQUIRE_API_KEY` | Habilitar autenticação por API key | `false` | Não |
 
-### Supported LLM Providers
+### Provedores LLM Suportados
 
-| Provider | Models | Pricing | Best For |
-|----------|--------|---------|----------|
-| **Gemini** | gemini-pro, gemini-flash | Free tier: 60 RPM | Development, low volume |
-| **OpenRouter** | 100+ models | Pay per token | Production, high volume |
-| **Mock** | Test responses | Free | Testing, CI/CD |
+| Provedor | Modelos | Preço | Melhor Para |
+|----------|---------|-------|-------------|
+| **Gemini** | gemini-pro, gemini-flash | Gratuito: 60 RPM | Desenvolvimento, baixo volume |
+| **OpenRouter** | 100+ modelos | Pago por token | Produção, alto volume |
+| **Mock** | Respostas de teste | Gratuito | Testes, CI/CD |
 
-## 🧪 Testing
+## 🧪 Testes
 
 ```bash
-# Run all tests
+# Executar todos os testes
 make test
 
-# Run with coverage
+# Executar com cobertura
 make test-coverage
 
-# Run specific test suites
+# Executar suítes específicas
 pytest tests/unit/
 pytest tests/integration/
 pytest tests/e2e/
@@ -117,20 +133,20 @@ pytest tests/e2e/
 
 ## 📊 Performance
 
-- **Latency**: < 200ms p50, < 500ms p99
-- **Throughput**: 10,000+ requests/sec
-- **Availability**: 99.9% SLA
-- **Cost**: < $50 per million requests
+- **Latência**: < 200ms p50, < 500ms p99
+- **Taxa de Transferência**: 10.000+ requisições/seg
+- **Disponibilidade**: 99.9% SLA
+- **Custo**: < R$250 por milhão de requisições
 
-## 🚢 Deployment
+## 🚢 Deploy
 
 ### AWS Lambda
 
 ```bash
-# Deploy to development
+# Deploy para desenvolvimento
 make deploy-dev
 
-# Deploy to production
+# Deploy para produção
 make deploy-prod
 ```
 
@@ -144,15 +160,15 @@ terraform apply
 
 ### GitHub Actions
 
-Automated deployment on push to `main` branch. See `.github/workflows/deploy.yml`.
+Deploy automatizado ao fazer push para a branch `main`. Veja `.github/workflows/deploy.yml`.
 
-## 📖 API Documentation
+## 📖 Documentação da API
 
 ### POST /v1/chat
 
-Send a chat message to the LLM.
+Envia uma mensagem de chat para o LLM.
 
-**Request:**
+**Requisição:**
 ```json
 {
   "userId": "string",
@@ -160,7 +176,7 @@ Send a chat message to the LLM.
 }
 ```
 
-**Response:**
+**Resposta:**
 ```json
 {
   "id": "uuid",
@@ -174,9 +190,9 @@ Send a chat message to the LLM.
 
 ### GET /v1/health
 
-Health check endpoint.
+Endpoint de verificação de saúde.
 
-**Response:**
+**Resposta:**
 ```json
 {
   "status": "healthy",
@@ -185,24 +201,24 @@ Health check endpoint.
 }
 ```
 
-## 🤝 Contributing
+## 🤝 Contribuindo
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Faça um fork do repositório
+2. Crie sua branch de feature (`git checkout -b feature/recurso-incrivel`)
+3. Faça commit das suas mudanças (`git commit -m 'Adiciona recurso incrível'`)
+4. Faça push para a branch (`git push origin feature/recurso-incrivel`)
+5. Abra um Pull Request
 
-## 📄 License
+## 📄 Licença
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ## 🔗 Links
 
-- [Documentation](https://morelatto.github.io/AWSDeployTest/)
+- [Documentação](https://morelatto.github.io/AWSDeployTest/)
 - [Issues](https://github.com/Morelatto/AWSDeployTest/issues)
-- [Discussions](https://github.com/Morelatto/AWSDeployTest/discussions)
+- [Discussões](https://github.com/Morelatto/AWSDeployTest/discussions)
 
-## 🙏 Acknowledgments
+## 🙏 Agradecimentos
 
-Built with FastAPI, AWS Lambda, and love for serverless architecture.
+Construído com FastAPI, AWS Lambda e amor pela arquitetura serverless.
