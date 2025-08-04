@@ -55,20 +55,34 @@ jobs:
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
-          # Install dependencies for Lambda layer using pip
+          # Install Lambda dependencies directly from pyproject.toml
           rm -rf layer lambda_layer.zip
           mkdir -p layer/python
-          pip install -r ../../requirements.txt \
+          
+          # Install core dependencies needed for Lambda
+          pip install \
+            fastapi==0.104.1 \
+            mangum==0.17.0 \
+            pydantic==2.5.0 \
+            pydantic-settings==2.1.0 \
+            google-generativeai==0.7.2 \
+            openai==1.3.0 \
+            tenacity==8.2.3 \
+            boto3==1.34.0 \
+            python-dotenv==1.0.0 \
+            httpx==0.25.2 \
             -t layer/python \
             --platform manylinux2014_x86_64 \
             --implementation cp \
             --python-version 311 \
             --only-binary=:all: \
             --upgrade
-          # Clean up unnecessary files
+          
+          # Clean up unnecessary files to reduce layer size
           find layer -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
           find layer -type d -name '*.dist-info' | head -20 | xargs rm -rf 2>/dev/null || true
           find layer -type d -name 'tests' -exec rm -rf {} + 2>/dev/null || true
+          find layer -type f -name '*.pyc' -delete 2>/dev/null || true
       - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform

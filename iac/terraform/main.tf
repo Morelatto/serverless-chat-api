@@ -50,19 +50,31 @@ data "archive_file" "lambda_package" {
 
 # Create a Lambda layer for dependencies
 # In CI/CD, the layer directory is created by the workflow
-# Locally, it can be created using build_layer.sh or the null_resource
+# Locally, it can be created using build_layer.sh
 resource "null_resource" "lambda_layer" {
   count = fileexists("${path.module}/layer/python") ? 0 : 1
   
   triggers = {
-    requirements = filemd5("${path.module}/../../requirements.txt")
+    pyproject = fileexists("${path.module}/../../pyproject.toml") ? filemd5("${path.module}/../../pyproject.toml") : "default"
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       rm -rf ${path.module}/layer
       mkdir -p ${path.module}/layer/python
-      pip install -r ${path.module}/../../requirements.txt \
+      
+      # Install core Lambda dependencies
+      pip install \
+        fastapi==0.104.1 \
+        mangum==0.17.0 \
+        pydantic==2.5.0 \
+        pydantic-settings==2.1.0 \
+        google-generativeai==0.7.2 \
+        openai==1.3.0 \
+        tenacity==8.2.3 \
+        boto3==1.34.0 \
+        python-dotenv==1.0.0 \
+        httpx==0.25.2 \
         -t ${path.module}/layer/python \
         --platform manylinux2014_x86_64 \
         --only-binary=:all: \
