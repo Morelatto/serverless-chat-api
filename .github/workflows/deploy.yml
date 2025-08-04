@@ -46,12 +46,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Terraform Plan
+      - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
           terraform init
-          terraform plan -var-file="terraform.tfvars.dev"
+          terraform workspace select dev || terraform workspace new dev
       - name: Deploy to AWS
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
