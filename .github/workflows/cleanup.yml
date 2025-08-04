@@ -25,15 +25,26 @@ jobs:
       - name: Destroy Terraform Resources
         working-directory: iac/terraform
         run: |
-          terraform init
+          # Create dummy layer directory to avoid errors
+          mkdir -p layer/python
+          touch layer/python/.keep
+          
+          terraform init -reconfigure
+          
+          # Create minimal tfvars for destroy
+          cat > terraform.tfvars.destroy <<EOF
+          environment = "dev"
+          gemini_api_key = "dummy"
+          openrouter_api_key = "dummy"
+          EOF
           
           # Import existing resources first
           echo "Importing existing resources before destruction..."
-          terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || true
-          terraform import aws_dynamodb_table.main serverless-chat-api-dev 2>/dev/null || true
-          terraform import aws_lambda_function.api serverless-chat-api-dev 2>/dev/null || true
-          terraform import aws_lambda_function_url.api serverless-chat-api-dev 2>/dev/null || true
-          terraform import aws_cloudwatch_log_group.lambda /aws/lambda/serverless-chat-api-dev 2>/dev/null || true
+          terraform import -var-file="terraform.tfvars.destroy" aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || true
+          terraform import -var-file="terraform.tfvars.destroy" aws_dynamodb_table.main serverless-chat-api-dev 2>/dev/null || true
+          terraform import -var-file="terraform.tfvars.destroy" aws_lambda_function.api serverless-chat-api-dev 2>/dev/null || true
+          terraform import -var-file="terraform.tfvars.destroy" aws_lambda_function_url.api serverless-chat-api-dev 2>/dev/null || true
+          terraform import -var-file="terraform.tfvars.destroy" aws_cloudwatch_log_group.lambda /aws/lambda/serverless-chat-api-dev 2>/dev/null || true
           
           # Destroy all resources
-          terraform destroy -auto-approve
+          terraform destroy -var-file="terraform.tfvars.destroy" -auto-approve
