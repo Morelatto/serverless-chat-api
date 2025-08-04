@@ -46,33 +46,23 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Terraform Init and Import
+      - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
-          terraform init
-          
-          # Try to import existing resources to avoid conflicts
-          echo "Checking for existing resources..."
-          terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || echo "IAM role doesn't exist or already imported"
-          terraform import aws_dynamodb_table.main serverless-chat-api-dev 2>/dev/null || echo "DynamoDB table doesn't exist or already imported"
-          terraform import aws_lambda_function.api serverless-chat-api-dev 2>/dev/null || echo "Lambda doesn't exist or already imported"
-          terraform import aws_lambda_function_url.api serverless-chat-api-dev 2>/dev/null || echo "Lambda URL doesn't exist or already imported"
-          terraform import aws_cloudwatch_log_group.lambda /aws/lambda/serverless-chat-api-dev 2>/dev/null || echo "Log group doesn't exist or already imported"
-          
+          terraform init -reconfigure
       - name: Deploy to AWS
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: |
-          zip -r lambda_function.zip ../../src/ -x "**/__pycache__/*"
           terraform apply -var-file="terraform.tfvars.dev" -auto-approve
-          echo "url=$(terraform output -raw api_endpoint 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "url=$(terraform output -raw api_url 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
         id: deploy
       - name: Health check
         if: steps.check-aws.outputs.has_aws == 'true' && steps.deploy.outputs.url != ''
         run: |
           sleep 5
-          curl -f "${{ steps.deploy.outputs.url }}/v1/health" || echo "Health check failed but continuing"
+          curl -f "${{ steps.deploy.outputs.url }}v1/health" || echo "Health check failed but continuing"
 
   deploy-staging:
     if: github.event.inputs.environment == 'staging'

@@ -1,5 +1,14 @@
 terraform {
   required_version = ">= 1.0"
+  
+  backend "s3" {
+    bucket         = "serverless-chat-api-terraform-state"
+    key            = "terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -19,19 +28,7 @@ provider "aws" {
   }
 }
 
-# Check if IAM role exists
-data "aws_iam_role" "existing_lambda" {
-  count = var.check_existing_resources ? 1 : 0
-  name  = "${var.project_name}-lambda-${var.environment}"
-}
-
-# Check if DynamoDB table exists
-data "aws_dynamodb_table" "existing_table" {
-  count = var.check_existing_resources ? 1 : 0
-  name  = "${var.project_name}-${var.environment}"
-}
-
-# Import existing or create new IAM role
+# IAM role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda-${var.environment}"
   
