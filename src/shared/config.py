@@ -5,41 +5,90 @@ import os
 from functools import lru_cache
 from typing import Any
 
+from pydantic import Field
+from pydantic_settings import BaseSettings
+
 logger = logging.getLogger(__name__)
 
 
-class Settings:
+class Settings(BaseSettings):
     """Application settings with environment variable support."""
-
-    def __init__(self) -> None:
-        """Initialize settings from environment variables."""
-        self.API_PORT = int(os.getenv("API_PORT", "8000"))
-        self.API_HOST = os.getenv("API_HOST", "0.0.0.0")
-        self.API_KEYS = os.getenv("API_KEY", os.getenv("API_KEYS", "dev-key-123"))
-        self.REQUIRE_API_KEY = os.getenv("REQUIRE_API_KEY", "false").lower() == "true"
-        self.AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-        self.AWS_LAMBDA_FUNCTION_NAME = os.getenv("AWS_LAMBDA_FUNCTION_NAME")
-        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
-        self.LLM_FALLBACK = os.getenv("LLM_FALLBACK", "true")
-        self.GEMINI_API_KEY = self._get_secret("GEMINI_API_KEY")
-        self.OPENROUTER_API_KEY = self._get_secret("OPENROUTER_API_KEY")
-        self.OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-pro")
-        self.DATABASE_PATH = os.getenv("DATABASE_PATH", "chat_history.db")
-        self.DYNAMODB_TABLE = os.getenv(
-            "TABLE_NAME", os.getenv("DYNAMODB_TABLE", "chat-interactions")
-        )
-        self.RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
-        self.ENABLE_CACHE = os.getenv("ENABLE_CACHE", "true").lower() == "true"
-        self.CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
-        self.CIRCUIT_BREAKER_THRESHOLD = int(os.getenv("CIRCUIT_BREAKER_THRESHOLD", "5"))
-        self.CIRCUIT_BREAKER_TIMEOUT = int(os.getenv("CIRCUIT_BREAKER_TIMEOUT", "60"))
-        self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-        self.LOG_FORMAT = os.getenv("LOG_FORMAT", "json")
-        self.ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() == "true"
-        self.ENABLE_TRACING = os.getenv("ENABLE_TRACING", "false").lower() == "true"
-
+    
+    # API Configuration
+    API_PORT: int = Field(default=8000, env="API_PORT")
+    API_HOST: str = Field(default="0.0.0.0", env="API_HOST")
+    API_KEYS: str = Field(default="dev-key-123", env=["API_KEY", "API_KEYS"])
+    REQUIRE_API_KEY: bool = Field(default=False, env="REQUIRE_API_KEY")
+    
+    # AWS Configuration  
+    AWS_REGION: str = Field(default="us-east-1", env="AWS_REGION")
+    AWS_LAMBDA_FUNCTION_NAME: str | None = Field(default=None, env="AWS_LAMBDA_FUNCTION_NAME")
+    
+    # LLM Configuration
+    LLM_PROVIDER: str = Field(default="gemini", env="LLM_PROVIDER")
+    LLM_FALLBACK: str = Field(default="true", env="LLM_FALLBACK")
+    GEMINI_API_KEY: str | None = Field(default=None, env="GEMINI_API_KEY")
+    OPENROUTER_API_KEY: str | None = Field(default=None, env="OPENROUTER_API_KEY")
+    OPENROUTER_MODEL: str = Field(default="google/gemini-pro", env="OPENROUTER_MODEL")
+    
+    # Database Configuration
+    DATABASE_PATH: str = Field(default="chat_history.db", env="DATABASE_PATH")
+    DYNAMODB_TABLE: str = Field(default="chat-interactions", env=["TABLE_NAME", "DYNAMODB_TABLE"])
+    
+    # Rate Limiting & Performance
+    RATE_LIMIT_PER_MINUTE: int = Field(default=60, env="RATE_LIMIT_PER_MINUTE")
+    ENABLE_CACHE: bool = Field(default=True, env="ENABLE_CACHE")
+    CACHE_TTL_SECONDS: int = Field(default=3600, env="CACHE_TTL_SECONDS")
+    CIRCUIT_BREAKER_THRESHOLD: int = Field(default=5, env="CIRCUIT_BREAKER_THRESHOLD")
+    CIRCUIT_BREAKER_TIMEOUT: int = Field(default=60, env="CIRCUIT_BREAKER_TIMEOUT")
+    
+    # Logging & Monitoring
+    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
+    LOG_FORMAT: str = Field(default="json", env="LOG_FORMAT")
+    ENABLE_METRICS: bool = Field(default=True, env="ENABLE_METRICS")
+    ENABLE_TRACING: bool = Field(default=False, env="ENABLE_TRACING")
+    
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = True
+    
+    def __init__(self, **kwargs) -> None:
+        """Initialize settings and configure logging."""
+        super().__init__(**kwargs)
         self._configure_logging()
+    
+    def get_gemini_key(self) -> str | None:
+        """Get Gemini API key with SSM fallback if needed."""
+        return self._get_secret_with_fallback("GEMINI_API_KEY", self.GEMINI_API_KEY)
+    
+    def get_openrouter_key(self) -> str | None:
+        """Get OpenRouter API key with SSM fallback if needed."""
+        return self._get_secret_with_fallback("OPENROUTER_API_KEY", self.OPENROUTER_API_KEY)
 
+    def _get_secret_with_fallback(self, key: str, env_value: str | None) -> str | None:
+        """Get secret with SSM fallback if in Lambda and env value is missing."""
+        if env_value:
+            return env_value
+        
+        if self.AWS_LAMBDA_FUNCTION_NAME:
+            try:
+                import boto3
+
+                ssm = boto3.client("ssm", region_name=self.AWS_REGION)
+
+                parameter_name = f"/chatapi/{key}"
+                response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+
+                value = response["Parameter"]["Value"]
+                logger.info(f"Retrieved secret {key} from SSM")
+                return str(value)
+
+            except Exception as e:
+                logger.warning(f"Failed to get secret {key} from SSM: {e}")
+
+        return None
+    
     def _get_secret(self, key: str) -> str | None:
         """Get secret from environment or AWS SSM if in Lambda."""
         value = os.getenv(key)
@@ -102,9 +151,10 @@ class Settings:
 
     def to_dict(self) -> dict[str, Any]:
         """Export settings as dictionary (excluding secrets)."""
+        data = self.dict()
         return {
             k: v
-            for k, v in self.__dict__.items()
+            for k, v in data.items()
             if not k.startswith("_") and "KEY" not in k and "SECRET" not in k
         }
 

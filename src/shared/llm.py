@@ -20,12 +20,12 @@ class LLMProviderFactory:
         self.fallback_enabled = os.getenv("LLM_FALLBACK", "true").lower() == "true"
 
         gemini_key = os.getenv("GEMINI_API_KEY")
-        if gemini_key:
+        if gemini_key and gemini_key.strip() and not gemini_key.startswith("your_"):
             self.providers["gemini"] = GeminiProvider(gemini_key)
             logger.info("Gemini provider initialized")
 
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if openrouter_key:
+        if openrouter_key and openrouter_key.strip() and openrouter_key.startswith("sk-"):
             self.providers["openrouter"] = OpenRouterProvider(openrouter_key)  # type: ignore[assignment]
             logger.info("OpenRouter provider initialized")
 
