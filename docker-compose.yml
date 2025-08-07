@@ -4,21 +4,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - API_PORT=8000
-      - API_HOST=0.0.0.0
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
-      - REQUIRE_API_KEY=false
-      - LLM_PROVIDER=openrouter
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - OPENROUTER_MODEL=google/gemini-2.5-flash
-      - LLM_FALLBACK=true
-      - ENABLE_CACHE=true
-      - DATABASE_PATH=chat_history.db
-      - ENABLE_METRICS=true
-      - RATE_LIMIT_PER_MINUTE=60
+      - CHAT_HOST=0.0.0.0
+      - CHAT_PORT=8000
+      - CHAT_LOG_LEVEL=INFO
+      - CHAT_LLM_PROVIDER=openrouter
+      - CHAT_OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - CHAT_DATABASE_URL=sqlite+aiosqlite:///./data/chat.db
+      - CHAT_RATE_LIMIT=60/minute
+    volumes:
+      - ./data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

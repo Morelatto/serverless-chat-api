@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "serverless-chat-api"
+name = "chat-api"
 version = "1.0.0"
-description = "Microservice for processing prompts with LLM integration"
+description = "A simple LLM chat service with Pythonic design"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-authors = [{name = "Itaú AI Platform Team"}]
-keywords = ["api", "llm", "chat", "serverless"]
+authors = [{name = "Chat API Team"}]
+keywords = ["api", "llm", "chat", "fastapi", "python"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -18,77 +18,68 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: FastAPI",
 ]
 
 dependencies = [
-    "fastapi>=0.100.0",
-    "uvicorn[standard]>=0.20.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "mangum>=0.17.0",
-    "google-generativeai>=0.7.0",
-    "openai>=1.0.0",
-    "tenacity>=8.0.0",
-    "boto3>=1.30.0",
-    "python-dotenv>=1.0.0",
+    "fastapi",
+    "uvicorn[standard]",
+    "databases[sqlite,postgresql]",  # Async database
+    "redis[hiredis]",                # Cache (optional)
+    "litellm",                       # Universal LLM
+    "slowapi",                       # Rate limiting
+    "tenacity",                      # Retry
+    "pydantic-settings",             # Config
+    "sqlalchemy",                    # For database tables
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.20.0",
-    "pytest-cov>=4.0.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "httpx>=0.24.0",
     "ruff>=0.1.0",
-    "mypy>=1.0.0",
-    "types-python-dateutil",
 ]
+
 test = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.20.0",
-    "pytest-cov>=4.0.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
     "httpx>=0.24.0",
 ]
-aws = ["awslambdaric==3.0.0"]
 
 [project.scripts]
-chat-api = "src.main:run"
+chat-api = "chat_api.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/chat-api"
+Repository = "https://github.com/your-org/chat-api.git"
+Issues = "https://github.com/your-org/chat-api/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["chat_api"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/src", "/tests", "/README.md", "/LICENSE"]
+include = ["/chat_api", "/tests", "/README.md", "/LICENSE"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM"]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src", "chat", "shared"]
-
-[tool.mypy]
-strict = true
-python_version = "3.11"
-
-[[tool.mypy.overrides]]
-module = "boto3.*"
-ignore_missing_imports = true
+known-first-party = ["chat_api"]
 
 [tool.pytest.ini_options]
-addopts = "-ra -q --ignore=tests/generated"
 testpaths = ["tests"]
 pythonpath = ["."]
+asyncio_default_fixture_loop_scope = "session"
 
-[tool.coverage.run]
-source = ["src"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
 ]
