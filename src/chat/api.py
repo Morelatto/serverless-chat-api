@@ -2,7 +2,7 @@
 
 import hashlib
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -15,7 +15,53 @@ from src.shared.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["chat"])
 
-rate_limit_storage: dict[str, list[datetime]] = {}
+# Rate limiting with automatic cleanup
+class RateLimitStorage:
+    """Rate limit storage with periodic cleanup to prevent memory leaks."""
+
+    def __init__(self, cleanup_interval_hours: int = 1):
+        self.storage: dict[str, list[datetime]] = {}
+        self.cleanup_interval = timedelta(hours=cleanup_interval_hours)
+        self.last_cleanup = datetime.now(timezone.utc)
+
+    def add_request(self, user_key: str, timestamp: datetime) -> None:
+        """Add a request timestamp for a user."""
+        if user_key not in self.storage:
+            self.storage[user_key] = []
+        self.storage[user_key].append(timestamp)
+        self._cleanup_if_needed()
+
+    def get_requests(self, user_key: str, since: datetime) -> list[datetime]:
+        """Get requests for a user since a given time."""
+        if user_key not in self.storage:
+            return []
+        # Clean while retrieving
+        self.storage[user_key] = [t for t in self.storage[user_key] if t > since]
+        return self.storage[user_key]
+
+    def _cleanup_if_needed(self) -> None:
+        """Cleanup old entries periodically."""
+        current_time = datetime.now(timezone.utc)
+        if current_time - self.last_cleanup > self.cleanup_interval:
+            self._cleanup_old_entries()
+            self.last_cleanup = current_time
+
+    def _cleanup_old_entries(self) -> None:
+        """Remove expired entries from storage."""
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+        keys_before = len(self.storage)
+
+        for user_key in list(self.storage.keys()):
+            self.storage[user_key] = [
+                t for t in self.storage[user_key] if t > cutoff
+            ]
+            if not self.storage[user_key]:
+                del self.storage[user_key]
+
+        if keys_before != len(self.storage):
+            logger.info(f"Cleaned rate limit storage: {keys_before} -> {len(self.storage)} keys")
+
+rate_limit_storage = RateLimitStorage()
 
 
 async def verify_api_key(x_api_key: str | None = Header(None)) -> str:
@@ -34,24 +80,20 @@ async def verify_api_key(x_api_key: str | None = Header(None)) -> str:
 
 
 async def check_rate_limit(request: ChatRequest, api_key_hash: str) -> None:
-    """Rate limiting per user."""
-    from datetime import timedelta
-
+    """Rate limiting per user with automatic cleanup."""
     user_key = f"{request.userId}:{api_key_hash}"
-    current_time = datetime.now(UTC)
-
-    if user_key not in rate_limit_storage:
-        rate_limit_storage[user_key] = []
-
-    # Clean old requests (older than 1 minute)
+    current_time = datetime.now(timezone.utc)
     minute_ago = current_time - timedelta(minutes=1)
-    rate_limit_storage[user_key] = [t for t in rate_limit_storage[user_key] if t > minute_ago]
-
+    
+    # Get recent requests for this user
+    recent_requests = rate_limit_storage.get_requests(user_key, minute_ago)
+    
     # Check limit
-    if len(rate_limit_storage[user_key]) >= settings.RATE_LIMIT_PER_MINUTE:
+    if len(recent_requests) >= settings.RATE_LIMIT_PER_MINUTE:
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
-
-    rate_limit_storage[user_key].append(current_time)
+    
+    # Add current request
+    rate_limit_storage.add_request(user_key, current_time)
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -110,7 +152,7 @@ async def chat_endpoint(  # type: ignore[no-untyped-def]
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
-    return HealthResponse(status="healthy", timestamp=datetime.now(UTC).isoformat())
+    return HealthResponse(status="healthy", timestamp=datetime.now(timezone.utc).isoformat())
 
 
 @router.get("/ready")
@@ -123,7 +165,7 @@ async def readiness_check() -> JSONResponse:
     status_code = 200 if all_ready else 503
 
     return JSONResponse(
-        content={"ready": all_ready, "checks": checks, "timestamp": datetime.now(UTC).isoformat()},
+        content={"ready": all_ready, "checks": checks, "timestamp": datetime.now(timezone.utc).isoformat()},
         status_code=status_code,
     )
 

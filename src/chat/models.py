@@ -1,7 +1,7 @@
 """Pydantic models for request/response validation."""
 
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -96,4 +96,4 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error message")
     detail: str | None = Field(None, description="Detailed error information")
     trace_id: str | None = Field(None, description="Request trace ID for debugging")
-    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())

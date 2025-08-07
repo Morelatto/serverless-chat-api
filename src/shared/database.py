@@ -3,7 +3,7 @@
 import logging
 import os
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -76,7 +76,7 @@ class DatabaseInterface:
     ) -> str:
         """Save a new interaction to the database."""
         interaction_id = str(uuid4())
-        timestamp = datetime.now(UTC).isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         if self.is_production:
             item = {

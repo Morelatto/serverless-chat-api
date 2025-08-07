@@ -21,9 +21,24 @@ class CircuitState(Enum):
 
 
 class CircuitBreaker:
-    """Simple circuit breaker implementation."""
+    """Circuit breaker pattern implementation for fault tolerance.
+    
+    Prevents cascading failures by temporarily blocking calls to a failing service.
+    States: CLOSED (normal), OPEN (blocking), HALF_OPEN (testing recovery).
+    
+    Attributes:
+        failure_threshold: Number of failures before opening circuit
+        recovery_timeout: Seconds to wait before attempting recovery
+        state: Current circuit state (CLOSED, OPEN, HALF_OPEN)
+    """
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
+        """Initialize circuit breaker.
+        
+        Args:
+            failure_threshold: Failures required to open circuit
+            recovery_timeout: Seconds before attempting recovery
+        """
         self.failure_count = 0
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -60,11 +75,14 @@ class CircuitBreaker:
 
 
 class ResponseCache:
-    """Simple in-memory cache for responses."""
+    """LRU cache for responses with O(1) operations."""
 
-    def __init__(self, ttl_seconds: int = 3600):
-        self.cache: dict[str, dict[str, Any]] = {}
+    def __init__(self, ttl_seconds: int = 3600, max_size: int = 1000):
+        from collections import OrderedDict
+        
+        self.cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self.ttl = ttl_seconds
+        self.max_size = max_size
 
     def _get_key(self, prompt: str) -> str:
         """Generate cache key."""
@@ -72,26 +90,41 @@ class ResponseCache:
         return hashlib.md5(normalized.encode()).hexdigest()
 
     def get(self, prompt: str) -> str | None:
-        """Get cached response."""
+        """Get cached response with LRU update."""
         key = self._get_key(prompt)
         if key in self.cache:
             entry = self.cache[key]
-            if datetime.now(UTC).replace(tzinfo=None) - entry["time"] < timedelta(seconds=self.ttl):
+            current_time = datetime.now(timezone.utc).replace(tzinfo=None)
+            
+            # Check if expired
+            if current_time - entry["time"] < timedelta(seconds=self.ttl):
+                # Move to end (most recently used)
+                self.cache.move_to_end(key)
                 logger.info(f"Cache hit for key {key[:8]}")
                 return str(entry["response"])
             else:
+                # Remove expired entry
                 del self.cache[key]
         return None
 
     def set(self, prompt: str, response: str) -> None:
-        """Cache response."""
+        """Cache response with LRU eviction."""
         key = self._get_key(prompt)
-        self.cache[key] = {"response": response, "time": datetime.now(UTC).replace(tzinfo=None)}
-
-        # Limit cache size
-        if len(self.cache) > 1000:
-            oldest_key = min(self.cache.items(), key=lambda x: x[1]["time"])[0]
-            del self.cache[oldest_key]
+        
+        # Update existing or add new
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        
+        self.cache[key] = {
+            "response": response,
+            "time": datetime.now(timezone.utc).replace(tzinfo=None)
+        }
+        
+        # LRU eviction - O(1) operation
+        if len(self.cache) > self.max_size:
+            # Remove least recently used (first item)
+            self.cache.popitem(last=False)
+            logger.debug("Evicted LRU cache entry")
 
 
 class ChatService:
