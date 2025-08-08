@@ -1,4 +1,5 @@
 """Test Pydantic models."""
+
 from datetime import UTC, datetime
 
 import pytest
@@ -14,24 +15,11 @@ def test_chat_message_valid():
     assert message.content == "Hello world"
 
 
-def test_chat_message_sanitize_email():
-    """Test email sanitization in chat message."""
-    message = ChatMessage(
-        user_id="test123",
-        content="Contact me at john.doe@example.com please"
-    )
-    assert "[EMAIL]" in message.content
-    assert "john.doe@example.com" not in message.content
-
-
-def test_chat_message_sanitize_phone():
-    """Test phone sanitization in chat message."""
-    message = ChatMessage(
-        user_id="test123",
-        content="Call me at 123-456-7890"
-    )
-    assert "[PHONE]" in message.content
-    assert "123-456-7890" not in message.content
+def test_chat_message_preserves_content():
+    """Test that chat message preserves original content."""
+    original_content = "Contact me at john.doe@example.com or call 123-456-7890"
+    message = ChatMessage(user_id="test123", content=original_content)
+    assert message.content == original_content
 
 
 def test_chat_message_empty_user_id():
@@ -67,7 +55,7 @@ def test_chat_response():
         content="Hello there!",
         timestamp=datetime.now(UTC),
         cached=True,
-        model="test-model"
+        model="test-model",
     )
 
     assert response.id == "test-123"
@@ -78,11 +66,7 @@ def test_chat_response():
 
 def test_chat_response_defaults():
     """Test chat response with defaults."""
-    response = ChatResponse(
-        id="test-123",
-        content="Hello there!",
-        timestamp=datetime.now(UTC)
-    )
+    response = ChatResponse(id="test-123", content="Hello there!", timestamp=datetime.now(UTC))
 
     assert response.cached is False
     assert response.model is None

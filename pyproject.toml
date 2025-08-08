@@ -24,27 +24,38 @@ classifiers = [
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
-    "databases[sqlite,postgresql]",  # Async database
-    "redis[hiredis]",                # Cache (optional)
-    "litellm",                       # Universal LLM
-    "slowapi",                       # Rate limiting
-    "tenacity",                      # Retry
-    "pydantic-settings",             # Config
-    "sqlalchemy",                    # For database tables
+    "databases[sqlite,postgresql]",
+    "redis[hiredis]",
+    "litellm",
+    "slowapi",
+    "tenacity",
+    "pydantic-settings",
+    "sqlalchemy",
+    "loguru",
+    "orjson",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "httpx>=0.24.0",
-    "ruff>=0.1.0",
+    "pytest>=8.0",
+    "pytest-asyncio",
+    "pytest-cov",
+    "httpx",
+    "ruff>=0.8.0",
+    "mypy>=1.0",
+    "bandit[toml]>=1.7",
+    "types-redis",
 ]
 
 test = [
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
-    "httpx>=0.24.0",
+    "pytest>=8.0",
+    "pytest-asyncio",
+    "pytest-cov",
+    "httpx",
+]
+
+lambda = [
+    "mangum",
 ]
 
 [project.scripts]
@@ -55,30 +66,120 @@ Homepage = "https://github.com/your-org/chat-api"
 Repository = "https://github.com/your-org/chat-api.git"
 Issues = "https://github.com/your-org/chat-api/issues"
 
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+fix = true
+
+[tool.ruff.lint]
+select = [
+    # Core error checking
+    "E4", "E7", "E9", "F",
+    # Bug prevention
+    "B", "BLE", "TRY",
+    # Performance & Security
+    "S", "G", "PERF",
+    # Code quality
+    "SIM", "RET", "RUF", "PTH",
+    # FastAPI/Modern Python
+    "ASYNC", "I", "UP", "TCH",
+]
+
+ignore = [
+    "E501",    # Line length (formatter handles)
+    "S101",    # Assert in tests
+    "S104",    # Bind 0.0.0.0 (Docker)
+    "TRY003",  # Long exception messages
+    "B008",    # FastAPI Depends()
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "ARG", "PLR2004"]
+"*/lambda_handler.py" = ["G004"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["chat_api"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_no_return = true
+warn_unreachable = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+    "-q",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: integration tests requiring external services",
+    "unit: unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::DeprecationWarning:httpx.*",
+]
+
+[tool.coverage.run]
+source = ["chat_api"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+    "*/lambda_handler.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "except ImportError:",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 75
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = ["B101"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["chat_api"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/chat_api", "/tests", "/README.md", "/LICENSE"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
-ignore = ["E501"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["chat_api"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-asyncio_default_fixture_loop_scope = "session"
-
 [dependency-groups]
 dev = [
+    "bandit[toml]>=1.8.6",
+    "httpx>=0.28.1",
+    "pre-commit>=4.2.0",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",

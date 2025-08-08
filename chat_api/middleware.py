@@ -1,6 +1,8 @@
 """Middleware for request tracking and monitoring."""
+
 import uuid
 from collections.abc import Callable
+from typing import cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -11,11 +13,11 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with request ID.
-        
+
         Args:
             request: Incoming HTTP request.
             call_next: Next middleware or endpoint handler.
-            
+
         Returns:
             HTTP response with X-Request-ID header.
         """
@@ -33,16 +35,16 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
 
-        return response
+        return cast("Response", response)
 
 
 async def add_request_id(request: Request, call_next: Callable) -> Response:
     """Simpler middleware function for request ID tracking.
-    
+
     Args:
         request: Incoming HTTP request.
         call_next: Next middleware or endpoint handler.
-        
+
     Returns:
         HTTP response with X-Request-ID header.
     """
@@ -58,4 +60,4 @@ async def add_request_id(request: Request, call_next: Callable) -> Response:
     # Add to response headers
     response.headers["X-Request-ID"] = request_id
 
-    return response
+    return cast("Response", response)

@@ -1,4 +1,5 @@
 """Tests for storage operations."""
+
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
@@ -17,7 +18,7 @@ from chat_api.storage import (
 @pytest.mark.asyncio
 async def test_save_message() -> None:
     """Test saving message to database."""
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.execute = AsyncMock()
 
         await save_message(
@@ -26,7 +27,7 @@ async def test_save_message() -> None:
             content="Hello",
             response="Hi there!",
             model="test-model",
-            tokens=10
+            tokens=10,
         )
 
         # Verify database was called
@@ -47,11 +48,11 @@ async def test_get_user_history() -> None:
             "content": "Hello",
             "response": "Hi there!",
             "timestamp": datetime.now(UTC),
-            "metadata": {"model": "test-model"}
+            "metadata": {"model": "test-model"},
         }
     ]
 
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.fetch_all = AsyncMock(return_value=mock_results)
 
         result = await get_user_history("test_user", 10)
@@ -67,7 +68,7 @@ async def test_get_user_history() -> None:
 @pytest.mark.asyncio
 async def test_get_user_history_empty() -> None:
     """Test retrieving history for user with no messages."""
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.fetch_all = AsyncMock(return_value=[])
 
         result = await get_user_history("new_user", 10)
@@ -80,7 +81,7 @@ async def test_get_cached_hit() -> None:
     """Test cache hit scenario."""
     mock_cached_data = '{"id": "test", "content": "cached response"}'
 
-    with patch('chat_api.storage._redis') as mock_redis:
+    with patch("chat_api.storage._redis") as mock_redis:
         mock_redis.get = AsyncMock(return_value=mock_cached_data)
 
         result = await get_cached("test_key")
@@ -93,7 +94,7 @@ async def test_get_cached_hit() -> None:
 @pytest.mark.asyncio
 async def test_get_cached_miss() -> None:
     """Test cache miss scenario."""
-    with patch('chat_api.storage._redis') as mock_redis:
+    with patch("chat_api.storage._redis") as mock_redis:
         mock_redis.get = AsyncMock(return_value=None)
 
         result = await get_cached("test_key")
@@ -107,7 +108,7 @@ async def test_set_cached() -> None:
     """Test setting data in cache."""
     test_data = {"id": "test", "content": "response"}
 
-    with patch('chat_api.storage._redis') as mock_redis:
+    with patch("chat_api.storage._redis") as mock_redis:
         mock_redis.setex = AsyncMock()
 
         await set_cached("test_key", test_data, 3600)
@@ -123,7 +124,7 @@ async def test_set_cached() -> None:
 @pytest.mark.asyncio
 async def test_health_check_healthy() -> None:
     """Test health check when database is healthy."""
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.execute = AsyncMock()
 
         result = await health_check()
@@ -134,14 +135,12 @@ async def test_health_check_healthy() -> None:
 @pytest.mark.asyncio
 async def test_health_check_database_failure() -> None:
     """Test health check when database fails."""
-    with patch('chat_api.storage.database') as mock_db:
-        mock_db.execute = AsyncMock(side_effect=Exception("DB error"))
+    with patch("chat_api.storage.database") as mock_db:
+        mock_db.execute = AsyncMock(side_effect=ConnectionError("DB error"))
 
         result = await health_check()
 
         assert result is False
-
-
 
 
 def test_generate_cache_key() -> None:
@@ -167,7 +166,7 @@ def test_generate_cache_key() -> None:
 @pytest.mark.asyncio
 async def test_save_message_database_error() -> None:
     """Test handling database errors during message save."""
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.execute = AsyncMock(side_effect=Exception("Database connection failed"))
 
         with pytest.raises(Exception, match="Database connection failed"):
@@ -177,14 +176,14 @@ async def test_save_message_database_error() -> None:
                 content="Hello",
                 response="Hi there!",
                 model="test-model",
-                tokens=10
+                tokens=10,
             )
 
 
 @pytest.mark.asyncio
 async def test_get_user_history_database_error() -> None:
     """Test handling database errors during history retrieval."""
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.fetch_all = AsyncMock(side_effect=Exception("Query failed"))
 
         with pytest.raises(Exception, match="Query failed"):
@@ -194,25 +193,25 @@ async def test_get_user_history_database_error() -> None:
 @pytest.mark.asyncio
 async def test_cache_serialization_error() -> None:
     """Test handling serialization errors in cache operations."""
+
     # Test with non-serializable data
     class NonSerializable:
         pass
 
-    with patch('chat_api.storage._redis') as mock_redis:
+    with patch("chat_api.storage._redis") as mock_redis:
         mock_redis.setex = AsyncMock()
 
         # Should handle serialization gracefully or raise appropriate error
-        try:
+        from contextlib import suppress
+
+        with suppress(TypeError, ValueError):
             await set_cached("test_key", {"data": NonSerializable()}, 3600)
-        except (TypeError, ValueError):
-            # Expected for non-serializable data
-            pass
 
 
 @pytest.mark.asyncio
 async def test_cache_json_parsing_error() -> None:
     """Test handling JSON parsing errors in cache retrieval."""
-    with patch('chat_api.storage._redis') as mock_redis:
+    with patch("chat_api.storage._redis") as mock_redis:
         mock_redis.get = AsyncMock(return_value="invalid json {")
 
         result = await get_cached("test_key")
@@ -226,17 +225,22 @@ async def test_get_user_history_limit_enforcement() -> None:
     """Test that history limit is properly enforced."""
     # Create more results than requested limit
     mock_results = [
-        {"id": f"msg-{i}", "user_id": "test_user", "content": f"Message {i}",
-         "response": f"Response {i}", "timestamp": datetime.now(UTC),
-         "metadata": {}}
+        {
+            "id": f"msg-{i}",
+            "user_id": "test_user",
+            "content": f"Message {i}",
+            "response": f"Response {i}",
+            "timestamp": datetime.now(UTC),
+            "metadata": {},
+        }
         for i in range(10)
     ]
 
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.fetch_all = AsyncMock(return_value=mock_results)
 
         # Request only 5 messages
-        result = await get_user_history("test_user", 5)
+        await get_user_history("test_user", 5)
 
         # Database query should limit to 5, not Python slicing
         call_args = mock_db.fetch_all.call_args[0]
@@ -255,10 +259,10 @@ async def test_message_data_integrity() -> None:
         "content": "Hello with special chars: <>\"'&",
         "response": "Response with unicode: 🚀 emoji",
         "model": "test-model",
-        "tokens": 42
+        "tokens": 42,
     }
 
-    with patch('chat_api.storage.database') as mock_db:
+    with patch("chat_api.storage.database") as mock_db:
         mock_db.execute = AsyncMock()
 
         await save_message(**test_data)

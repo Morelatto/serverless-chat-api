@@ -1,4 +1,5 @@
 """Shared test fixtures."""
+
 import asyncio
 import os
 from collections.abc import AsyncGenerator
@@ -30,10 +31,18 @@ def event_loop():
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Test client fixture."""
     from httpx import ASGITransport
+    from unittest.mock import patch
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+    # Mock storage operations to avoid database issues in tests
+    with (
+        patch("chat_api.storage.startup", return_value=None),
+        patch("chat_api.storage.shutdown", return_value=None),
+        patch("chat_api.storage.database.connect", return_value=None),
+        patch("chat_api.storage.database.disconnect", return_value=None),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
 
 
 @pytest.fixture
@@ -48,5 +57,5 @@ def mock_llm_response() -> dict[str, Any]:
     return {
         "text": "Hello! How can I help you?",
         "model": "test-model",
-        "usage": {"total_tokens": 10}
+        "usage": {"total_tokens": 10},
     }

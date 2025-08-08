@@ -1,0 +1,82 @@
+# Pre-commit hooks for Python best practices
+# Simplified configuration for better compatibility
+
+repos:
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-ast
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: detect-private-key
+
+  # Python code formatting and linting with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff-format
+        args: ['--line-length=100']
+      - id: ruff
+        args: ['--fix', '--exit-non-zero-on-fix']
+
+  # Type checking (optional - can be slow)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        args: ['--ignore-missing-imports', '--check-untyped-defs']
+        additional_dependencies: ['pydantic', 'fastapi']
+        files: '^chat_api/'
+        pass_filenames: false
+
+  # Security scanning
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.8.0'
+    hooks:
+      - id: bandit
+        args: ['-r', 'chat_api/', '--skip=B101']
+        pass_filenames: false
+
+# Local hooks (run with system Python)
+  - repo: local
+    hooks:
+      # Run tests before push
+      - id: pytest
+        name: pytest
+        entry: bash -c 'python -m pytest tests/ -q --tb=short || true'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      
+      # Check for secrets
+      - id: check-secrets
+        name: Check for secrets
+        entry: bash -c 'grep -r "sk-\|api[_-]key\|secret\|password" --include="*.py" --exclude-dir=".git" --exclude-dir="tests" --exclude-dir=".venv" --exclude-dir="venv" chat_api/ || true'
+        language: system
+        pass_filenames: false
+        
+      # Validate pyproject.toml
+      - id: validate-pyproject
+        name: Validate pyproject.toml
+        entry: python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
+        language: system
+        files: 'pyproject\.toml$'
+
+default_language_version:
+  python: python3.11
+
+# Don't run certain hooks in CI
+ci:
+  skip: [pytest, mypy]

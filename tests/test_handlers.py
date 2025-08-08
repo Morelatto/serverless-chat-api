@@ -1,4 +1,5 @@
 """Test HTTP handlers."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -27,14 +28,16 @@ async def test_root(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.process_message')
-async def test_chat(mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]) -> None:
+@patch("chat_api.handlers.process_message")
+async def test_chat(
+    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
+) -> None:
     """Test chat endpoint."""
     mock_process.return_value = {
         "id": "test-123",
         "content": "Hello! How can I help you?",
         "model": "test-model",
-        "cached": False
+        "cached": False,
     }
 
     response = await client.post("/chat", json=sample_message)
@@ -62,7 +65,7 @@ async def test_chat_invalid_content(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.get_user_history')
+@patch("chat_api.handlers.get_user_history")
 async def test_history(mock_get_history: AsyncMock, client: AsyncClient) -> None:
     """Test history endpoint."""
     mock_get_history.return_value = [
@@ -71,7 +74,7 @@ async def test_history(mock_get_history: AsyncMock, client: AsyncClient) -> None
             "user_id": "test_user",
             "content": "Hello",
             "response": "Hi there!",
-            "timestamp": "2025-01-01T00:00:00Z"
+            "timestamp": "2025-01-01T00:00:00Z",
         }
     ]
 
@@ -90,8 +93,10 @@ async def test_history_limit_exceeded(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.process_message')
-async def test_chat_error_handling(mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]) -> None:
+@patch("chat_api.handlers.process_message")
+async def test_chat_error_handling(
+    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
+) -> None:
     """Test chat endpoint error handling."""
     mock_process.side_effect = Exception("Processing error")
 
@@ -103,14 +108,16 @@ async def test_chat_error_handling(mock_process: AsyncMock, client: AsyncClient,
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.process_message')
-async def test_chat_cached_response(mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]) -> None:
+@patch("chat_api.handlers.process_message")
+async def test_chat_cached_response(
+    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
+) -> None:
     """Test chat endpoint with cached response."""
     mock_process.return_value = {
         "id": "cached-123",
         "content": "Cached response",
         "model": "test-model",
-        "cached": True
+        "cached": True,
     }
 
     response = await client.post("/chat", json=sample_message)
@@ -121,7 +128,7 @@ async def test_chat_cached_response(mock_process: AsyncMock, client: AsyncClient
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.get_user_history')
+@patch("chat_api.handlers.get_user_history")
 async def test_history_empty(mock_get_history: AsyncMock, client: AsyncClient) -> None:
     """Test history endpoint with no history."""
     mock_get_history.return_value = []
@@ -133,7 +140,7 @@ async def test_history_empty(mock_get_history: AsyncMock, client: AsyncClient) -
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.get_user_history')
+@patch("chat_api.handlers.get_user_history")
 async def test_history_with_limit(mock_get_history: AsyncMock, client: AsyncClient) -> None:
     """Test history endpoint with custom limit."""
     mock_get_history.return_value = [
@@ -148,7 +155,7 @@ async def test_history_with_limit(mock_get_history: AsyncMock, client: AsyncClie
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.get_user_history')
+@patch("chat_api.handlers.get_user_history")
 async def test_history_default_limit(mock_get_history: AsyncMock, client: AsyncClient) -> None:
     """Test history endpoint with default limit."""
     mock_get_history.return_value = []
@@ -159,7 +166,7 @@ async def test_history_default_limit(mock_get_history: AsyncMock, client: AsyncC
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.core_health')
+@patch("chat_api.handlers.core_health")
 async def test_health_healthy(mock_health: AsyncMock, client: AsyncClient) -> None:
     """Test health endpoint when all services are healthy."""
     mock_health.return_value = {"storage": True, "llm": True}
@@ -174,7 +181,7 @@ async def test_health_healthy(mock_health: AsyncMock, client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.core_health')
+@patch("chat_api.handlers.core_health")
 async def test_health_unhealthy(mock_health: AsyncMock, client: AsyncClient) -> None:
     """Test health endpoint when services are unhealthy."""
     mock_health.return_value = {"storage": False, "llm": True}
@@ -190,7 +197,9 @@ async def test_health_unhealthy(mock_health: AsyncMock, client: AsyncClient) -> 
 @pytest.mark.asyncio
 async def test_chat_malformed_json(client: AsyncClient) -> None:
     """Test chat endpoint with malformed JSON."""
-    response = await client.post("/chat", content="invalid json", headers={"content-type": "application/json"})
+    response = await client.post(
+        "/chat", content="invalid json", headers={"content-type": "application/json"}
+    )
     assert response.status_code == 422
 
 
@@ -205,14 +214,16 @@ async def test_chat_missing_fields(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch('chat_api.handlers.process_message')
-async def test_chat_response_structure(mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]) -> None:
+@patch("chat_api.handlers.process_message")
+async def test_chat_response_structure(
+    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
+) -> None:
     """Test that chat response has correct structure."""
     mock_process.return_value = {
         "id": "test-123",
         "content": "Response content",
         "model": "gpt-4",
-        "cached": False
+        "cached": False,
     }
 
     response = await client.post("/chat", json=sample_message)

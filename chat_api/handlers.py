@@ -1,4 +1,5 @@
 """HTTP request handlers."""
+
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, Request
@@ -15,21 +16,21 @@ from .storage import get_user_history
 limiter = Limiter(
     key_func=get_remote_address,
     storage_uri=settings.redis_url or "memory://",  # Explicit memory backend when no Redis
-    default_limits=[settings.rate_limit]
+    default_limits=[settings.rate_limit],
 )
 
 
 @limiter.limit(settings.rate_limit)
 async def chat_handler(request: Request, message: ChatMessage) -> ChatResponse:
     """Handle incoming chat requests.
-    
+
     Args:
         request: FastAPI request object (used for rate limiting).
         message: Chat message containing user_id and content.
-        
+
     Returns:
         ChatResponse with generated content and metadata.
-        
+
     Raises:
         HTTPException: If processing fails.
     """
@@ -41,7 +42,7 @@ async def chat_handler(request: Request, message: ChatMessage) -> ChatResponse:
             content=result["content"],
             timestamp=datetime.now(UTC),
             cached=result.get("cached", False),
-            model=result.get("model")
+            model=result.get("model"),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -49,14 +50,14 @@ async def chat_handler(request: Request, message: ChatMessage) -> ChatResponse:
 
 async def history_handler(user_id: str, limit: int = 10) -> list:
     """Retrieve chat history for a user.
-    
+
     Args:
         user_id: Unique identifier for the user.
         limit: Maximum number of messages to return (max 100).
-        
+
     Returns:
         List of message dictionaries with content and metadata.
-        
+
     Raises:
         HTTPException: If limit exceeds 100.
     """
@@ -68,7 +69,7 @@ async def history_handler(user_id: str, limit: int = 10) -> list:
 
 async def health_handler() -> dict:
     """Check health status of all system components.
-    
+
     Returns:
         Dictionary containing overall status, timestamp, and individual service statuses.
     """
@@ -78,5 +79,5 @@ async def health_handler() -> dict:
     return {
         "status": "healthy" if all_healthy else "unhealthy",
         "timestamp": datetime.now(UTC).isoformat(),
-        "services": status
+        "services": status,
     }
