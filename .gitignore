@@ -190,6 +190,3 @@ coverage.xml
 
 # Cython debug symbols
 cython_debug/
-archive/
-CLAUDE.md
-uv.lock
