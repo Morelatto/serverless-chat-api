@@ -4,7 +4,7 @@
 # AWS Configuration
 aws_region = "us-east-1"
 
-# Project Configuration  
+# Project Configuration
 project_name = "serverless-chat-api"
 environment  = "dev"
 

@@ -30,8 +30,9 @@ def event_loop():
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Test client fixture."""
-    from httpx import ASGITransport
     from unittest.mock import patch
+
+    from httpx import ASGITransport
 
     # Mock storage operations to avoid database issues in tests
     with (

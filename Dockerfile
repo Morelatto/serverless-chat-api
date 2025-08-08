@@ -11,7 +11,7 @@ ENV PYTHONPATH="${LAMBDA_TASK_ROOT}:${PYTHONPATH}"
 # Note: Lambda handler would need to be implemented in chat_api for serverless
 CMD ["chat_api.lambda_handler.handler"]
 
-# Base stage for local development  
+# Base stage for local development
 FROM python:3.11-slim AS local-base
 WORKDIR /app
 COPY pyproject.toml README.md ./

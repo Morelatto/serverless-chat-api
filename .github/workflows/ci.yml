@@ -11,24 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
-      
+
       - name: Install dependencies
         run: |
           pip install -e ".[dev,test]"
-      
+
       - name: Run linter
         run: |
           ruff check chat_api/ tests/
-      
+
       - name: Run tests
         run: |
           pytest tests/ --cov=chat_api --cov-report=term-missing
-      
+
       - name: Check types
         run: |
           mypy chat_api/ --ignore-missing-imports || true

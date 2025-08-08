@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0"
-  
+
   backend "s3" {
     bucket         = "serverless-chat-api-terraform-state"
     key            = "container/terraform.tfstate"
@@ -8,7 +8,7 @@ terraform {
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
   }
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -19,7 +19,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Project     = var.project_name
@@ -32,18 +32,18 @@ provider "aws" {
 resource "aws_ecr_repository" "lambda" {
   name                 = "${var.project_name}-${var.environment}"
   image_tag_mutability = "MUTABLE"
-  
+
   image_scanning_configuration {
     scan_on_push = true
   }
-  
+
   force_delete = true
 }
 
 # IAM role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda-${var.environment}"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -89,11 +89,11 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-${var.environment}"
   role          = aws_iam_role.lambda.arn
-  
+
   # Container image configuration
   package_type = "Image"
   image_uri    = "${aws_ecr_repository.lambda.repository_url}:latest"
-  
+
   memory_size = var.lambda_memory_size
   timeout     = var.lambda_timeout
 
@@ -101,25 +101,25 @@ resource "aws_lambda_function" "api" {
     variables = {
       # Application settings
       ENVIRONMENT = var.environment
-      
-      # Database configuration  
+
+      # Database configuration
       DATABASE_TYPE = "dynamodb"
       TABLE_NAME    = aws_dynamodb_table.main.name
-      
+
       # LLM configuration
       LLM_PROVIDER       = var.llm_provider
       GEMINI_API_KEY     = var.gemini_api_key
       OPENROUTER_API_KEY = var.openrouter_api_key
-      
+
       # Security
       REQUIRE_API_KEY = var.require_api_key ? "true" : "false"
       API_KEY         = var.api_key
-      
+
       # Logging
       LOG_LEVEL = var.log_level
     }
   }
-  
+
   depends_on = [
     aws_ecr_repository.lambda
   ]
@@ -148,12 +148,12 @@ resource "aws_dynamodb_table" "main" {
     name = "interaction_id"
     type = "S"
   }
-  
+
   attribute {
     name = "user_id"
     type = "S"
   }
-  
+
   global_secondary_index {
     name            = "user_id_index"
     hash_key        = "user_id"
@@ -164,11 +164,11 @@ resource "aws_dynamodb_table" "main" {
     attribute_name = "ttl"
     enabled        = true
   }
-  
+
   point_in_time_recovery {
     enabled = var.enable_point_in_time_recovery
   }
-  
+
   tags = {
     Name        = "${var.project_name}-${var.environment}"
     Environment = var.environment
@@ -179,7 +179,7 @@ resource "aws_dynamodb_table" "main" {
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
   retention_in_days = var.log_retention_days
-  
+
   kms_key_id = var.kms_key_id
 }
 
@@ -212,7 +212,7 @@ output "deployment_commands" {
     docker build --build-arg TARGET=lambda -t ${var.project_name} ../..
     docker tag ${var.project_name}:latest ${aws_ecr_repository.lambda.repository_url}:latest
     docker push ${aws_ecr_repository.lambda.repository_url}:latest
-    
+
     # Update Lambda function:
     aws lambda update-function-code --function-name ${aws_lambda_function.api.function_name} --image-uri ${aws_ecr_repository.lambda.repository_url}:latest
   EOT

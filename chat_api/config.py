@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings with validation."""
 
     # API Settings
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec B104 - Intentional for containerized deployment
     port: int = 8000
     log_level: str = "INFO"
     log_file: str | None = None  # Optional log file path

@@ -94,7 +94,7 @@ logs: ## Stream Lambda function logs from CloudWatch
 #   pre-commit run --all-files              # Run all code quality checks
 #   python -m src.main                      # Start the application locally
 #   docker-compose logs -f                  # View Docker logs
-#   
+#
 # Terraform commands (from iac/terraform/):
 #   terraform init                          # Initialize Terraform
 #   terraform plan -var-file="terraform.tfvars.dev"  # Preview changes
@@ -102,6 +102,6 @@ logs: ## Stream Lambda function logs from CloudWatch
 #   terraform fmt -recursive                # Format .tf files
 #   terraform output                        # Show outputs
 #   terraform state list                    # List resources
-#   
+#
 # Test Lambda endpoint:
 #   curl $(cd iac/terraform && terraform output -raw lambda_function_url)/v1/health

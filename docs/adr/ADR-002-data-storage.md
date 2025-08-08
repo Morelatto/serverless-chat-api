@@ -16,17 +16,17 @@ graph LR
     subgraph "Application"
         S[storage.py]
     end
-    
+
     subgraph "Development"
         SQL[SQLite]
         MEM[In-Memory Cache]
     end
-    
+
     subgraph "Production"
         DDB[DynamoDB]
         R[Redis]
     end
-    
+
     S -->|Local| SQL
     S -->|Local| MEM
     S -->|Cloud| DDB
@@ -83,7 +83,7 @@ sequenceDiagram
     participant API
     participant Cache
     participant DB
-    
+
     API->>Cache: Check cache
     alt Cache hit
         Cache-->>API: Return cached
@@ -102,7 +102,7 @@ sequenceDiagram
 - Automatic migrations
 - File-based persistence
 
-### DynamoDB (Production)  
+### DynamoDB (Production)
 - On-demand billing
 - Global secondary index on user_id
 - Point-in-time recovery
@@ -118,7 +118,7 @@ sequenceDiagram
 
 ### Retention Policy
 - Active data: 30 days in hot storage
-- Archive: 90 days in cold storage  
+- Archive: 90 days in cold storage
 - Deletion: After 90 days (GDPR compliance)
 - Cache: 5 minute TTL
 

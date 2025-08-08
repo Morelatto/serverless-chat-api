@@ -17,21 +17,21 @@ graph TB
         H[handlers.py]
         M[middleware.py]
     end
-    
+
     subgraph "Business Logic"
         C[core.py]
     end
-    
+
     subgraph "Data Layer"
         S[storage.py]
         MO[models.py]
     end
-    
+
     subgraph "Infrastructure"
         CF[config.py]
         A[app.py]
     end
-    
+
     H --> C
     C --> S
     C --> MO
@@ -47,7 +47,7 @@ graph TB
 ### Module Organization
 Flat structure with single-purpose modules:
 - `app.py` - FastAPI application lifecycle
-- `handlers.py` - HTTP request handlers  
+- `handlers.py` - HTTP request handlers
 - `core.py` - Business logic functions
 - `storage.py` - Database and cache operations
 - `models.py` - Pydantic models with validation

@@ -36,8 +36,8 @@ repos:
     rev: v1.14.1
     hooks:
       - id: mypy
-        args: ['--ignore-missing-imports', '--check-untyped-defs']
-        additional_dependencies: ['pydantic', 'fastapi']
+        args: ['--ignore-missing-imports', '--check-untyped-defs', 'chat_api/']
+        additional_dependencies: ['pydantic', 'fastapi', 'types-redis']
         files: '^chat_api/'
         pass_filenames: false
 
@@ -59,14 +59,14 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
-      
+
       # Check for secrets
       - id: check-secrets
         name: Check for secrets
         entry: bash -c 'grep -r "sk-\|api[_-]key\|secret\|password" --include="*.py" --exclude-dir=".git" --exclude-dir="tests" --exclude-dir=".venv" --exclude-dir="venv" chat_api/ || true'
         language: system
         pass_filenames: false
-        
+
       # Validate pyproject.toml
       - id: validate-pyproject
         name: Validate pyproject.toml

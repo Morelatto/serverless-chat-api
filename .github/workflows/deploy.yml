@@ -23,18 +23,18 @@ jobs:
     environment: dev
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-      
+
       - name: Install and test
         run: |
           pip install -e ".[dev,test]"
           ruff check src/
           pytest tests/ --cov=src --cov-fail-under=70
-      
+
       - name: Check AWS credentials
         id: check-aws
         run: |
@@ -45,24 +45,24 @@ jobs:
             echo "has_aws=false" >> $GITHUB_OUTPUT
             echo "⚠️ AWS credentials not configured - skipping deployment"
           fi
-      
+
       - uses: hashicorp/setup-terraform@v3
         if: steps.check-aws.outputs.has_aws == 'true'
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
-      
+
       - uses: aws-actions/configure-aws-credentials@v4
         if: steps.check-aws.outputs.has_aws == 'true'
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-      
+
       - name: Terraform Init
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
         run: terraform init -reconfigure
-      
+
       - name: Terraform Apply (Infrastructure Only)
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
@@ -73,7 +73,7 @@ jobs:
           else
             LLM_PROVIDER="gemini"
           fi
-          
+
           # First apply only ECR and supporting infrastructure (not Lambda)
           terraform apply -auto-approve \
             -target=aws_ecr_repository.lambda \
@@ -85,12 +85,12 @@ jobs:
             -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
             -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || 'dummy-key' }}" \
             -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
-      
+
       - name: Login to Amazon ECR
         if: steps.check-aws.outputs.has_aws == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      
+
       - name: Build and push Docker image
         if: steps.check-aws.outputs.has_aws == 'true'
         env:
@@ -101,7 +101,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-      
+
       - name: Terraform Apply (Lambda Function)
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
@@ -112,14 +112,14 @@ jobs:
           else
             LLM_PROVIDER="gemini"
           fi
-          
+
           # Now apply Lambda function and URL
           terraform apply -auto-approve \
             -var="llm_provider=$LLM_PROVIDER" \
             -var="gemini_api_key=${{ secrets.GEMINI_API_KEY || 'dummy-key' }}" \
             -var="openrouter_api_key=${{ secrets.OPENROUTER_API_KEY || 'dummy-key' }}" \
             -var="api_key=${{ secrets.API_KEY || 'dev-key' }}"
-      
+
       - name: Update Lambda function
         if: steps.check-aws.outputs.has_aws == 'true'
         run: |
@@ -127,12 +127,12 @@ jobs:
             --function-name serverless-chat-api-dev \
             --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
             --region ${{ env.AWS_REGION }}
-          
+
           # Wait for update to complete
           aws lambda wait function-updated \
             --function-name serverless-chat-api-dev \
             --region ${{ env.AWS_REGION }}
-      
+
       - name: Get Lambda URL
         if: steps.check-aws.outputs.has_aws == 'true'
         id: get-url
@@ -145,7 +145,7 @@ jobs:
           if [ -n "$FUNCTION_URL" ]; then
             echo "🚀 Lambda deployed at: $FUNCTION_URL"
           fi
-      
+
       - name: Test deployment
         if: steps.check-aws.outputs.has_aws == 'true' && steps.get-url.outputs.function_url != ''
         run: |

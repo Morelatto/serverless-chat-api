@@ -33,4 +33,4 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     # Log the response for debugging
     logger.info("Lambda response status: {}", response.get("statusCode"))
 
-    return response
+    return response  # type: ignore[no-any-return]

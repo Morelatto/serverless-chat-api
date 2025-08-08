@@ -99,8 +99,7 @@ async def _create_tables_async():
 
     # Create index
     create_index_stmt = CreateIndex(
-        sa.Index('idx_messages_user_id', messages.c.user_id),
-        if_not_exists=True
+        sa.Index("idx_messages_user_id", messages.c.user_id), if_not_exists=True
     )
     await database.execute(str(create_index_stmt.compile(compile_kwargs={"literal_binds": True})))
 

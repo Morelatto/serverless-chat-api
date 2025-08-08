@@ -76,27 +76,27 @@ graph TB
     classDef node fill:#fff,stroke:#374151,stroke-width:2px,color:#374151
     classDef focus fill:#374151,stroke:#374151,stroke-width:2px,color:#fff
     classDef external fill:#fff,stroke:#374151,stroke-width:2px,stroke-dasharray:5 5,color:#374151
-    
+
     %% Arquitetura
     Client(Cliente):::node
     Gateway(API Gateway):::node
     Lambda(Lambda Function):::focus
     DB[(DynamoDB)]:::node
     LLM(LLM Providers<br/>━━━━━<br/>Gemini & OpenRouter):::external
-    
+
     %% Conexões
     Client --> Gateway
     Gateway --> Lambda
     Lambda --> DB
     Lambda --> LLM
-    
+
     %% Contexto AWS
     subgraph cloud[AWS Cloud]
         Gateway
         Lambda
         DB
     end
-    
+
     style cloud fill:#f9fafb,stroke:#d1d5db,stroke-width:1px
 ```
 

@@ -16,17 +16,17 @@ graph TD
     subgraph "Application"
         C[core.py]
     end
-    
+
     subgraph "Providers"
         G[Gemini]
         O[OpenRouter]
         F[Future Providers]
     end
-    
+
     C -->|Primary| G
     C -->|Fallback| O
     C -.->|Extensible| F
-    
+
     G -->|Retry| G
     O -->|Retry| O
 ```
@@ -106,15 +106,15 @@ CHAT_RATE_LIMIT=60/minute
 class Settings(BaseSettings):
     # Required fields
     llm_provider: Literal["gemini", "openrouter"]
-    
+
     # Optional with defaults
     rate_limit: str = "60/minute"
     cache_ttl: int = 300
-    
+
     # Secrets (masked in logs)
     gemini_api_key: Optional[SecretStr]
     openrouter_api_key: Optional[SecretStr]
-    
+
     @validator("gemini_api_key")
     def validate_api_keys(cls, v, values):
         # Provider-specific validation
@@ -127,7 +127,7 @@ sequenceDiagram
     participant Env
     participant Settings
     participant Validation
-    
+
     App->>Env: Read environment
     Env->>Settings: Parse variables
     Settings->>Validation: Validate types
@@ -169,7 +169,7 @@ X-RateLimit-Reset: 1234567890
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     user_id: str = Field(..., regex="^[a-zA-Z0-9_-]+$")
-    
+
     @validator("message")
     def sanitize_message(cls, v):
         # Remove PII, sanitize input
@@ -193,15 +193,15 @@ graph LR
     subgraph "Development"
         D[SQLite + In-Memory]
     end
-    
+
     subgraph "Staging"
         S[DynamoDB + Redis]
     end
-    
+
     subgraph "Production"
         P[DynamoDB + Redis + WAF]
     end
-    
+
     D -->|Promote| S
     S -->|Promote| P
 ```
