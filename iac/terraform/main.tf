@@ -75,7 +75,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         "dynamodb:Query",
         "dynamodb:Scan",
         "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem"
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
       ]
       Resource = [
         aws_dynamodb_table.main.arn,
@@ -99,24 +100,26 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      # Application settings
-      ENVIRONMENT = var.environment
+      # Use CHAT_ prefix to match our application
+      CHAT_HOST = "0.0.0.0"
+      CHAT_PORT = "8000"
+      CHAT_LOG_LEVEL = var.log_level
 
-      # Database configuration
-      DATABASE_TYPE = "dynamodb"
-      TABLE_NAME    = aws_dynamodb_table.main.name
+      # Database configuration - DynamoDB URL format
+      CHAT_DATABASE_URL = "dynamodb://${aws_dynamodb_table.main.name}?region=${var.aws_region}"
 
       # LLM configuration
-      LLM_PROVIDER       = var.llm_provider
-      GEMINI_API_KEY     = var.gemini_api_key
-      OPENROUTER_API_KEY = var.openrouter_api_key
+      CHAT_LLM_PROVIDER = var.llm_provider
+      CHAT_GEMINI_API_KEY = var.gemini_api_key
+      CHAT_OPENROUTER_API_KEY = var.openrouter_api_key
+      CHAT_MODEL_NAME = var.openrouter_model_name
 
-      # Security
-      REQUIRE_API_KEY = var.require_api_key ? "true" : "false"
-      API_KEY         = var.api_key
+      # Rate limiting
+      CHAT_RATE_LIMIT = "60/minute"
+      CHAT_CACHE_TTL = "3600"
 
-      # Logging
-      LOG_LEVEL = var.log_level
+      # Environment
+      ENVIRONMENT = var.environment
     }
   }
 
@@ -138,14 +141,20 @@ resource "aws_lambda_function_url" "api" {
   }
 }
 
-# DynamoDB table for session storage
+# DynamoDB table for session storage and caching
 resource "aws_dynamodb_table" "main" {
   name           = "${var.project_name}-${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "interaction_id"
+  hash_key       = "pk"
+  range_key      = "sk"
 
   attribute {
-    name = "interaction_id"
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
     type = "S"
   }
 
@@ -154,9 +163,15 @@ resource "aws_dynamodb_table" "main" {
     type = "S"
   }
 
+  attribute {
+    name = "created_at"
+    type = "S"
+  }
+
   global_secondary_index {
-    name            = "user_id_index"
+    name            = "user-index"
     hash_key        = "user_id"
+    range_key       = "created_at"
     projection_type = "ALL"
   }
 

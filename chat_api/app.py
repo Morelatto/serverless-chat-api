@@ -3,7 +3,9 @@
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from loguru import logger
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -50,6 +52,41 @@ app.middleware("http")(add_request_id)
 # Add rate limiting
 app.state.limiter = handlers.limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# Modern validation error handler using Pydantic v2
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Handle validation errors with clean user-friendly messages."""
+    error_messages = []
+
+    for error in exc.errors():
+        # Extract the field name and error message
+        field = error["loc"][-1] if error["loc"] else "field"
+
+        # Use Pydantic's built-in message or custom message from PydanticCustomError
+        message = error.get("msg", f"Invalid {field}")
+
+        # Handle missing fields specifically
+        if error["type"] == "missing":
+            message = f"Required field '{field}' is missing"
+        elif error["type"] == "json_invalid":
+            message = "Invalid JSON format"
+
+        error_messages.append(message)
+
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "error": "Validation failed",
+            "message": "; ".join(error_messages),
+            "details": error_messages,
+        },
+    )
+
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Routes
 app.post("/chat", response_model=ChatResponse, tags=["chat"])(handlers.chat_handler)

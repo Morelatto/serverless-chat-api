@@ -70,6 +70,12 @@ variable "openrouter_api_key" {
   default     = ""
 }
 
+variable "openrouter_model_name" {
+  description = "OpenRouter model name (without openrouter/ prefix)"
+  type        = string
+  default     = "auto"
+}
+
 # Security
 variable "require_api_key" {
   description = "Whether to require API key authentication"

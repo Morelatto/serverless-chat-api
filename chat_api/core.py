@@ -57,7 +57,10 @@ async def _call_llm(content: str) -> dict[str, Any]:
         try:
             # Calculate cost using LiteLLM's built-in function
             cost = litellm.completion_cost(completion_response=response)
-            usage_dict["cost_usd"] = cost
+            # Convert float to Decimal for DynamoDB compatibility
+            from decimal import Decimal
+
+            usage_dict["cost_usd"] = Decimal(str(cost)) if cost is not None else None
         except (ValueError, KeyError, TypeError):
             # Cost calculation not available for this model
             logger.debug("Cost calculation not available for model: {}", response.model)

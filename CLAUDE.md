@@ -51,6 +51,8 @@ uv run python -m pytest tests/ -v
 - `make clean` - Remove all temporary files
 - `make deploy ENV=prod` - Deploy to AWS Lambda
 
+⚠️ **IAC Deployment Notice**: The current Terraform configuration is **not compatible** with the updated architecture. See @docs/DEPLOYMENT_MIGRATION.md for required updates before deploying.
+
 ## Architecture Overview
 
 This is a **Pythonic chat API** following "flat is better than nested" philosophy. The codebase was refactored from Java-style patterns to idiomatic Python, reducing code by 70%.

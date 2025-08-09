@@ -1,4 +1,4 @@
-# Example Terraform variables file
+# Updated Terraform variables for the new architecture
 # Copy this to terraform.tfvars and fill in your values
 
 # AWS Configuration
@@ -6,31 +6,80 @@ aws_region = "us-east-1"
 
 # Project Configuration
 project_name = "serverless-chat-api"
-environment  = "dev"
+environment  = "dev"  # dev, staging, prod
 
 # Lambda Configuration
-lambda_memory_size = 512  # MB
+lambda_memory_size = 256  # Will be overridden by environment defaults
 lambda_timeout     = 30   # seconds
 
 # LLM Configuration
 llm_provider       = "gemini"  # or "openrouter"
-gemini_api_key     = "your-gemini-api-key-here"
-openrouter_api_key = "your-openrouter-api-key-here"
+gemini_api_key     = "your-gemini-api-key-here"      # Get from https://aistudio.google.com/app/apikey
+openrouter_api_key = "your-openrouter-api-key-here"  # Get from https://openrouter.ai/keys
 
-# Security
-require_api_key = true
-api_key         = ""  # Leave empty to auto-generate
+# Application Configuration
+rate_limit = "60/minute"  # Rate limiting: number/period (second|minute|hour|day)
+cache_ttl  = 3600        # Cache TTL in seconds (1 hour)
 
-# CORS Configuration
-cors_origins = ["*"]  # Restrict in production
+# Redis Configuration (Optional - improves performance by 80%)
+enable_redis     = false              # Set to true for staging/prod
+redis_node_type  = "cache.t3.micro"   # Upgrade for prod: cache.t3.medium
+redis_num_nodes  = 1                  # Single node for dev/staging
 
-# Logging and Monitoring
-log_level          = "INFO"
-log_retention_days = 7
-enable_monitoring  = false  # Enable for production
+# Security & CORS
+cors_origins = ["*"]  # Restrict in production: ["https://yourdomain.com"]
+
+# Monitoring & Logging
+log_level          = "INFO"   # DEBUG, INFO, WARNING, ERROR
+log_retention_days = 7        # CloudWatch log retention
+enable_monitoring  = false    # Enable CloudWatch alarms (recommended for prod)
 
 # Database Configuration
 enable_point_in_time_recovery = false  # Enable for production
 
 # Encryption (optional)
-# kms_key_id = "arn:aws:kms:us-east-1:xxx:key/xxx"
+# kms_key_id = "arn:aws:kms:us-east-1:123456789:key/xxx"
+
+# ==================================================
+# ENVIRONMENT-SPECIFIC RECOMMENDATIONS:
+# ==================================================
+
+# FOR DEVELOPMENT:
+# environment = "dev"
+# enable_redis = false              # Use in-memory cache (saves cost)
+# lambda_memory_size = 256          # Minimal resources
+# log_level = "DEBUG"               # Verbose logging
+# enable_monitoring = false         # No alarms needed
+
+# FOR STAGING:
+# environment = "staging"
+# enable_redis = true               # Test cache performance
+# redis_node_type = "cache.t3.small"
+# lambda_memory_size = 512          # More resources for load testing
+# enable_monitoring = true          # Monitor performance
+# log_level = "INFO"
+
+# FOR PRODUCTION:
+# environment = "prod"
+# enable_redis = true               # Required for performance
+# redis_node_type = "cache.t3.medium" # Handle production load
+# lambda_memory_size = 1024         # Optimize for performance
+# enable_monitoring = true          # Full monitoring
+# enable_point_in_time_recovery = true # Data protection
+# log_level = "WARNING"             # Reduce log noise
+# cors_origins = ["https://yourdomain.com"] # Restrict origins
+
+# ==================================================
+# COST ESTIMATES (US East 1):
+# ==================================================
+#
+# Development (Redis disabled):    ~$5/month
+# Staging (Redis enabled):         ~$20/month
+# Production (Redis + monitoring): ~$50/month
+#
+# Breakdown:
+# - Lambda: $2/month (1M requests)
+# - DynamoDB: $2.50/month (1M operations)
+# - ECR + Logs: $0.60/month
+# - Redis: $15-45/month (depending on instance)
+# - CloudWatch: $1-5/month (monitoring)

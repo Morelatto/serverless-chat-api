@@ -170,6 +170,9 @@ Desktop.ini
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.*
+!terraform.tfvars.example
 
 # AWS
 .aws/

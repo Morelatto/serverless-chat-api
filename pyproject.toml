@@ -33,6 +33,8 @@ dependencies = [
     "sqlalchemy",
     "loguru",
     "orjson",
+    "boto3",  # For DynamoDB support
+    "mangum",  # For Lambda deployment
 ]
 
 [project.optional-dependencies]
