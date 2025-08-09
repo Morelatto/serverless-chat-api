@@ -10,7 +10,6 @@ from .config import settings
 from .core import health_check as core_health
 from .core import process_message
 from .models import ChatMessage, ChatResponse
-from .storage import get_user_history
 
 # Rate limiter - explicit backend configuration
 limiter = Limiter(
@@ -35,7 +34,11 @@ async def chat_handler(request: Request, message: ChatMessage) -> ChatResponse:
         HTTPException: If processing fails.
     """
     try:
-        result = await process_message(message.user_id, message.content)
+        # Get repository and cache from app state
+        repository = request.app.state.repository
+        cache = request.app.state.cache
+
+        result = await process_message(message.user_id, message.content, repository, cache)
 
         return ChatResponse(
             id=result["id"],
@@ -48,10 +51,11 @@ async def chat_handler(request: Request, message: ChatMessage) -> ChatResponse:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-async def history_handler(user_id: str, limit: int = 10) -> list:
+async def history_handler(request: Request, user_id: str, limit: int = 10) -> list:
     """Retrieve chat history for a user.
 
     Args:
+        request: FastAPI request object for accessing app state.
         user_id: Unique identifier for the user.
         limit: Maximum number of messages to return (max 100).
 
@@ -64,16 +68,24 @@ async def history_handler(user_id: str, limit: int = 10) -> list:
     if limit > 100:
         raise HTTPException(400, "Limit cannot exceed 100")
 
-    return await get_user_history(user_id, limit)
+    # Get repository from app state
+    repository = request.app.state.repository
+    return await repository.get_history(user_id, limit)
 
 
-async def health_handler() -> dict:
+async def health_handler(request: Request) -> dict:
     """Check health status of all system components.
+
+    Args:
+        request: FastAPI request object for accessing app state.
 
     Returns:
         Dictionary containing overall status, timestamp, and individual service statuses.
     """
-    status = await core_health()
+    # Get repository from app state
+    repository = request.app.state.repository
+
+    status = await core_health(repository)
     all_healthy = all(status.values())
 
     return {

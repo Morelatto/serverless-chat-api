@@ -16,14 +16,18 @@ class Settings(BaseSettings):
     log_file: str | None = None  # Optional log file path
 
     # LLM Settings
-    llm_provider: str = "gemini"  # gemini, openrouter, mock
+    llm_provider: str = "openrouter"  # openrouter or gemini
     gemini_api_key: str | None = None
     openrouter_api_key: str | None = None
-    model_name: str = "google/gemini-pro"  # Default model for openrouter
+    openrouter_model: str = "google/gemma-2-9b-it:free"  # Default free model for openrouter
 
     # Storage
     database_url: str = "sqlite+aiosqlite:///./data/chat.db"
     redis_url: str | None = None
+
+    # AWS Configuration (for production)
+    aws_region: str = "us-east-1"
+    dynamodb_table: str = "chat-interactions"
 
     # Rate Limiting
     rate_limit: str = "60/minute"
@@ -41,10 +45,9 @@ class Settings(BaseSettings):
                 "OpenRouter provider selected but CHAT_OPENROUTER_API_KEY not set. "
                 "Please set the CHAT_OPENROUTER_API_KEY environment variable."
             )
-        if self.llm_provider not in ("gemini", "openrouter", "mock"):
+        if self.llm_provider not in ("gemini", "openrouter"):
             raise ValueError(
-                f"Invalid LLM provider: {self.llm_provider}. "
-                "Must be one of: gemini, openrouter, mock"
+                f"Invalid LLM provider: {self.llm_provider}. " "Must be one of: gemini, openrouter"
             )
         return self
 
@@ -53,9 +56,8 @@ class Settings(BaseSettings):
         """Get the full model identifier for litellm based on provider."""
         if self.llm_provider == "gemini":
             return "gemini/gemini-1.5-flash"
-        if self.llm_provider == "openrouter":
-            return f"openrouter/{self.model_name}"
-        return "mock"  # For testing
+        # openrouter
+        return f"openrouter/{self.openrouter_model}"
 
     class Config:
         env_file = ".env"

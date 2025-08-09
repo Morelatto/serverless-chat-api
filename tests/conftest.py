@@ -30,20 +30,24 @@ def event_loop():
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Test client fixture."""
-    from unittest.mock import patch
+    from unittest.mock import AsyncMock
 
     from httpx import ASGITransport
 
-    # Mock storage operations to avoid database issues in tests
-    with (
-        patch("chat_api.storage.startup", return_value=None),
-        patch("chat_api.storage.shutdown", return_value=None),
-        patch("chat_api.storage.database.connect", return_value=None),
-        patch("chat_api.storage.database.disconnect", return_value=None),
-    ):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            yield ac
+    # Initialize mock repository and cache in app state
+    app.state.repository = AsyncMock()
+    app.state.cache = AsyncMock()
+
+    # Setup default mock behaviors
+    app.state.repository.health_check.return_value = True
+    app.state.repository.get_history.return_value = []
+    app.state.repository.save.return_value = None
+    app.state.cache.get.return_value = None
+    app.state.cache.set.return_value = None
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
 
 
 @pytest.fixture

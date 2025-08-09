@@ -17,6 +17,9 @@ async def test_e2e_chat_flow(mock_call_llm, client: AsyncClient):
         "usage": {"prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20},
     }
 
+    # Mock cache miss
+    client._transport.app.state.cache.get.return_value = None
+
     # Send chat message
     response = await client.post(
         "/chat", json={"user_id": "test-user-123", "content": "Hello, how are you?"}
@@ -32,31 +35,47 @@ async def test_e2e_chat_flow(mock_call_llm, client: AsyncClient):
     assert data["cached"] is False
     assert "timestamp" in data
 
+    # Mock history for the history endpoint
+    client._transport.app.state.repository.get_history.return_value = [
+        {
+            "id": data["id"],
+            "user_id": "test-user-123",
+            "content": "Hello, how are you?",
+            "response": "Hello! I'm an AI assistant. How can I help you today?",
+            "timestamp": data["timestamp"],
+        }
+    ]
+
     # Check history endpoint
     history_response = await client.get("/history/test-user-123")
     assert history_response.status_code == 200
     history_data = history_response.json()
 
     # History should contain our message
-    assert len(history_data) > 0
-    # Note: In a real integration test, we'd verify the message is in history
-    # but our mocked storage might not persist across calls
+    assert len(history_data) == 1
+    assert history_data[0]["content"] == "Hello, how are you?"
 
 
 @pytest.mark.asyncio
 async def test_e2e_health_check(client: AsyncClient):
     """Test health check endpoint."""
-    response = await client.get("/health")
-    assert response.status_code == 200
+    # Mock health check result
+    client._transport.app.state.repository.health_check.return_value = True
 
-    data = response.json()
-    assert "status" in data
-    assert "services" in data
-    assert "timestamp" in data
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {"text": "test", "model": "test", "usage": {}}
 
-    # Should have storage and llm status
-    assert "storage" in data["services"]
-    assert "llm" in data["services"]
+        response = await client.get("/health")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "status" in data
+        assert "services" in data
+        assert "timestamp" in data
+
+        # Should have storage and llm status
+        assert "storage" in data["services"]
+        assert "llm" in data["services"]
 
 
 @pytest.mark.asyncio
@@ -81,7 +100,7 @@ async def test_e2e_validation_errors(client: AsyncClient):
             "content": "Hello",
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
     # Missing fields
     response = await client.post(
@@ -91,7 +110,7 @@ async def test_e2e_validation_errors(client: AsyncClient):
             # Missing content
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
     # History limit too high
     response = await client.get("/history/test?limit=200")
@@ -100,10 +119,7 @@ async def test_e2e_validation_errors(client: AsyncClient):
 
 @pytest.mark.asyncio
 @patch("chat_api.core._call_llm")
-@patch("chat_api.handlers.get_user_history")
-async def test_e2e_complete_workflow(
-    mock_get_history: AsyncMock, mock_call_llm: AsyncMock, client: AsyncClient
-):
+async def test_e2e_complete_workflow(mock_call_llm: AsyncMock, client: AsyncClient):
     """Test complete application workflow including chat and history."""
     # Setup mocks
     mock_call_llm.return_value = {
@@ -111,6 +127,9 @@ async def test_e2e_complete_workflow(
         "model": "gpt-4",
         "usage": {"total_tokens": 25},
     }
+
+    # Mock cache miss initially
+    client._transport.app.state.cache.get.return_value = None
 
     # Step 1: Health check
     response = await client.get("/health")
@@ -127,7 +146,7 @@ async def test_e2e_complete_workflow(
     assert "timestamp" in chat_data
 
     # Step 3: Check history
-    mock_get_history.return_value = [
+    client._transport.app.state.repository.get_history.return_value = [
         {
             "id": chat_data["id"],
             "user_id": "integration-test-user",
@@ -144,9 +163,18 @@ async def test_e2e_complete_workflow(
     assert history_data[0]["content"] == "What is the capital of France?"
 
     # Step 4: Test caching (second identical request)
+    # Mock cache hit
+    client._transport.app.state.cache.get.return_value = {
+        "id": "cached-id",
+        "content": "AI response to user query",
+        "model": "gpt-4",
+        "cached": False,
+    }
+
     response = await client.post("/chat", json=chat_request)
     assert response.status_code == 200
-    # In real scenario with proper caching, this would be cached
+    cached_data = response.json()
+    assert cached_data["cached"] is True
 
     # Step 5: API info
     response = await client.get("/")

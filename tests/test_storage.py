@@ -1,27 +1,34 @@
 """Tests for storage operations."""
 
-from datetime import UTC, datetime
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from chat_api.storage import (
     cache_key,
-    get_cached,
-    get_user_history,
-    health_check,
-    save_message,
-    set_cached,
+    create_cache,
+    create_repository,
 )
+from chat_api.storage.cache import NoOpCache, RedisCache
+from chat_api.storage.sqlite import SQLiteRepository
 
 
 @pytest.mark.asyncio
 async def test_save_message() -> None:
     """Test saving message to database."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.execute = AsyncMock()
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        await save_message(
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
+
+        # Save a message
+        await repo.save(
             id="msg-123",
             user_id="test_user",
             content="Hello",
@@ -30,117 +37,182 @@ async def test_save_message() -> None:
             tokens=10,
         )
 
-        # Verify database was called
-        mock_db.execute.assert_called_once()
-        call_args = mock_db.execute.call_args
+        # Verify by getting history
+        history = await repo.get_history("test_user", 10)
+        assert len(history) == 1
+        assert history[0]["id"] == "msg-123"
+        assert history[0]["content"] == "Hello"
 
-        # Verify SQL structure (without checking exact query)
-        assert len(call_args[0]) >= 1  # Should have query and values
+        await repo.shutdown()
+    finally:
+        # Clean up temp file
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_get_user_history() -> None:
     """Test retrieving user history from database."""
-    mock_results = [
-        {
-            "id": "msg-1",
-            "user_id": "test_user",
-            "content": "Hello",
-            "response": "Hi there!",
-            "timestamp": datetime.now(UTC),
-            "metadata": {"model": "test-model"},
-        }
-    ]
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.fetch_all = AsyncMock(return_value=mock_results)
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
 
-        result = await get_user_history("test_user", 10)
+        # Save multiple messages
+        for i in range(3):
+            await repo.save(
+                id=f"msg-{i}",
+                user_id="test_user",
+                content=f"Hello {i}",
+                response=f"Hi there {i}!",
+                model="test-model",
+            )
 
-        assert len(result) == 1
-        assert result[0]["user_id"] == "test_user"
-        assert result[0]["content"] == "Hello"
+        # Get history
+        history = await repo.get_history("test_user", 10)
+        assert len(history) == 3
+        # Should be in reverse order (newest first)
+        assert history[0]["id"] == "msg-2"
+        assert history[2]["id"] == "msg-0"
 
-        # Verify database query
-        mock_db.fetch_all.assert_called_once()
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_get_user_history_empty() -> None:
     """Test retrieving history for user with no messages."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.fetch_all = AsyncMock(return_value=[])
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        result = await get_user_history("new_user", 10)
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
 
-        assert result == []
+        history = await repo.get_history("new_user", 10)
+        assert history == []
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_get_cached_hit() -> None:
     """Test cache hit scenario."""
-    mock_cached_data = '{"id": "test", "content": "cached response"}'
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        # Mock Redis client
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = '{"id": "test", "content": "cached response"}'
+        mock_redis.ping.return_value = True
+        mock_redis_from_url.return_value = mock_redis
 
-    with patch("chat_api.storage._redis") as mock_redis:
-        mock_redis.get = AsyncMock(return_value=mock_cached_data)
+        # Create cache and initialize
+        cache = RedisCache("redis://localhost")
+        await cache.startup()
 
-        result = await get_cached("test_key")
-
+        # Test cache get
+        result = await cache.get("test_key")
         assert result is not None
         assert result["content"] == "cached response"
+
         mock_redis.get.assert_called_once_with("test_key")
+        await cache.shutdown()
 
 
 @pytest.mark.asyncio
 async def test_get_cached_miss() -> None:
     """Test cache miss scenario."""
-    with patch("chat_api.storage._redis") as mock_redis:
-        mock_redis.get = AsyncMock(return_value=None)
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        # Mock Redis client
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = None
+        mock_redis.ping.return_value = True
+        mock_redis_from_url.return_value = mock_redis
 
-        result = await get_cached("test_key")
+        # Create cache and initialize
+        cache = RedisCache("redis://localhost")
+        await cache.startup()
 
+        # Test cache miss
+        result = await cache.get("test_key")
         assert result is None
+
         mock_redis.get.assert_called_once_with("test_key")
+        await cache.shutdown()
 
 
 @pytest.mark.asyncio
 async def test_set_cached() -> None:
     """Test setting data in cache."""
-    test_data = {"id": "test", "content": "response"}
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        # Mock Redis client
+        mock_redis = AsyncMock()
+        mock_redis.ping.return_value = True
+        mock_redis_from_url.return_value = mock_redis
 
-    with patch("chat_api.storage._redis") as mock_redis:
-        mock_redis.setex = AsyncMock()
+        # Create cache and initialize
+        cache = RedisCache("redis://localhost")
+        await cache.startup()
 
-        await set_cached("test_key", test_data, 3600)
+        # Test cache set
+        test_data = {"id": "test", "content": "response"}
+        await cache.set("test_key", test_data, 3600)
 
         mock_redis.setex.assert_called_once()
         call_args = mock_redis.setex.call_args[0]
+        assert call_args[0] == "test_key"
+        assert call_args[1] == 3600
 
-        assert call_args[0] == "test_key"  # Key
-        assert call_args[1] == 3600  # TTL
-        # call_args[2] would be JSON serialized data
+        await cache.shutdown()
 
 
 @pytest.mark.asyncio
 async def test_health_check_healthy() -> None:
     """Test health check when database is healthy."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.execute = AsyncMock()
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        result = await health_check()
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
 
+        result = await repo.health_check()
         assert result is True
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_health_check_database_failure() -> None:
     """Test health check when database fails."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.execute = AsyncMock(side_effect=ConnectionError("DB error"))
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        result = await health_check()
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
 
-        assert result is False
+        # Mock execute to fail
+        with patch.object(repo.database, "execute", side_effect=ConnectionError("DB error")):
+            result = await repo.health_check()
+            assert result is False
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 def test_generate_cache_key() -> None:
@@ -159,117 +231,188 @@ def test_generate_cache_key() -> None:
     assert key3 != key4
 
     # Keys should be reasonable length and format
-    assert len(key1) > 10
+    assert len(key1) == 16  # We limit to 16 chars
     assert isinstance(key1, str)
 
 
 @pytest.mark.asyncio
 async def test_save_message_database_error() -> None:
     """Test handling database errors during message save."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.execute = AsyncMock(side_effect=Exception("Database connection failed"))
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        with pytest.raises(Exception, match="Database connection failed"):
-            await save_message(
-                id="msg-123",
-                user_id="test_user",
-                content="Hello",
-                response="Hi there!",
-                model="test-model",
-                tokens=10,
-            )
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
+
+        # Mock execute to fail
+        with patch.object(
+            repo.database, "execute", side_effect=Exception("Database connection failed")
+        ):
+            with pytest.raises(Exception, match="Database connection failed"):
+                await repo.save(
+                    id="msg-123",
+                    user_id="test_user",
+                    content="Hello",
+                    response="Hi there!",
+                    model="test-model",
+                    tokens=10,
+                )
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_get_user_history_database_error() -> None:
     """Test handling database errors during history retrieval."""
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.fetch_all = AsyncMock(side_effect=Exception("Query failed"))
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-        with pytest.raises(Exception, match="Query failed"):
-            await get_user_history("test_user", 10)
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
+
+        # Mock fetch_all to fail
+        with patch.object(repo.database, "fetch_all", side_effect=Exception("Query failed")):
+            with pytest.raises(Exception, match="Query failed"):
+                await repo.get_history("test_user", 10)
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_cache_serialization_error() -> None:
     """Test handling serialization errors in cache operations."""
+    # NoOpCache should handle any data gracefully
+    cache = NoOpCache()
+    await cache.startup()
 
-    # Test with non-serializable data
+    # Should not raise any error
     class NonSerializable:
         pass
 
-    with patch("chat_api.storage._redis") as mock_redis:
-        mock_redis.setex = AsyncMock()
+    await cache.set("test_key", {"data": NonSerializable()}, 3600)  # type: ignore
+    result = await cache.get("test_key")
+    assert result is None  # NoOpCache always returns None
 
-        # Should handle serialization gracefully or raise appropriate error
-        from contextlib import suppress
-
-        with suppress(TypeError, ValueError):
-            await set_cached("test_key", {"data": NonSerializable()}, 3600)
+    await cache.shutdown()
 
 
 @pytest.mark.asyncio
 async def test_cache_json_parsing_error() -> None:
     """Test handling JSON parsing errors in cache retrieval."""
-    with patch("chat_api.storage._redis") as mock_redis:
-        mock_redis.get = AsyncMock(return_value="invalid json {")
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        # Mock Redis client
+        mock_redis = AsyncMock()
+        mock_redis.get.return_value = "invalid json {"
+        mock_redis.ping.return_value = True
+        mock_redis_from_url.return_value = mock_redis
 
-        result = await get_cached("test_key")
+        # Create cache and initialize
+        cache = RedisCache("redis://localhost")
+        await cache.startup()
 
         # Should handle invalid JSON gracefully
+        result = await cache.get("test_key")
         assert result is None
+
+        await cache.shutdown()
 
 
 @pytest.mark.asyncio
 async def test_get_user_history_limit_enforcement() -> None:
     """Test that history limit is properly enforced."""
-    # Create more results than requested limit
-    mock_results = [
-        {
-            "id": f"msg-{i}",
-            "user_id": "test_user",
-            "content": f"Message {i}",
-            "response": f"Response {i}",
-            "timestamp": datetime.now(UTC),
-            "metadata": {},
-        }
-        for i in range(10)
-    ]
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.fetch_all = AsyncMock(return_value=mock_results)
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
+
+        # Save more messages than limit
+        for i in range(10):
+            await repo.save(
+                id=f"msg-{i}",
+                user_id="test_user",
+                content=f"Message {i}",
+                response=f"Response {i}",
+                model="test-model",
+            )
 
         # Request only 5 messages
-        await get_user_history("test_user", 5)
+        history = await repo.get_history("test_user", 5)
+        assert len(history) == 5
+        # Should get the 5 most recent (9, 8, 7, 6, 5)
+        assert history[0]["id"] == "msg-9"
+        assert history[4]["id"] == "msg-5"
 
-        # Database query should limit to 5, not Python slicing
-        call_args = mock_db.fetch_all.call_args[0]
-        query = call_args[0]  # First argument should be query
-
-        # Verify limit is in the SQL query (exact format may vary)
-        assert "5" in str(query) or "LIMIT" in str(query).upper()
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
 async def test_message_data_integrity() -> None:
     """Test that saved message data maintains integrity."""
-    test_data = {
-        "id": "msg-456",
-        "user_id": "test_user_123",
-        "content": "Hello with special chars: <>\"'&",
-        "response": "Response with unicode: 🚀 emoji",
-        "model": "test-model",
-        "tokens": 42,
-    }
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-    with patch("chat_api.storage.database") as mock_db:
-        mock_db.execute = AsyncMock()
+    try:
+        # Create repository with temp file
+        repo = SQLiteRepository(f"sqlite+aiosqlite:///{db_path}")
+        await repo.startup()
 
-        await save_message(**test_data)
+        test_data = {
+            "id": "msg-456",
+            "user_id": "test_user_123",
+            "content": "Hello with special chars: <>\"'&",
+            "response": "Response with unicode: 🚀 emoji",
+            "model": "test-model",
+            "tokens": 42,
+        }
 
-        # Verify all data was passed to database
-        call_args = mock_db.execute.call_args
-        assert call_args is not None
+        await repo.save(**test_data)
 
-        # Values should be passed as parameters to prevent SQL injection
-        assert len(call_args) >= 1
+        # Retrieve and verify
+        history = await repo.get_history("test_user_123", 1)
+        assert len(history) == 1
+        msg = history[0]
+        assert msg["id"] == "msg-456"
+        assert msg["content"] == "Hello with special chars: <>\"'&"
+        assert msg["response"] == "Response with unicode: 🚀 emoji"
+        assert msg.get("model") == "test-model"
+        assert msg.get("tokens") == 42
+
+        await repo.shutdown()
+    finally:
+        Path(db_path).unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_factory_functions() -> None:
+    """Test factory functions for creating repository and cache."""
+    # Create temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
+
+    try:
+        # Test repository creation
+        repo = create_repository(f"sqlite+aiosqlite:///{db_path}")
+        assert isinstance(repo, SQLiteRepository)
+
+        # Test cache creation
+        cache = create_cache()  # Should create NoOpCache without Redis URL
+        assert isinstance(cache, NoOpCache)
+    finally:
+        Path(db_path).unlink(missing_ok=True)

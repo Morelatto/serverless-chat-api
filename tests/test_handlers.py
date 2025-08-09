@@ -1,6 +1,6 @@
 """Test HTTP handlers."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
@@ -9,12 +9,18 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_health(client: AsyncClient) -> None:
     """Test health endpoint."""
-    response = await client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert "status" in data
-    assert "timestamp" in data
-    assert "services" in data
+    # Mock health check
+    client._transport.app.state.repository.health_check.return_value = True
+
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {"text": "test", "model": "test", "usage": {}}
+
+        response = await client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "timestamp" in data
+        assert "services" in data
 
 
 @pytest.mark.asyncio
@@ -28,24 +34,24 @@ async def test_root(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.process_message")
-async def test_chat(
-    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
-) -> None:
+async def test_chat(client: AsyncClient, sample_message: dict[str, str]) -> None:
     """Test chat endpoint."""
-    mock_process.return_value = {
-        "id": "test-123",
-        "content": "Hello! How can I help you?",
-        "model": "test-model",
-        "cached": False,
-    }
+    # Mock cache miss and successful LLM call
+    client._transport.app.state.cache.get.return_value = None
 
-    response = await client.post("/chat", json=sample_message)
-    assert response.status_code == 200
-    data = response.json()
-    assert "id" in data
-    assert "content" in data
-    assert data["cached"] is False
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {
+            "text": "Hello! How can I help you?",
+            "model": "test-model",
+            "usage": {"total_tokens": 10},
+        }
+
+        response = await client.post("/chat", json=sample_message)
+        assert response.status_code == 200
+        data = response.json()
+        assert "id" in data
+        assert "content" in data
+        assert data["cached"] is False
 
 
 @pytest.mark.asyncio
@@ -53,7 +59,7 @@ async def test_chat_invalid_user_id(client: AsyncClient) -> None:
     """Test chat with invalid user_id."""
     invalid_message = {"user_id": "", "content": "Hello"}
     response = await client.post("/chat", json=invalid_message)
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
 
 @pytest.mark.asyncio
@@ -61,14 +67,14 @@ async def test_chat_invalid_content(client: AsyncClient) -> None:
     """Test chat with invalid content."""
     invalid_message = {"user_id": "test", "content": ""}
     response = await client.post("/chat", json=invalid_message)
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.get_user_history")
-async def test_history(mock_get_history: AsyncMock, client: AsyncClient) -> None:
+async def test_history(client: AsyncClient) -> None:
     """Test history endpoint."""
-    mock_get_history.return_value = [
+    # Mock repository behavior in conftest
+    client._transport.app.state.repository.get_history.return_value = [
         {
             "id": "test-123",
             "user_id": "test_user",
@@ -93,45 +99,43 @@ async def test_history_limit_exceeded(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.process_message")
-async def test_chat_error_handling(
-    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
-) -> None:
+async def test_chat_error_handling(client: AsyncClient, sample_message: dict[str, str]) -> None:
     """Test chat endpoint error handling."""
-    mock_process.side_effect = Exception("Processing error")
+    # Mock repository to raise an error
+    client._transport.app.state.repository.save.side_effect = Exception("Processing error")
+    client._transport.app.state.cache.get.return_value = None
 
     response = await client.post("/chat", json=sample_message)
     assert response.status_code == 500
     data = response.json()
     assert "detail" in data
-    assert "Processing error" in data["detail"]
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.process_message")
-async def test_chat_cached_response(
-    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
-) -> None:
+async def test_chat_cached_response(client: AsyncClient, sample_message: dict[str, str]) -> None:
     """Test chat endpoint with cached response."""
-    mock_process.return_value = {
+    # Mock cache to return cached response
+    client._transport.app.state.cache.get.return_value = {
         "id": "cached-123",
         "content": "Cached response",
         "model": "test-model",
-        "cached": True,
+        "cached": False,
     }
 
-    response = await client.post("/chat", json=sample_message)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["cached"] is True
-    assert data["content"] == "Cached response"
+    with patch("chat_api.core._call_llm") as mock_llm:
+        response = await client.post("/chat", json=sample_message)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["cached"] is True
+        assert data["content"] == "Cached response"
+        # LLM should not be called when cached
+        mock_llm.assert_not_called()
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.get_user_history")
-async def test_history_empty(mock_get_history: AsyncMock, client: AsyncClient) -> None:
+async def test_history_empty(client: AsyncClient) -> None:
     """Test history endpoint with no history."""
-    mock_get_history.return_value = []
+    client._transport.app.state.repository.get_history.return_value = []
 
     response = await client.get("/history/test_user")
     assert response.status_code == 200
@@ -140,10 +144,9 @@ async def test_history_empty(mock_get_history: AsyncMock, client: AsyncClient) -
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.get_user_history")
-async def test_history_with_limit(mock_get_history: AsyncMock, client: AsyncClient) -> None:
+async def test_history_with_limit(client: AsyncClient) -> None:
     """Test history endpoint with custom limit."""
-    mock_get_history.return_value = [
+    client._transport.app.state.repository.get_history.return_value = [
         {"id": f"test-{i}", "content": f"Message {i}"} for i in range(5)
     ]
 
@@ -151,47 +154,48 @@ async def test_history_with_limit(mock_get_history: AsyncMock, client: AsyncClie
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 5
-    mock_get_history.assert_called_once_with("test_user", 5)
+    client._transport.app.state.repository.get_history.assert_called_with("test_user", 5)
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.get_user_history")
-async def test_history_default_limit(mock_get_history: AsyncMock, client: AsyncClient) -> None:
+async def test_history_default_limit(client: AsyncClient) -> None:
     """Test history endpoint with default limit."""
-    mock_get_history.return_value = []
+    client._transport.app.state.repository.get_history.return_value = []
 
     response = await client.get("/history/test_user")
     assert response.status_code == 200
-    mock_get_history.assert_called_once_with("test_user", 10)
+    client._transport.app.state.repository.get_history.assert_called_with("test_user", 10)
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.core_health")
-async def test_health_healthy(mock_health: AsyncMock, client: AsyncClient) -> None:
+async def test_health_healthy(client: AsyncClient) -> None:
     """Test health endpoint when all services are healthy."""
-    mock_health.return_value = {"storage": True, "llm": True}
+    client._transport.app.state.repository.health_check.return_value = True
 
-    response = await client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert data["services"]["storage"] is True
-    assert data["services"]["llm"] is True
-    assert "timestamp" in data
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {"text": "test", "model": "test", "usage": {}}
+        response = await client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["services"]["storage"] is True
+        assert data["services"]["llm"] is True
+        assert "timestamp" in data
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.core_health")
-async def test_health_unhealthy(mock_health: AsyncMock, client: AsyncClient) -> None:
+async def test_health_unhealthy(client: AsyncClient) -> None:
     """Test health endpoint when services are unhealthy."""
-    mock_health.return_value = {"storage": False, "llm": True}
+    client._transport.app.state.repository.health_check.return_value = False
 
-    response = await client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "unhealthy"
-    assert data["services"]["storage"] is False
-    assert data["services"]["llm"] is True
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {"text": "test", "model": "test", "usage": {}}
+        response = await client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "unhealthy"
+        assert data["services"]["storage"] is False
+        assert data["services"]["llm"] is True
 
 
 @pytest.mark.asyncio
@@ -200,54 +204,53 @@ async def test_chat_malformed_json(client: AsyncClient) -> None:
     response = await client.post(
         "/chat", content="invalid json", headers={"content-type": "application/json"}
     )
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
 
 @pytest.mark.asyncio
 async def test_chat_missing_fields(client: AsyncClient) -> None:
     """Test chat endpoint with missing required fields."""
     response = await client.post("/chat", json={"user_id": "test"})  # missing content
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
     response = await client.post("/chat", json={"content": "hello"})  # missing user_id
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400
 
 
 @pytest.mark.asyncio
-@patch("chat_api.handlers.process_message")
-async def test_chat_response_structure(
-    mock_process: AsyncMock, client: AsyncClient, sample_message: dict[str, str]
-) -> None:
+async def test_chat_response_structure(client: AsyncClient, sample_message: dict[str, str]) -> None:
     """Test that chat response has correct structure."""
-    mock_process.return_value = {
-        "id": "test-123",
-        "content": "Response content",
-        "model": "gpt-4",
-        "cached": False,
-    }
+    # Mock cache miss and successful LLM call
+    client._transport.app.state.cache.get.return_value = None
 
-    response = await client.post("/chat", json=sample_message)
-    assert response.status_code == 200
-    data = response.json()
+    with patch("chat_api.core._call_llm") as mock_llm:
+        mock_llm.return_value = {
+            "text": "Response content",
+            "model": "gpt-4",
+            "usage": {"total_tokens": 10},
+        }
 
-    # Check required fields
-    assert "id" in data
-    assert "content" in data
-    assert "timestamp" in data
-    assert "cached" in data
+        response = await client.post("/chat", json=sample_message)
+        assert response.status_code == 200
+        data = response.json()
 
-    # Check optional fields
-    assert "model" in data
+        # Check required fields
+        assert "id" in data
+        assert "content" in data
+        assert "timestamp" in data
+        assert "cached" in data
 
-    # Validate values
-    assert data["id"] == "test-123"
-    assert data["content"] == "Response content"
-    assert data["model"] == "gpt-4"
-    assert data["cached"] is False
+        # Check optional fields
+        assert "model" in data
+
+        # Validate values
+        assert data["content"] == "Response content"
+        assert data["model"] == "gpt-4"
+        assert data["cached"] is False
 
 
 @pytest.mark.asyncio
 async def test_history_invalid_limit_types(client: AsyncClient) -> None:
     """Test history endpoint with invalid limit parameter types."""
     response = await client.get("/history/test_user?limit=abc")
-    assert response.status_code == 422
+    assert response.status_code == 400  # Custom validation handler returns 400

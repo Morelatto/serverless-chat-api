@@ -10,10 +10,11 @@ from loguru import logger
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from . import handlers, storage
+from . import handlers
 from .config import settings
 from .middleware import add_request_id
 from .models import ChatResponse
+from .storage import create_cache, create_repository
 
 # Configure loguru
 logger.remove()  # Remove default handler
@@ -33,12 +34,27 @@ if settings.log_file:
     )
 
 
+# Create storage instances
+repository = create_repository()
+cache = create_cache()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle."""
-    await storage.startup()
+    # Store instances in app state for access in handlers
+    app.state.repository = repository
+    app.state.cache = cache
+
+    # Initialize storage
+    await repository.startup()
+    await cache.startup()
+
     yield
-    await storage.shutdown()
+
+    # Cleanup storage
+    await repository.shutdown()
+    await cache.shutdown()
 
 
 # Create app
