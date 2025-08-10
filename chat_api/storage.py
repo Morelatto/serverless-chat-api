@@ -10,6 +10,7 @@ from databases import Database
 from loguru import logger
 
 from .exceptions import StorageError
+from .types import MessageRecord
 
 
 # ============== Protocols ==============
@@ -19,7 +20,7 @@ class Repository(Protocol):
     async def startup(self) -> None: ...
     async def shutdown(self) -> None: ...
     async def save(self, **kwargs) -> None: ...
-    async def get_history(self, user_id: str, limit: int) -> list[dict[str, Any]]: ...
+    async def get_history(self, user_id: str, limit: int) -> list[MessageRecord]: ...
     async def health_check(self) -> bool: ...
 
 
@@ -187,7 +188,7 @@ class SQLiteRepository:
             },
         )
 
-    async def get_history(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history for a user."""
         rows = await self.database.fetch_all(
             """
@@ -200,8 +201,9 @@ class SQLiteRepository:
             {"user_id": user_id, "limit": limit},
         )
 
-        return [
-            {
+        results: list[MessageRecord] = []
+        for row in rows:
+            record: MessageRecord = {
                 "id": row["id"],
                 "user_id": row["user_id"],
                 "content": row["content"],
@@ -212,10 +214,10 @@ class SQLiteRepository:
                 if hasattr(row["timestamp"], "isoformat")
                 else str(row["timestamp"])
                 if row["timestamp"]
-                else None,
+                else "",
             }
-            for row in rows
-        ]
+            results.append(record)
+        return results
 
     async def health_check(self) -> bool:
         """Check database health."""
@@ -239,20 +241,18 @@ class DynamoDBRepository:
         params = parse_qs(parsed.query) if parsed.query else {}
         self.region = params.get("region", ["us-east-1"])[0]
 
-        self.client: Any = None
-        self.table: Any = None
+        self.session: Any = None
         logger.info(f"DynamoDB repository configured: {self.table_name} in {self.region}")
 
     async def startup(self) -> None:
-        """Initialize DynamoDB client."""
+        """Initialize DynamoDB session."""
         import aioboto3
 
-        session = aioboto3.Session()
-        self.client = session.client("dynamodb", region_name=self.region)
+        self.session = aioboto3.Session()
 
         # Check if table exists, create if not
         try:
-            async with self.client as client:
+            async with self.session.client("dynamodb", region_name=self.region) as client:
                 await client.describe_table(TableName=self.table_name)
                 logger.info(f"DynamoDB table {self.table_name} exists")
         except (ConnectionError, TimeoutError, OSError) as e:
@@ -261,7 +261,7 @@ class DynamoDBRepository:
 
     async def _create_table(self) -> None:
         """Create DynamoDB table."""
-        async with self.client as client:
+        async with self.session.client("dynamodb", region_name=self.region) as client:
             await client.create_table(
                 TableName=self.table_name,
                 KeySchema=[
@@ -280,9 +280,9 @@ class DynamoDBRepository:
             await waiter.wait(TableName=self.table_name)
 
     async def shutdown(self) -> None:
-        """Close DynamoDB client."""
-        if self.client:
-            await self.client.close()
+        """Clean up DynamoDB session."""
+        # Session doesn't need explicit cleanup in aioboto3
+        pass
 
     async def save(self, **kwargs) -> None:
         """Save message to DynamoDB."""
@@ -299,12 +299,12 @@ class DynamoDBRepository:
             "ttl": int(time.time()) + 86400 * 30,  # 30 days TTL
         }
 
-        async with self.client as client:
+        async with self.session.client("dynamodb", region_name=self.region) as client:
             await client.put_item(TableName=self.table_name, Item=self._serialize(item))
 
-    async def get_history(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history from DynamoDB."""
-        async with self.client as client:
+        async with self.session.client("dynamodb", region_name=self.region) as client:
             response = await client.query(
                 TableName=self.table_name,
                 KeyConditionExpression="user_id = :user_id",
@@ -313,12 +313,16 @@ class DynamoDBRepository:
                 ScanIndexForward=False,  # Descending order
             )
 
-        return [self._deserialize(item) for item in response.get("Items", [])]
+        results: list[MessageRecord] = []
+        for item in response.get("Items", []):
+            record: MessageRecord = self._deserialize(item)  # type: ignore
+            results.append(record)
+        return results
 
     async def health_check(self) -> bool:
         """Check DynamoDB health."""
         try:
-            async with self.client as client:
+            async with self.session.client("dynamodb", region_name=self.region) as client:
                 await client.describe_table(TableName=self.table_name)
         except (ConnectionError, TimeoutError, OSError) as e:
             logger.error(f"DynamoDB health check failed: {e}")

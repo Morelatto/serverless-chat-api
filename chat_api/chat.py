@@ -1,9 +1,7 @@
 """Chat service - Core business logic and models (Python 2025 style)."""
 
-import time
 import uuid
 from datetime import datetime
-from typing import Any
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -12,6 +10,7 @@ from pydantic_core import PydanticCustomError
 from .exceptions import LLMProviderError, StorageError
 from .providers import LLMProvider
 from .storage import Cache, Repository, cache_key
+from .types import ChatResult, HealthStatus, MessageRecord
 
 
 # ============== Models ==============
@@ -87,14 +86,12 @@ class ChatService:
         self.repository = repository
         self.cache = cache
         self.llm_provider = llm_provider
-        self._last_health_check: dict[str, Any] | None = None
-        self._health_check_timestamp: float = 0
 
     async def process_message(
         self,
         user_id: str,
         content: str,
-    ) -> dict[str, Any]:
+    ) -> ChatResult:
         """Process a chat message.
 
         Args:
@@ -111,7 +108,15 @@ class ChatService:
         if cached:
             logger.debug(f"Cache hit for user {user_id[:8]}")
             cached["cached"] = True
-            return cached
+            # Return as ChatResult with usage from cache if available
+            cached_result: ChatResult = {
+                "id": cached["id"],
+                "content": cached["content"],
+                "model": cached["model"],
+                "cached": True,
+                "usage": cached.get("usage", {}),
+            }
+            return cached_result
 
         logger.debug(f"Cache miss for user {user_id[:8]}")
 
@@ -150,19 +155,26 @@ class ChatService:
             )
 
         # Prepare response
-        result = {
+        result: ChatResult = {
+            "id": message_id,
+            "content": llm_response.text,
+            "model": llm_response.model,
+            "cached": False,
+            "usage": llm_response.usage,
+        }
+
+        # Cache it (exclude usage from cache)
+        cache_data = {
             "id": message_id,
             "content": llm_response.text,
             "model": llm_response.model,
             "cached": False,
         }
-
-        # Cache it
-        await self.cache.set(key, result)
+        await self.cache.set(key, cache_data)
 
         return result
 
-    async def get_history(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history for a user.
 
         Args:
@@ -173,22 +185,15 @@ class ChatService:
             List of message dictionaries.
 
         """
-        return await self.repository.get_history(user_id, limit)
+        return await self.repository.get_history(user_id, limit)  # type: ignore
 
-    async def health_check(self) -> dict[str, bool]:
-        """Check health of all system components with caching.
+    async def health_check(self) -> HealthStatus:
+        """Check health of all system components.
 
         Returns:
             Dictionary with health status of each component.
 
         """
-        # Return cached result if less than 30 seconds old
-        current_time = time.time()
-        if self._last_health_check is not None and current_time - self._health_check_timestamp < 30:
-            logger.debug("Returning cached health check result")
-            return self._last_health_check
-
-        # Perform actual health checks
         logger.debug("Performing health checks")
         storage_ok = await self.repository.health_check()
 
@@ -200,58 +205,5 @@ class ChatService:
             logger.warning("LLM health check failed: {}", e)
             llm_ok = False
 
-        result = {"storage": storage_ok, "llm": llm_ok}
-
-        # Cache the result
-        self._last_health_check = result
-        self._health_check_timestamp = current_time
-
+        result: HealthStatus = {"storage": storage_ok, "llm": llm_ok}
         return result
-
-
-# ============== Standalone Functions (for backward compatibility) ==============
-async def process_message_with_deps(
-    user_id: str,
-    content: str,
-    repository: Repository,
-    cache: Cache,
-    llm_provider: LLMProvider,
-) -> dict[str, Any]:
-    """Process a chat message with injected dependencies (backward compatibility).
-
-    Args:
-        user_id: User identifier.
-        content: Message content to process.
-        repository: Repository instance for persistence.
-        cache: Cache instance for caching.
-        llm_provider: LLM provider instance.
-
-    Returns:
-        Dictionary with message ID, response content, model, and cache status.
-
-    """
-    service = ChatService(repository, cache, llm_provider)
-    return await service.process_message(user_id, content)
-
-
-async def health_check(
-    repository: Repository,
-    llm_provider: LLMProvider,
-) -> dict[str, bool]:
-    """Check health of all systems (backward compatibility).
-
-    Args:
-        repository: Repository instance to check.
-        llm_provider: LLM provider instance.
-
-    Returns:
-        Dictionary with health status of each component.
-
-    """
-    # Dummy cache for health check
-    from .storage import InMemoryCache
-
-    cache = InMemoryCache()
-
-    service = ChatService(repository, cache, llm_provider)
-    return await service.health_check()

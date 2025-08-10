@@ -2,8 +2,7 @@
 
 import uvicorn
 
-from chat_api.api.app import app
-
+from .api import app
 from .config import settings
 
 

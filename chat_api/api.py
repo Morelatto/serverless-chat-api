@@ -206,14 +206,10 @@ async def history_endpoint(
     user_id: str,
     limit: int = 10,
     service: ChatService = Depends(get_chat_service),
-) -> list[dict[str, Any]]:
+) -> Any:
     """Retrieve chat history for a user."""
     if limit > 100:
         raise HTTPException(400, "Limit cannot exceed 100")
-
-    # Add caching headers for history (5 minutes)
-    response.headers["Cache-Control"] = "public, max-age=300"
-    response.headers["ETag"] = f'"{user_id}-{limit}"'
 
     return await service.get_history(user_id, limit)
 
@@ -227,9 +223,6 @@ async def health_endpoint(
     status = await service.health_check()
     all_healthy = all(status.values())
 
-    # Add caching headers for health (30 seconds)
-    response.headers["Cache-Control"] = "public, max-age=30"
-
     # Set status code based on health
     if not all_healthy:
         response.status_code = 503
@@ -242,9 +235,10 @@ async def health_endpoint(
 
 
 @app.get("/health/detailed", tags=["health"])
-async def detailed_health_endpoint(request: Request) -> dict[str, Any]:
+async def detailed_health_endpoint(
+    service: ChatService = Depends(get_chat_service),
+) -> dict[str, Any]:
     """Get detailed health information."""
-    service: ChatService = request.app.state.chat_service
     status = await service.health_check()
 
     return {
@@ -262,9 +256,6 @@ async def detailed_health_endpoint(request: Request) -> dict[str, Any]:
 @app.get("/", tags=["health"])
 async def root_endpoint(response: Response) -> dict[str, str]:
     """API information endpoint."""
-    # Cache API info for 1 hour
-    response.headers["Cache-Control"] = "public, max-age=3600"
-
     return {
         "name": "Chat API",
         "version": "1.0.0",

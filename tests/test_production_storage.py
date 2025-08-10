@@ -20,7 +20,7 @@ class TestDynamoDBRepository:
     """Test DynamoDB repository implementation."""
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_initialization(self, mock_boto_resource):
         """Test DynamoDB repository initialization."""
         # Mock DynamoDB resource
@@ -40,7 +40,7 @@ class TestDynamoDBRepository:
         await repo.shutdown()
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_save_message(self, mock_boto_resource):
         """Test saving a message to DynamoDB."""
         # Mock DynamoDB table
@@ -76,7 +76,7 @@ class TestDynamoDBRepository:
         await repo.shutdown()
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_get_history(self, mock_boto_resource):
         """Test retrieving user history from DynamoDB."""
         # Mock DynamoDB table with query response
@@ -128,7 +128,7 @@ class TestDynamoDBRepository:
         await repo.shutdown()
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_health_check(self, mock_boto_resource):
         """Test DynamoDB health check."""
         # Mock successful describe_table
@@ -154,7 +154,7 @@ class TestDynamoDBRepository:
         await repo.shutdown()
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_connection_error_handling(self, mock_boto_resource):
         """Test DynamoDB connection error handling."""
         # Mock connection failure
@@ -167,7 +167,7 @@ class TestDynamoDBRepository:
             await repo.startup()
 
     @pytest.mark.asyncio
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     async def test_dynamodb_decimal_handling(self, mock_boto_resource):
         """Test proper handling of DynamoDB Decimal types."""
         # DynamoDB returns Decimal types for numbers
@@ -195,7 +195,7 @@ class TestDynamoDBRepository:
         assert len(history) == 1
         # Decimals should be converted to appropriate types
         if "tokens" in history[0]:
-            assert isinstance(history[0]["tokens"], (int, float, Decimal))
+            assert isinstance(history[0]["tokens"], int | float | Decimal)
 
         await repo.shutdown()
 
@@ -332,7 +332,7 @@ class TestFactoryFunctions:
         repo = create_repository("sqlite+aiosqlite:///./test.db")
         assert isinstance(repo, SQLiteRepository)
 
-    @patch("chat_api.storage.boto3.resource")
+    @patch("boto3.resource")
     def test_create_repository_dynamodb(self, mock_boto):
         """Test creating DynamoDB repository."""
         repo = create_repository("dynamodb://my-table?region=us-east-1")

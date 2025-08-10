@@ -12,6 +12,18 @@ from .retry import with_llm_retry
 from .types import TokenUsage
 
 
+def setup_litellm() -> None:
+    """Setup litellm configuration."""
+    import os
+
+    litellm.set_verbose = False
+    litellm.drop_params = True
+    litellm.suppress_debug_info = True
+
+    # Enable observability features
+    os.environ["LITELLM_LOG"] = "INFO"  # Enable for metrics
+
+
 @dataclass
 class LLMConfig:
     """Configuration for LLM providers."""
@@ -19,9 +31,6 @@ class LLMConfig:
     model: str
     api_key: str | None = None
     timeout: int = 30
-    max_retries: int = 3
-    retry_min_wait: int = 1
-    retry_max_wait: int = 10
     temperature: float = 0.1  # Low temperature for consistent responses
     seed: int = 42  # Fixed seed for reproducibility
 
@@ -55,25 +64,8 @@ class GeminiProvider:
         if not config.api_key:
             raise ConfigurationError("Gemini API key is required")
 
-        # Configure litellm for Gemini
-        self._setup_litellm()
-
-    def _setup_litellm(self) -> None:
-        """Setup litellm configuration with observability."""
-        litellm.set_verbose = False
-        litellm.drop_params = True
-        litellm.suppress_debug_info = True
-
-        # Enable observability features
-        import os
-
-        os.environ["LITELLM_LOG"] = "INFO"  # Enable for metrics
-
-        # Enable Prometheus metrics if available
-        from contextlib import suppress
-
-        with suppress(ImportError, AttributeError, TypeError):
-            litellm.callbacks = ["prometheus"]  # Built-in Prometheus integration
+        # Configure litellm
+        setup_litellm()
 
     @with_llm_retry(
         provider_name="Gemini",
@@ -133,25 +125,8 @@ class OpenRouterProvider:
         if not config.api_key:
             raise ConfigurationError("OpenRouter API key is required")
 
-        # Configure litellm for OpenRouter
-        self._setup_litellm()
-
-    def _setup_litellm(self) -> None:
-        """Setup litellm configuration with observability."""
-        litellm.set_verbose = False
-        litellm.drop_params = True
-        litellm.suppress_debug_info = True
-
-        # Enable observability features
-        import os
-
-        os.environ["LITELLM_LOG"] = "INFO"  # Enable for metrics
-
-        # Enable Prometheus metrics if available
-        from contextlib import suppress
-
-        with suppress(ImportError, AttributeError, TypeError):
-            litellm.callbacks = ["prometheus"]  # Built-in Prometheus integration
+        # Configure litellm
+        setup_litellm()
 
     @with_llm_retry(
         provider_name="OpenRouter",
@@ -228,9 +203,6 @@ def create_llm_provider(
         model=model,
         api_key=api_key,
         timeout=kwargs.get("timeout", 30),
-        max_retries=kwargs.get("max_retries", 3),
-        retry_min_wait=kwargs.get("retry_min_wait", 1),
-        retry_max_wait=kwargs.get("retry_max_wait", 10),
     )
 
     providers = {
