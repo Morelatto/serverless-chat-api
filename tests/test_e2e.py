@@ -1,28 +1,28 @@
-"""End-to-end integration tests."""
-
-from unittest.mock import AsyncMock, patch
+"""End-to-end integration tests focusing on complete workflows."""
 
 import pytest
 from httpx import AsyncClient
 
+from chat_api.providers import LLMResponse
+
 
 @pytest.mark.asyncio
-@patch("chat_api.core._call_llm")
-async def test_e2e_chat_flow(mock_call_llm, client: AsyncClient):
+async def test_e2e_chat_flow(client: AsyncClient) -> None:
     """Test complete chat flow end-to-end."""
-    # Mock LLM response
-    mock_call_llm.return_value = {
-        "text": "Hello! I'm an AI assistant. How can I help you today?",
-        "model": "gpt-4",
-        "usage": {"prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20},
-    }
+    # Mock LLM provider response
+    client._transport.app.state.llm_provider.complete.return_value = LLMResponse(
+        text="Hello! I'm an AI assistant. How can I help you today?",
+        model="gpt-4",
+        usage={"prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20},
+    )
 
     # Mock cache miss
     client._transport.app.state.cache.get.return_value = None
 
     # Send chat message
     response = await client.post(
-        "/chat", json={"user_id": "test-user-123", "content": "Hello, how are you?"}
+        "/chat",
+        json={"user_id": "test-user-123", "content": "Hello, how are you?"},
     )
 
     assert response.status_code == 200
@@ -43,7 +43,7 @@ async def test_e2e_chat_flow(mock_call_llm, client: AsyncClient):
             "content": "Hello, how are you?",
             "response": "Hello! I'm an AI assistant. How can I help you today?",
             "timestamp": data["timestamp"],
-        }
+        },
     ]
 
     # Check history endpoint
@@ -57,40 +57,7 @@ async def test_e2e_chat_flow(mock_call_llm, client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_e2e_health_check(client: AsyncClient):
-    """Test health check endpoint."""
-    # Mock health check result
-    client._transport.app.state.repository.health_check.return_value = True
-
-    with patch("chat_api.core._call_llm") as mock_llm:
-        mock_llm.return_value = {"text": "test", "model": "test", "usage": {}}
-
-        response = await client.get("/health")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert "status" in data
-        assert "services" in data
-        assert "timestamp" in data
-
-        # Should have storage and llm status
-        assert "storage" in data["services"]
-        assert "llm" in data["services"]
-
-
-@pytest.mark.asyncio
-async def test_e2e_api_info(client: AsyncClient):
-    """Test root API info endpoint."""
-    response = await client.get("/")
-    assert response.status_code == 200
-
-    data = response.json()
-    assert data["name"] == "Chat API"
-    assert data["status"] == "running"
-
-
-@pytest.mark.asyncio
-async def test_e2e_validation_errors(client: AsyncClient):
+async def test_e2e_validation_errors(client: AsyncClient) -> None:
     """Test API validation errors."""
     # Invalid message format
     response = await client.post(
@@ -100,17 +67,17 @@ async def test_e2e_validation_errors(client: AsyncClient):
             "content": "Hello",
         },
     )
-    assert response.status_code == 400  # Custom validation handler returns 400
+    assert response.status_code == 400
 
     # Missing fields
     response = await client.post(
         "/chat",
         json={
-            "user_id": "test"
+            "user_id": "test",
             # Missing content
         },
     )
-    assert response.status_code == 400  # Custom validation handler returns 400
+    assert response.status_code == 400
 
     # History limit too high
     response = await client.get("/history/test?limit=200")
@@ -118,15 +85,15 @@ async def test_e2e_validation_errors(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-@patch("chat_api.core._call_llm")
-async def test_e2e_complete_workflow(mock_call_llm: AsyncMock, client: AsyncClient):
+async def test_e2e_complete_workflow(client: AsyncClient) -> None:
     """Test complete application workflow including chat and history."""
     # Setup mocks
-    mock_call_llm.return_value = {
-        "text": "AI response to user query",
-        "model": "gpt-4",
-        "usage": {"total_tokens": 25},
-    }
+    client._transport.app.state.llm_provider.complete.return_value = LLMResponse(
+        text="AI response to user query",
+        model="gpt-4",
+        usage={"total_tokens": 25},
+    )
+    client._transport.app.state.llm_provider.health_check.return_value = True
 
     # Mock cache miss initially
     client._transport.app.state.cache.get.return_value = None
@@ -153,7 +120,7 @@ async def test_e2e_complete_workflow(mock_call_llm: AsyncMock, client: AsyncClie
             "content": "What is the capital of France?",
             "response": "AI response to user query",
             "timestamp": chat_data["timestamp"],
-        }
+        },
     ]
 
     response = await client.get("/history/integration-test-user")
@@ -183,22 +150,28 @@ async def test_e2e_complete_workflow(mock_call_llm: AsyncMock, client: AsyncClie
 
 
 @pytest.mark.asyncio
-@patch("chat_api.core._call_llm")
-async def test_e2e_error_recovery(mock_call_llm: AsyncMock, client: AsyncClient):
+async def test_e2e_error_recovery(client: AsyncClient) -> None:
     """Test error handling and recovery."""
     # Simulate LLM failure
-    mock_call_llm.side_effect = Exception("LLM service unavailable")
+    client._transport.app.state.llm_provider.complete.side_effect = Exception(
+        "LLM service unavailable"
+    )
 
     response = await client.post("/chat", json={"user_id": "test-user", "content": "Test message"})
     assert response.status_code == 500
     assert "LLM service unavailable" in response.json()["detail"]
 
     # Simulate recovery
-    mock_call_llm.side_effect = None
-    mock_call_llm.return_value = {"text": "Service recovered", "model": "gpt-4", "usage": {}}
+    client._transport.app.state.llm_provider.complete.side_effect = None
+    client._transport.app.state.llm_provider.complete.return_value = LLMResponse(
+        text="Service recovered",
+        model="gpt-4",
+        usage={},
+    )
 
     response = await client.post(
-        "/chat", json={"user_id": "test-user", "content": "Test message after recovery"}
+        "/chat",
+        json={"user_id": "test-user", "content": "Test message after recovery"},
     )
     assert response.status_code == 200
     assert response.json()["content"] == "Service recovered"

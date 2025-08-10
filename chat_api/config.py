@@ -1,6 +1,6 @@
 """Configuration using pydantic-settings."""
 
-from functools import lru_cache
+import os
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
@@ -36,20 +36,39 @@ class Settings(BaseSettings):
     def validate_api_keys(self) -> "Settings":
         """Validate that required API keys are present for the configured provider."""
         if self.llm_provider == "gemini" and not self.gemini_api_key:
-            raise ValueError(
+            msg = (
                 "Gemini provider selected but CHAT_GEMINI_API_KEY not set. "
                 "Please set the CHAT_GEMINI_API_KEY environment variable."
             )
-        if self.llm_provider == "openrouter" and not self.openrouter_api_key:
             raise ValueError(
+                msg,
+            )
+        if self.llm_provider == "openrouter" and not self.openrouter_api_key:
+            msg = (
                 "OpenRouter provider selected but CHAT_OPENROUTER_API_KEY not set. "
                 "Please set the CHAT_OPENROUTER_API_KEY environment variable."
             )
-        if self.llm_provider not in ("gemini", "openrouter"):
             raise ValueError(
-                f"Invalid LLM provider: {self.llm_provider}. " "Must be one of: gemini, openrouter"
+                msg,
+            )
+        if self.llm_provider not in ("gemini", "openrouter"):
+            msg = f"Invalid LLM provider: {self.llm_provider}. Must be one of: gemini, openrouter"
+            raise ValueError(
+                msg,
             )
         return self
+
+    @property
+    def is_lambda_environment(self) -> bool:
+        """Check if running in AWS Lambda."""
+        return bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+
+    @property
+    def effective_database_url(self) -> str:
+        """Get the effective database URL based on environment."""
+        if self.is_lambda_environment and not self.database_url.startswith("dynamodb"):
+            return f"dynamodb://{self.dynamodb_table}?region={self.aws_region}"
+        return self.database_url
 
     @property
     def llm_model(self) -> str:
@@ -64,11 +83,6 @@ class Settings(BaseSettings):
         env_prefix = "CHAT_"  # CHAT_PORT=8000
 
 
-@lru_cache
-def get_settings() -> Settings:
-    """Get cached settings instance."""
-    return Settings()
-
-
-# Module-level instance
-settings = get_settings()
+# Module-level instance (for backward compatibility)
+# New code should use dependency injection instead
+settings = Settings()

@@ -5,50 +5,50 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from chat_api.models import ChatMessage, ChatResponse
+from chat_api.chat import ChatMessage, ChatResponse
 
 
-def test_chat_message_valid():
+def test_chat_message_valid() -> None:
     """Test valid chat message."""
     message = ChatMessage(user_id="test123", content="Hello world")
     assert message.user_id == "test123"
     assert message.content == "Hello world"
 
 
-def test_chat_message_preserves_content():
+def test_chat_message_preserves_content() -> None:
     """Test that chat message preserves original content."""
     original_content = "Contact me at john.doe@example.com or call 123-456-7890"
     message = ChatMessage(user_id="test123", content=original_content)
     assert message.content == original_content
 
 
-def test_chat_message_empty_user_id():
+def test_chat_message_empty_user_id() -> None:
     """Test chat message with empty user_id."""
     with pytest.raises(ValidationError):
         ChatMessage(user_id="", content="Hello")
 
 
-def test_chat_message_empty_content():
+def test_chat_message_empty_content() -> None:
     """Test chat message with empty content."""
     with pytest.raises(ValidationError):
         ChatMessage(user_id="test123", content="")
 
 
-def test_chat_message_long_user_id():
+def test_chat_message_long_user_id() -> None:
     """Test chat message with too long user_id."""
     long_id = "x" * 101
     with pytest.raises(ValidationError):
         ChatMessage(user_id=long_id, content="Hello")
 
 
-def test_chat_message_long_content():
+def test_chat_message_long_content() -> None:
     """Test chat message with too long content."""
     long_content = "x" * 4001
     with pytest.raises(ValidationError):
         ChatMessage(user_id="test123", content=long_content)
 
 
-def test_chat_response():
+def test_chat_response() -> None:
     """Test chat response model."""
     response = ChatResponse(
         id="test-123",
@@ -64,7 +64,7 @@ def test_chat_response():
     assert response.model == "test-model"
 
 
-def test_chat_response_defaults():
+def test_chat_response_defaults() -> None:
     """Test chat response with defaults."""
     response = ChatResponse(id="test-123", content="Hello there!", timestamp=datetime.now(UTC))
 

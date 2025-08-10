@@ -34,7 +34,10 @@ dependencies = [
     "loguru",
     "orjson",
     "boto3",  # For DynamoDB support
+    "aioboto3",  # For async DynamoDB operations
     "mangum",  # For Lambda deployment
+    "prometheus-client",  # For litellm Prometheus integration
+    "backoff",  # Required by litellm for retries
 ]
 
 [project.optional-dependencies]

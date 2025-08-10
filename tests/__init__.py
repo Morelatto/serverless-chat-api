@@ -1,1 +1,1 @@
-"""Test suite for Serverless Chat API"""
+"""Test suite for Serverless Chat API."""

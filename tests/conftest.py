@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-from chat_api.app import app
+from chat_api import app
 
 # Set test environment
 os.environ["CHAT_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
@@ -29,21 +29,39 @@ def event_loop():
 
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
-    """Test client fixture."""
+    """Test client fixture - simple mocking via app.state."""
     from unittest.mock import AsyncMock
 
     from httpx import ASGITransport
 
-    # Initialize mock repository and cache in app state
-    app.state.repository = AsyncMock()
-    app.state.cache = AsyncMock()
+    from chat_api.chat import ChatService
+    from chat_api.providers import LLMResponse
+
+    # Create mock dependencies
+    mock_repository = AsyncMock()
+    mock_cache = AsyncMock()
+    mock_llm_provider = AsyncMock()
 
     # Setup default mock behaviors
-    app.state.repository.health_check.return_value = True
-    app.state.repository.get_history.return_value = []
-    app.state.repository.save.return_value = None
-    app.state.cache.get.return_value = None
-    app.state.cache.set.return_value = None
+    mock_repository.health_check.return_value = True
+    mock_repository.get_history.return_value = []
+    mock_repository.save.return_value = None
+    mock_cache.get.return_value = None
+    mock_cache.set.return_value = None
+    mock_llm_provider.health_check.return_value = True
+    mock_llm_provider.complete.return_value = LLMResponse(
+        text="Test response",
+        model="test-model",
+        usage={"total_tokens": 10},
+    )
+
+    # Create ChatService with mocks and inject into app.state
+    app.state.chat_service = ChatService(mock_repository, mock_cache, mock_llm_provider)
+
+    # Also store individual mocks for tests that need them
+    app.state.repository = mock_repository
+    app.state.cache = mock_cache
+    app.state.llm_provider = mock_llm_provider
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

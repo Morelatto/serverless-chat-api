@@ -1,33 +1,36 @@
-"""Middleware for request tracking and monitoring."""
+"""Request tracking middleware."""
 
 import uuid
-from collections.abc import Callable
-from typing import cast
 
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request
+from loguru import logger
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Add request ID to all requests for tracking."""
+async def add_request_id(request: Request, call_next):
+    """Add request ID to context for tracking.
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request with request ID.
+    Args:
+        request: Incoming FastAPI request.
+        call_next: Next middleware or handler in chain.
 
-        Args:
-            request: Incoming HTTP request.
-            call_next: Next middleware or endpoint handler.
+    Returns:
+        Response with X-Request-ID header.
 
-        Returns:
-            HTTP response with X-Request-ID header.
-        """
-        # Get or generate request ID
-        request_id = request.headers.get("X-Request-ID")
-        if not request_id:
-            request_id = str(uuid.uuid4())
+    """
+    # Generate or use existing request ID
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
 
-        # Store in request state for access in handlers
-        request.state.request_id = request_id
+    # Add to request state for access in handlers
+    request.state.request_id = request_id
+
+    # Add context for structured logging
+    with logger.contextualize(request_id=request_id):
+        logger.debug(
+            "Request started",
+            method=request.method,
+            path=request.url.path,
+            client=request.client.host if request.client else None,
+        )
 
         # Process request
         response = await call_next(request)
@@ -35,29 +38,9 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
 
-        return cast("Response", response)
+        logger.debug(
+            "Request completed",
+            status_code=response.status_code,
+        )
 
-
-async def add_request_id(request: Request, call_next: Callable) -> Response:
-    """Simpler middleware function for request ID tracking.
-
-    Args:
-        request: Incoming HTTP request.
-        call_next: Next middleware or endpoint handler.
-
-    Returns:
-        HTTP response with X-Request-ID header.
-    """
-    # Get or generate request ID
-    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-
-    # Store in request state
-    request.state.request_id = request_id
-
-    # Process request
-    response = await call_next(request)
-
-    # Add to response headers
-    response.headers["X-Request-ID"] = request_id
-
-    return cast("Response", response)
+        return response
