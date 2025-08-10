@@ -12,6 +12,9 @@ from .providers import LLMProvider
 from .storage import Cache, Repository, cache_key
 from .types import ChatResult, HealthStatus, MessageRecord
 
+# Constants
+USER_ID_LOG_LENGTH = 8  # Characters to show in logs for privacy
+
 
 # ============== Models ==============
 class ChatMessage(BaseModel):
@@ -106,7 +109,7 @@ class ChatService:
         key = cache_key(user_id, content)
         cached = await self.cache.get(key)
         if cached:
-            logger.debug(f"Cache hit for user {user_id[:8]}")
+            logger.debug(f"Cache hit for user {user_id[:USER_ID_LOG_LENGTH]}")
             cached["cached"] = True
             # Return as ChatResult with usage from cache if available
             cached_result: ChatResult = {
@@ -118,7 +121,7 @@ class ChatService:
             }
             return cached_result
 
-        logger.debug(f"Cache miss for user {user_id[:8]}")
+        logger.debug(f"Cache miss for user {user_id[:USER_ID_LOG_LENGTH]}")
 
         # Generate response
         try:
@@ -201,7 +204,7 @@ class ChatService:
         try:
             llm_ok = await self.llm_provider.health_check()
             logger.debug(f"LLM health check: ok={llm_ok}")
-        except (LLMProviderError, ValueError, ConnectionError, TimeoutError, Exception) as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("LLM health check failed: {}", e)
             llm_ok = False
 

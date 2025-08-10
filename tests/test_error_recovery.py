@@ -234,7 +234,7 @@ async def test_timeout_cascade_prevention() -> None:
         client._timeout = 1.0  # 1 second timeout
 
         # Request should timeout quickly instead of waiting
-        with pytest.raises(Exception):  # Will raise timeout error
+        with pytest.raises(Exception):  # noqa: B017 - Will raise timeout error
             await client.post(
                 "/chat",
                 json={"user_id": "test_user", "content": "Test message"},
@@ -322,7 +322,6 @@ async def test_recovery_after_failure() -> None:
         call_count += 1
         if call_count <= failure_window:
             raise StorageError("Temporary database issue")
-        return
 
     mock_repository.save.side_effect = intermittent_save
     mock_repository.health_check.side_effect = lambda: call_count > failure_window

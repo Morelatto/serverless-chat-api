@@ -213,7 +213,7 @@ def create_llm_provider(
     provider_class = providers.get(provider_type.lower())
     if not provider_class:
         raise ConfigurationError(
-            f"Unknown provider type: {provider_type}. Must be 'gemini' or 'openrouter'"
+            f"Unknown provider type: {provider_type}. Must be 'gemini' or 'openrouter'",
         )
 
     return provider_class(config)  # type: ignore

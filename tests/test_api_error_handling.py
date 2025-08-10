@@ -91,7 +91,9 @@ async def test_pydantic_validation_errors(client: AsyncClient) -> None:
 async def test_malformed_json_handling(client: AsyncClient) -> None:
     """Test handling of malformed JSON."""
     response = await client.post(
-        "/chat", content="invalid json {", headers={"content-type": "application/json"}
+        "/chat",
+        content="invalid json {",
+        headers={"content-type": "application/json"},
     )
 
     assert response.status_code == 400

@@ -132,7 +132,8 @@ class TestGeminiProvider:
 
         # Mock cost calculation failure
         with patch(
-            "chat_api.providers.litellm.completion_cost", side_effect=ValueError("No pricing data")
+            "chat_api.providers.litellm.completion_cost",
+            side_effect=ValueError("No pricing data"),
         ):
             config = LLMConfig(model="gemini-1.5-flash", api_key="test-key")
             provider = GeminiProvider(config)

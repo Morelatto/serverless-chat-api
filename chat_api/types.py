@@ -1,7 +1,7 @@
 """Type definitions for the Chat API."""
 
 from decimal import Decimal
-from typing import Any, TypedDict
+from typing import TypedDict
 
 
 class TokenUsage(TypedDict, total=False):
@@ -38,5 +38,5 @@ class MessageRecord(TypedDict, total=False):
     content: str
     response: str
     model: str | None
-    usage: TokenUsage | dict[str, Any] | None
+    usage: TokenUsage | None
     timestamp: str

@@ -12,6 +12,11 @@ from loguru import logger
 from .exceptions import StorageError
 from .types import MessageRecord
 
+# Constants
+CACHE_TTL_SECONDS = 3600  # 1 hour default cache TTL
+TTL_DAYS = 30  # DynamoDB TTL in days
+CACHE_KEY_LENGTH = 32  # Blake2b hash output length
+
 
 # ============== Protocols ==============
 class Repository(Protocol):
@@ -30,7 +35,7 @@ class Cache(Protocol):
     async def startup(self) -> None: ...
     async def shutdown(self) -> None: ...
     async def get(self, key: str) -> dict[str, Any] | None: ...
-    async def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None: ...
+    async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None: ...
 
 
 # ============== Cache Implementations ==============
@@ -41,11 +46,13 @@ def cache_key(user_id: str, content: str) -> str:
 
 
 class InMemoryCache:
-    """Simple in-memory cache with TTL support."""
+    """Simple in-memory cache with TTL support and size limit."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_size: int = 1000) -> None:
         self.cache: dict[str, tuple[dict[str, Any], float]] = {}
-        logger.info("Using in-memory cache")
+        self.max_size = max_size
+        self.access_order: list[str] = []  # Track insertion order for LRU
+        logger.info(f"Using in-memory cache with max size {max_size}")
 
     async def startup(self) -> None:
         """Initialize cache."""
@@ -61,15 +68,30 @@ class InMemoryCache:
             if time.time() < expiry:
                 logger.debug(f"Cache hit: {key}")
                 return value
+            # Remove expired entry
             del self.cache[key]
+            if key in self.access_order:
+                self.access_order.remove(key)
             logger.debug(f"Cache expired: {key}")
         return None
 
-    async def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None:
-        """Set value in cache with TTL."""
+    async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
+        """Set value in cache with TTL and enforce size limit."""
+        # Check if we need to evict old entries
+        if len(self.cache) >= self.max_size and key not in self.cache and self.access_order:
+            oldest_key = self.access_order.pop(0)
+            if oldest_key in self.cache:
+                del self.cache[oldest_key]
+                logger.debug(f"Evicted oldest cache entry: {oldest_key}")
+
         expiry = time.time() + ttl
         self.cache[key] = (value, expiry)
-        logger.debug(f"Cached: {key} (TTL: {ttl}s)")
+
+        # Track access order
+        if key not in self.access_order:
+            self.access_order.append(key)
+
+        logger.debug(f"Cached: {key} (TTL: {ttl}s, size: {len(self.cache)}/{self.max_size})")
 
 
 class RedisCache:
@@ -282,7 +304,6 @@ class DynamoDBRepository:
     async def shutdown(self) -> None:
         """Clean up DynamoDB session."""
         # Session doesn't need explicit cleanup in aioboto3
-        pass
 
     async def save(self, **kwargs) -> None:
         """Save message to DynamoDB."""
@@ -296,7 +317,7 @@ class DynamoDBRepository:
             "response": kwargs["response"],
             "model": kwargs.get("model"),
             "usage": kwargs.get("usage"),
-            "ttl": int(time.time()) + 86400 * 30,  # 30 days TTL
+            "ttl": int(time.time()) + 86400 * TTL_DAYS,  # TTL in seconds
         }
 
         async with self.session.client("dynamodb", region_name=self.region) as client:

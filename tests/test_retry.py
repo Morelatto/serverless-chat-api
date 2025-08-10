@@ -191,7 +191,8 @@ class TestRetryDecorator:
         call_count = 0
 
         @with_llm_retry(
-            "TestProvider", max_retries=1
+            "TestProvider",
+            max_retries=1,
         )  # tenacity stop_after_attempt(1) = no retries
         async def test_function():
             nonlocal call_count

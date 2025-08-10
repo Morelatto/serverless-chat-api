@@ -10,37 +10,25 @@ from dataclasses import dataclass
 class ChatAPIError(Exception):
     """Base exception for all Chat API errors."""
 
-    pass
-
 
 class LLMProviderError(ChatAPIError):
     """Error related to LLM provider operations."""
-
-    pass
 
 
 class StorageError(ChatAPIError):
     """Error related to storage operations."""
 
-    pass
-
 
 class CacheError(ChatAPIError):
     """Error related to cache operations."""
-
-    pass
 
 
 class ValidationError(ChatAPIError):
     """Error related to input validation (not Pydantic)."""
 
-    pass
-
 
 class ConfigurationError(ChatAPIError):
     """Error related to configuration issues."""
-
-    pass
 
 
 @dataclass

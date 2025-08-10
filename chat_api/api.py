@@ -20,6 +20,7 @@ from .exceptions import ChatAPIError, LLMProviderError, StorageError, Validation
 from .middleware import add_request_id
 from .providers import create_llm_provider
 from .storage import create_cache, create_repository
+from .types import MessageRecord
 
 # Configure loguru
 logger.remove()
@@ -206,7 +207,7 @@ async def history_endpoint(
     user_id: str,
     limit: int = 10,
     service: ChatService = Depends(get_chat_service),
-) -> Any:
+) -> list[MessageRecord]:
     """Retrieve chat history for a user."""
     if limit > 100:
         raise HTTPException(400, "Limit cannot exceed 100")

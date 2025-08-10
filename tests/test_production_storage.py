@@ -90,7 +90,7 @@ class TestDynamoDBRepository:
                     "response": "Hi there",
                     "timestamp": "2025-01-01T00:00:00Z",
                     "model": "gpt-4",
-                    "tokens": Decimal("20"),
+                    "tokens": Decimal(20),
                 },
                 {
                     "id": "msg-2",
@@ -99,9 +99,9 @@ class TestDynamoDBRepository:
                     "response": "I'm doing well",
                     "timestamp": "2025-01-01T00:01:00Z",
                     "model": "gpt-4",
-                    "tokens": Decimal("25"),
+                    "tokens": Decimal(25),
                 },
-            ]
+            ],
         }
 
         mock_dynamodb = MagicMock()
@@ -176,10 +176,10 @@ class TestDynamoDBRepository:
             "Items": [
                 {
                     "id": "msg-1",
-                    "tokens": Decimal("42"),  # DynamoDB Decimal
+                    "tokens": Decimal(42),  # DynamoDB Decimal
                     "cost": Decimal("0.0025"),
                 },
-            ]
+            ],
         }
 
         mock_dynamodb = MagicMock()
@@ -328,7 +328,6 @@ class TestFactoryFunctions:
 
     def test_create_repository_sqlite(self):
         """Test creating SQLite repository."""
-
         repo = create_repository("sqlite+aiosqlite:///./test.db")
         assert isinstance(repo, SQLiteRepository)
 

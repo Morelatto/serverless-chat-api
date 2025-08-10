@@ -28,6 +28,7 @@ def with_llm_retry(
 
     Returns:
         Decorated function with retry logic
+
     """
 
     def decorator(func: F) -> F:
