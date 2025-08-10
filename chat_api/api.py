@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -218,9 +218,14 @@ async def history_endpoint(
 @app.get("/health", tags=["health"])
 async def health_endpoint(
     response: Response,
+    detailed: bool = Query(False, description="Include detailed environment information"),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
-    """Check health status of all components."""
+    """Check health status of all components.
+
+    Args:
+        detailed: If True, includes version and environment information.
+    """
     status = await service.health_check()
     all_healthy = all(status.values())
 
@@ -228,30 +233,21 @@ async def health_endpoint(
     if not all_healthy:
         response.status_code = 503
 
-    return {
+    result: dict[str, Any] = {
         "status": "healthy" if all_healthy else "unhealthy",
         "timestamp": datetime.now(UTC).isoformat(),
         "services": status,
     }
 
-
-@app.get("/health/detailed", tags=["health"])
-async def detailed_health_endpoint(
-    service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    """Get detailed health information."""
-    status = await service.health_check()
-
-    return {
-        "status": "healthy" if all(status.values()) else "unhealthy",
-        "timestamp": datetime.now(UTC).isoformat(),
-        "services": status,
-        "version": "1.0.0",
-        "environment": {
+    # Add detailed info if requested
+    if detailed:
+        result["version"] = "1.0.0"
+        result["environment"] = {
             "llm_provider": settings.llm_provider,
             "rate_limit": settings.rate_limit,
-        },
-    }
+        }
+
+    return result
 
 
 @app.get("/", tags=["health"])

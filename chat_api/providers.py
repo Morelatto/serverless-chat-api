@@ -67,12 +67,7 @@ class GeminiProvider:
         # Configure litellm
         setup_litellm()
 
-    @with_llm_retry(
-        provider_name="Gemini",
-        max_retries=3,
-        min_wait=1,
-        max_wait=10,
-    )
+    @with_llm_retry("Gemini", max_retries=3)
     async def complete(self, prompt: str) -> LLMResponse:
         """Generate completion using Gemini."""
         response = await litellm.acompletion(
@@ -128,12 +123,7 @@ class OpenRouterProvider:
         # Configure litellm
         setup_litellm()
 
-    @with_llm_retry(
-        provider_name="OpenRouter",
-        max_retries=3,
-        min_wait=1,
-        max_wait=10,
-    )
+    @with_llm_retry("OpenRouter", max_retries=3)
     async def complete(self, prompt: str) -> LLMResponse:
         """Generate completion using OpenRouter."""
         response = await litellm.acompletion(

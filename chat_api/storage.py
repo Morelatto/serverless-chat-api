@@ -6,7 +6,6 @@ import time
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlparse
 
-from cachetools import TTLCache  # type: ignore[import-untyped]
 from databases import Database
 from loguru import logger
 
@@ -48,38 +47,83 @@ def cache_key(user_id: str, content: str) -> str:
 
 
 class InMemoryCache:
-    """In-memory cache using cachetools TTLCache."""
+    """Simple in-memory cache with TTL support and LRU eviction."""
 
-    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE, ttl: int = CACHE_TTL_SECONDS) -> None:
-        self.cache: TTLCache[str, dict[str, Any]] = TTLCache(maxsize=max_size, ttl=ttl)
-        self.default_ttl = ttl
-        logger.info(f"Using TTLCache with max size {max_size} and TTL {ttl}s")
+    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE) -> None:
+        self.cache: dict[str, dict[str, Any]] = {}
+        self.access_order: dict[str, float] = {}  # key -> last access time
+        self.max_size = max_size
+        logger.info(f"In-memory cache initialized with max size {max_size}")
 
     async def startup(self) -> None:
         """Initialize cache."""
-        pass  # TTLCache doesn't need initialization
+        pass  # No initialization needed
 
     async def shutdown(self) -> None:
         """Cleanup cache."""
         self.cache.clear()
+        self.access_order.clear()
 
     async def get(self, key: str) -> dict[str, Any] | None:
-        """Get value from cache."""
-        try:
-            value = self.cache[key]
-        except KeyError:
+        """Get value from cache if not expired."""
+        if key not in self.cache:
             logger.debug(f"Cache miss: {key}")
             return None
-        else:
-            logger.debug(f"Cache hit: {key}")
-            return value  # type: ignore[no-any-return]
+
+        # Check if expired
+        item = self.cache[key]
+        if time.time() > item["_expires_at"]:
+            # Remove expired item
+            del self.cache[key]
+            self.access_order.pop(key, None)
+            logger.debug(f"Cache expired: {key}")
+            return None
+
+        # Update access time for LRU
+        self.access_order[key] = time.time()
+        logger.debug(f"Cache hit: {key}")
+
+        # Return data without internal fields
+        data = item.copy()
+        data.pop("_expires_at", None)
+        return data
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
-        """Set value in cache."""
-        # Note: cachetools TTLCache uses a global TTL, not per-item
-        # If we need per-item TTL, we'd need to store expiry time with the value
-        self.cache[key] = value
-        logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.cache.maxsize})")
+        """Set value in cache with TTL."""
+        # Evict expired items first
+        await self._evict_expired()
+
+        # If at max size, evict least recently used
+        if len(self.cache) >= self.max_size:
+            await self._evict_lru()
+
+        # Store with expiration time
+        item = value.copy()
+        item["_expires_at"] = time.time() + ttl
+        self.cache[key] = item
+        self.access_order[key] = time.time()
+        logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.max_size}, TTL: {ttl}s)")
+
+    async def _evict_expired(self) -> None:
+        """Remove expired items."""
+        now = time.time()
+        expired_keys = [
+            key for key, item in self.cache.items() if now > item.get("_expires_at", float("inf"))
+        ]
+        for key in expired_keys:
+            del self.cache[key]
+            self.access_order.pop(key, None)
+            logger.debug(f"Evicted expired: {key}")
+
+    async def _evict_lru(self) -> None:
+        """Remove least recently used item."""
+        if not self.access_order:
+            return
+
+        lru_key = min(self.access_order.items(), key=lambda x: x[1])[0]
+        del self.cache[lru_key]
+        del self.access_order[lru_key]
+        logger.debug(f"Evicted LRU: {lru_key}")
 
 
 class RedisCache:
@@ -297,6 +341,8 @@ class DynamoDBRepository:
         """Save message to DynamoDB."""
         from datetime import UTC, datetime
 
+        from boto3.dynamodb.types import TypeSerializer
+
         item = {
             "user_id": kwargs["user_id"],
             "timestamp": datetime.now(UTC).isoformat(),
@@ -308,11 +354,17 @@ class DynamoDBRepository:
             "ttl": int(time.time()) + 86400 * TTL_DAYS,  # TTL in seconds
         }
 
+        # Use boto3's built-in serializer
+        serializer = TypeSerializer()
+        serialized_item = {k: serializer.serialize(v) for k, v in item.items() if v is not None}
+
         async with self.session.client("dynamodb", region_name=self.region) as client:
-            await client.put_item(TableName=self.table_name, Item=self._serialize(item))
+            await client.put_item(TableName=self.table_name, Item=serialized_item)
 
     async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history from DynamoDB."""
+        from boto3.dynamodb.types import TypeDeserializer
+
         async with self.session.client("dynamodb", region_name=self.region) as client:
             response = await client.query(
                 TableName=self.table_name,
@@ -322,9 +374,20 @@ class DynamoDBRepository:
                 ScanIndexForward=False,  # Descending order
             )
 
+        # Use boto3's built-in deserializer
+        deserializer = TypeDeserializer()
         results: list[MessageRecord] = []
         for item in response.get("Items", []):
-            record: MessageRecord = self._deserialize(item)  # type: ignore
+            deserialized_item = {k: deserializer.deserialize(v) for k, v in item.items()}
+            record: MessageRecord = {
+                "id": deserialized_item["id"],
+                "user_id": deserialized_item["user_id"],
+                "content": deserialized_item["content"],
+                "response": deserialized_item["response"],
+                "model": deserialized_item.get("model"),
+                "usage": deserialized_item.get("usage"),
+                "timestamp": deserialized_item["timestamp"],
+            }
             results.append(record)
         return results
 
@@ -338,56 +401,6 @@ class DynamoDBRepository:
             return False
         else:
             return True
-
-    def _serialize(self, item: dict) -> dict:
-        """Convert Python dict to DynamoDB format."""
-        result = {}
-        for key, value in item.items():
-            if value is None:
-                continue
-            if isinstance(value, str):
-                result[key] = {"S": value}
-            elif isinstance(value, int | float):
-                result[key] = {"N": str(value)}
-            elif isinstance(value, dict):
-                result[key] = {"M": self._serialize(value)}  # type: ignore[dict-item]
-            elif isinstance(value, list):
-                result[key] = {"L": [self._serialize_value(v) for v in value]}  # type: ignore[dict-item]
-        return result
-
-    def _serialize_value(self, value) -> dict:
-        """Serialize a single value."""
-        if isinstance(value, str):
-            return {"S": value}
-        if isinstance(value, int | float):
-            return {"N": str(value)}
-        if isinstance(value, dict):
-            return {"M": self._serialize(value)}
-        return {"NULL": True}
-
-    def _deserialize(self, item: dict) -> dict:
-        """Convert DynamoDB format to Python dict."""
-        result = {}
-        for key, value in item.items():
-            if "S" in value:
-                result[key] = value["S"]
-            elif "N" in value:
-                result[key] = float(value["N"])
-            elif "M" in value:
-                result[key] = self._deserialize(value["M"])
-            elif "L" in value:
-                result[key] = [self._deserialize_value(v) for v in value["L"]]
-        return result
-
-    def _deserialize_value(self, value: dict) -> Any:
-        """Deserialize a single value."""
-        if "S" in value:
-            return value["S"]
-        if "N" in value:
-            return float(value["N"])
-        if "M" in value:
-            return self._deserialize(value["M"])
-        return None
 
 
 # ============== Factory Functions ==============

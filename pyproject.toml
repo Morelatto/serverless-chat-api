@@ -28,8 +28,7 @@ dependencies = [
     "redis[hiredis]",
     "litellm",
     "slowapi",
-    "stamina",  # Modern retry library with async support
-    "cachetools",  # TTLCache with size limits
+    "tenacity",
     "pydantic-settings",
     "sqlalchemy",
     "loguru",
