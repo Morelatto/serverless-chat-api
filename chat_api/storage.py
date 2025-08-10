@@ -47,11 +47,11 @@ def cache_key(user_id: str, content: str) -> str:
 
 
 class InMemoryCache:
-    """Simple in-memory cache with TTL support and LRU eviction."""
+    """Simple in-memory cache using Python's dict - no custom LRU/TTL complexity."""
 
     def __init__(self, max_size: int = DEFAULT_CACHE_SIZE) -> None:
-        self.cache: dict[str, dict[str, Any]] = {}
-        self.access_order: dict[str, float] = {}  # key -> last access time
+        # Simple dict - let Python handle the memory management
+        self.cache: dict[str, tuple[dict[str, Any], float]] = {}  # key -> (data, expiry_time)
         self.max_size = max_size
         logger.info(f"In-memory cache initialized with max size {max_size}")
 
@@ -62,7 +62,6 @@ class InMemoryCache:
     async def shutdown(self) -> None:
         """Cleanup cache."""
         self.cache.clear()
-        self.access_order.clear()
 
     async def get(self, key: str) -> dict[str, Any] | None:
         """Get value from cache if not expired."""
@@ -70,64 +69,43 @@ class InMemoryCache:
             logger.debug(f"Cache miss: {key}")
             return None
 
+        data, expiry_time = self.cache[key]
+
         # Check if expired
-        item = self.cache[key]
-        if time.time() > item["_expires_at"]:
-            # Remove expired item
+        if time.time() > expiry_time:
             del self.cache[key]
-            self.access_order.pop(key, None)
             logger.debug(f"Cache expired: {key}")
             return None
 
-        # Update access time for LRU
-        self.access_order[key] = time.time()
         logger.debug(f"Cache hit: {key}")
-
-        # Return data without internal fields
-        data = item.copy()
-        data.pop("_expires_at", None)
         return data
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
         """Set value in cache with TTL."""
-        # Evict expired items first
-        await self._evict_expired()
-
-        # If at max size, evict least recently used
-        if len(self.cache) >= self.max_size:
-            await self._evict_lru()
+        # Simple size management - remove oldest if at max size
+        if len(self.cache) >= self.max_size and key not in self.cache:
+            # Remove one item (oldest by insertion order in Python 3.7+)
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+            logger.debug(f"Evicted oldest: {oldest_key}")
 
         # Store with expiration time
-        item = value.copy()
-        item["_expires_at"] = time.time() + ttl
-        self.cache[key] = item
-        self.access_order[key] = time.time()
+        expiry_time = time.time() + ttl
+        self.cache[key] = (value, expiry_time)
         logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.max_size}, TTL: {ttl}s)")
 
-    async def _evict_expired(self) -> None:
-        """Remove expired items."""
-        now = time.time()
-        expired_keys = [
-            key for key, item in self.cache.items() if now > item.get("_expires_at", float("inf"))
-        ]
-        for key in expired_keys:
-            del self.cache[key]
-            self.access_order.pop(key, None)
-            logger.debug(f"Evicted expired: {key}")
+    def size(self) -> int:
+        """Get current cache size."""
+        return len(self.cache)
 
-    async def _evict_lru(self) -> None:
-        """Remove least recently used item."""
-        if not self.access_order:
-            return
-
-        lru_key = min(self.access_order.items(), key=lambda x: x[1])[0]
-        del self.cache[lru_key]
-        del self.access_order[lru_key]
-        logger.debug(f"Evicted LRU: {lru_key}")
+    def clear(self) -> None:
+        """Clear all cached items."""
+        self.cache.clear()
+        logger.debug("Cache cleared")
 
 
 class RedisCache:
-    """Redis cache implementation."""
+    """Redis cache implementation - fail fast, no silent fallbacks."""
 
     def __init__(self, redis_url: str) -> None:
         self.redis_url = redis_url
@@ -135,52 +113,58 @@ class RedisCache:
         logger.info(f"Redis cache configured: {redis_url}")
 
     async def startup(self) -> None:
-        """Initialize Redis connection."""
+        """Initialize Redis connection - fail fast if Redis is unavailable."""
         import redis.asyncio as redis
 
         try:
             self.client = await redis.from_url(self.redis_url)
             await self.client.ping()
-            logger.info("Redis cache connected")
+            logger.info("Redis cache connected successfully")
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.warning(f"Redis connection failed: {e}. Falling back to in-memory cache.")
-            # Fallback to in-memory with cachetools
-            self._fallback = InMemoryCache()
-            await self._fallback.startup()
+            logger.error(f"Redis connection failed: {e}")
+            # Fail fast - don't hide infrastructure problems with silent fallbacks
+            raise ConnectionError(f"Failed to connect to Redis at {self.redis_url}: {e}") from e
 
     async def shutdown(self) -> None:
         """Close Redis connection."""
         if self.client:
-            await self.client.close()
+            try:
+                await self.client.close()
+                logger.info("Redis connection closed")
+            except (ConnectionError, TimeoutError, OSError) as e:
+                logger.warning(f"Error closing Redis connection: {e}")
 
     async def get(self, key: str) -> dict[str, Any] | None:
         """Get value from Redis."""
-        if hasattr(self, "_fallback"):
-            return await self._fallback.get(key)
-
         if not self.client:
-            return None
+            raise RuntimeError("Redis client not initialized - call startup() first")
 
         try:
             data = await self.client.get(key)
             if data:
-                return json.loads(data)  # type: ignore[no-any-return]
+                result = json.loads(data)
+                logger.debug(f"Redis cache hit: {key}")
+                return result  # type: ignore[no-any-return]
+            logger.debug(f"Redis cache miss: {key}")
+            return None
         except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
-            logger.error(f"Redis get error: {e}")
-        return None
+            logger.error(f"Redis get error for key {key}: {e}")
+            # Re-raise to make Redis problems visible
+            raise
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None:
         """Set value in Redis with TTL."""
-        if hasattr(self, "_fallback"):
-            return await self._fallback.set(key, value, ttl)
-
         if not self.client:
-            return None
+            raise RuntimeError("Redis client not initialized - call startup() first")
 
         try:
-            await self.client.setex(key, ttl, json.dumps(value))
+            serialized = json.dumps(value)
+            await self.client.setex(key, ttl, serialized)
+            logger.debug(f"Redis cached: {key} (TTL: {ttl}s)")
         except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
-            logger.error(f"Redis set error: {e}")
+            logger.error(f"Redis set error for key {key}: {e}")
+            # Re-raise to make Redis problems visible
+            raise
 
 
 # ============== Repository Implementations ==============

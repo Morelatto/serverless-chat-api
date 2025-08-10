@@ -104,7 +104,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -317,9 +317,14 @@ async def history_endpoint(
 @app.get("/health", tags=["health"])
 async def health_endpoint(
     response: Response,
+    detailed: bool = Query(False, description="Include detailed environment information"),
     service: ChatService = Depends(get_chat_service),
 ) -> dict[str, Any]:
-    """Check health status of all components."""
+    """Check health status of all components.
+
+    Args:
+        detailed: If True, includes version and environment information.
+    """
     status = await service.health_check()
     all_healthy = all(status.values())
 
@@ -327,30 +332,21 @@ async def health_endpoint(
     if not all_healthy:
         response.status_code = 503
 
-    return {
+    result: dict[str, Any] = {
         "status": "healthy" if all_healthy else "unhealthy",
         "timestamp": datetime.now(UTC).isoformat(),
         "services": status,
     }
 
-
-@app.get("/health/detailed", tags=["health"])
-async def detailed_health_endpoint(
-    service: ChatService = Depends(get_chat_service),
-) -> dict[str, Any]:
-    """Get detailed health information."""
-    status = await service.health_check()
-
-    return {
-        "status": "healthy" if all(status.values()) else "unhealthy",
-        "timestamp": datetime.now(UTC).isoformat(),
-        "services": status,
-        "version": "1.0.0",
-        "environment": {
+    # Add detailed info if requested
+    if detailed:
+        result["version"] = "1.0.0"
+        result["environment"] = {
             "llm_provider": settings.llm_provider,
             "rate_limit": settings.rate_limit,
-        },
-    }
+        }
+
+    return result
 
 
 @app.get("/", tags=["health"])
@@ -730,10 +726,8 @@ settings = Settings()
 """Domain-specific exceptions for the Chat API.
 
 Simple, flat hierarchy with clear error messages.
-Uses dataclasses for errors that need to carry context.
+Keep only what's actually used - YAGNI principle.
 """
-
-from dataclasses import dataclass
 
 
 class ChatAPIError(Exception):
@@ -748,78 +742,12 @@ class StorageError(ChatAPIError):
     """Error related to storage operations."""
 
 
-class CacheError(ChatAPIError):
-    """Error related to cache operations."""
-
-
 class ValidationError(ChatAPIError):
     """Error related to input validation (not Pydantic)."""
 
 
 class ConfigurationError(ChatAPIError):
     """Error related to configuration issues."""
-
-
-@dataclass
-class RateLimitError(ChatAPIError):
-    """Rate limit exceeded error with context."""
-
-    user_id: str
-    limit: str
-    retry_after: int | None = None
-
-    def __str__(self) -> str:
-        msg = f"Rate limit exceeded for user {self.user_id} (limit: {self.limit})"
-        if self.retry_after:
-            msg += f". Retry after {self.retry_after} seconds"
-        return msg
-
-
-@dataclass
-class RetryableError(ChatAPIError):
-    """Error that can be retried with context."""
-
-    operation: str
-    attempts: int
-    max_attempts: int
-    last_error: Exception | None = None
-
-    def __str__(self) -> str:
-        msg = f"Operation '{self.operation}' failed after {self.attempts}/{self.max_attempts} attempts"
-        if self.last_error:
-            msg += f": {self.last_error}"
-        return msg
-
-
-@dataclass
-class ResourceNotFoundError(StorageError):
-    """Resource not found error with context."""
-
-    resource_type: str
-    resource_id: str
-
-    def __str__(self) -> str:
-        return f"{self.resource_type} with id '{self.resource_id}' not found"
-
-
-@dataclass
-class ConnectionFailureError(ChatAPIError):
-    """Connection failure error with context."""
-
-    service: str
-    host: str | None = None
-    port: int | None = None
-    original_error: Exception | None = None
-
-    def __str__(self) -> str:
-        msg = f"Failed to connect to {self.service}"
-        if self.host:
-            msg += f" at {self.host}"
-            if self.port:
-                msg += f":{self.port}"
-        if self.original_error:
-            msg += f": {self.original_error}"
-        return msg
 ```
 
 ## File: middleware.py
@@ -943,12 +871,7 @@ class GeminiProvider:
         # Configure litellm
         setup_litellm()
 
-    @with_llm_retry(
-        provider_name="Gemini",
-        max_retries=3,
-        min_wait=1,
-        max_wait=10,
-    )
+    @with_llm_retry("Gemini", max_retries=3)
     async def complete(self, prompt: str) -> LLMResponse:
         """Generate completion using Gemini."""
         response = await litellm.acompletion(
@@ -1004,12 +927,7 @@ class OpenRouterProvider:
         # Configure litellm
         setup_litellm()
 
-    @with_llm_retry(
-        provider_name="OpenRouter",
-        max_retries=3,
-        min_wait=1,
-        max_wait=10,
-    )
+    @with_llm_retry("OpenRouter", max_retries=3)
     async def complete(self, prompt: str) -> LLMResponse:
         """Generate completion using OpenRouter."""
         response = await litellm.acompletion(
@@ -1097,14 +1015,19 @@ def create_llm_provider(
 
 ## File: retry.py
 ```python
-"""Retry logic for the Chat API using stamina."""
+"""Retry logic for the Chat API using tenacity."""
 
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-import stamina
 from loguru import logger
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from .exceptions import LLMProviderError
 
@@ -1114,16 +1037,12 @@ F = TypeVar("F", bound=Callable[..., Any])
 def with_llm_retry(
     provider_name: str,
     max_retries: int = 3,
-    min_wait: int = 1,
-    max_wait: int = 10,
 ) -> Callable[[F], F]:
-    """Decorator to add retry logic to LLM provider methods using stamina.
+    """Decorator to add retry logic to LLM provider methods.
 
     Args:
         provider_name: Name of the provider for error messages
         max_retries: Maximum number of retry attempts
-        min_wait: Minimum wait time between retries (seconds)
-        max_wait: Maximum wait time between retries (seconds)
 
     Returns:
         Decorated function with retry logic
@@ -1131,44 +1050,24 @@ def with_llm_retry(
     """
 
     def decorator(func: F) -> F:
+        @retry(
+            retry=retry_if_exception_type((TimeoutError, ConnectionError)),
+            stop=stop_after_attempt(max_retries),
+            wait=wait_exponential(multiplier=1, min=1, max=10),
+            before_sleep=lambda retry_state: logger.warning(
+                f"{provider_name} attempt {retry_state.attempt_number}: {retry_state.outcome.exception()}"
+            ),
+        )
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # Configure stamina for this specific call
-            retrying = stamina.retry_context(
-                on=(TimeoutError, ConnectionError, LLMProviderError),
-                attempts=max_retries,
-                wait_initial=min_wait,
-                wait_max=max_wait,
-                wait_jitter=True,  # Add jitter to prevent thundering herd
-            )
-
-            async for attempt in retrying:
-                with attempt:
-                    try:
-                        return await func(*args, **kwargs)
-                    except TimeoutError as e:
-                        logger.warning(f"{provider_name} attempt {attempt.num}: Timeout - {e}")
-                        if attempt.num == max_retries:
-                            raise LLMProviderError(f"{provider_name} request timed out") from e
-                        raise
-                    except ConnectionError as e:
-                        logger.warning(
-                            f"{provider_name} attempt {attempt.num}: Connection failed - {e}"
-                        )
-                        if attempt.num == max_retries:
-                            raise LLMProviderError(
-                                f"Failed to connect to {provider_name} API"
-                            ) from e
-                        raise
-                    except Exception as e:
-                        logger.error(f"{provider_name} attempt {attempt.num}: Failed - {e}")
-                        if attempt.num == max_retries:
-                            raise LLMProviderError(f"{provider_name} API error: {e}") from e
-                        raise
-
-            # This should never be reached due to stamina's retry_context behavior
-            # but ruff requires an explicit return or raise
-            raise LLMProviderError(f"{provider_name} retry logic failed unexpectedly")
+            try:
+                return await func(*args, **kwargs)
+            except (TimeoutError, ConnectionError):
+                # Tenacity will handle retries
+                raise
+            except Exception as e:
+                logger.error(f"{provider_name} API error: {e}")
+                raise LLMProviderError(f"{provider_name} API error: {e}") from e
 
         return wrapper  # type: ignore[return-value,no-any-return]
 
@@ -1185,7 +1084,6 @@ import time
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlparse
 
-from cachetools import TTLCache  # type: ignore[import-untyped]
 from databases import Database
 from loguru import logger
 
@@ -1227,38 +1125,83 @@ def cache_key(user_id: str, content: str) -> str:
 
 
 class InMemoryCache:
-    """In-memory cache using cachetools TTLCache."""
+    """Simple in-memory cache with TTL support and LRU eviction."""
 
-    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE, ttl: int = CACHE_TTL_SECONDS) -> None:
-        self.cache: TTLCache[str, dict[str, Any]] = TTLCache(maxsize=max_size, ttl=ttl)
-        self.default_ttl = ttl
-        logger.info(f"Using TTLCache with max size {max_size} and TTL {ttl}s")
+    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE) -> None:
+        self.cache: dict[str, dict[str, Any]] = {}
+        self.access_order: dict[str, float] = {}  # key -> last access time
+        self.max_size = max_size
+        logger.info(f"In-memory cache initialized with max size {max_size}")
 
     async def startup(self) -> None:
         """Initialize cache."""
-        pass  # TTLCache doesn't need initialization
+        pass  # No initialization needed
 
     async def shutdown(self) -> None:
         """Cleanup cache."""
         self.cache.clear()
+        self.access_order.clear()
 
     async def get(self, key: str) -> dict[str, Any] | None:
-        """Get value from cache."""
-        try:
-            value = self.cache[key]
-        except KeyError:
+        """Get value from cache if not expired."""
+        if key not in self.cache:
             logger.debug(f"Cache miss: {key}")
             return None
-        else:
-            logger.debug(f"Cache hit: {key}")
-            return value  # type: ignore[no-any-return]
+
+        # Check if expired
+        item = self.cache[key]
+        if time.time() > item["_expires_at"]:
+            # Remove expired item
+            del self.cache[key]
+            self.access_order.pop(key, None)
+            logger.debug(f"Cache expired: {key}")
+            return None
+
+        # Update access time for LRU
+        self.access_order[key] = time.time()
+        logger.debug(f"Cache hit: {key}")
+
+        # Return data without internal fields
+        data = item.copy()
+        data.pop("_expires_at", None)
+        return data
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
-        """Set value in cache."""
-        # Note: cachetools TTLCache uses a global TTL, not per-item
-        # If we need per-item TTL, we'd need to store expiry time with the value
-        self.cache[key] = value
-        logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.cache.maxsize})")
+        """Set value in cache with TTL."""
+        # Evict expired items first
+        await self._evict_expired()
+
+        # If at max size, evict least recently used
+        if len(self.cache) >= self.max_size:
+            await self._evict_lru()
+
+        # Store with expiration time
+        item = value.copy()
+        item["_expires_at"] = time.time() + ttl
+        self.cache[key] = item
+        self.access_order[key] = time.time()
+        logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.max_size}, TTL: {ttl}s)")
+
+    async def _evict_expired(self) -> None:
+        """Remove expired items."""
+        now = time.time()
+        expired_keys = [
+            key for key, item in self.cache.items() if now > item.get("_expires_at", float("inf"))
+        ]
+        for key in expired_keys:
+            del self.cache[key]
+            self.access_order.pop(key, None)
+            logger.debug(f"Evicted expired: {key}")
+
+    async def _evict_lru(self) -> None:
+        """Remove least recently used item."""
+        if not self.access_order:
+            return
+
+        lru_key = min(self.access_order.items(), key=lambda x: x[1])[0]
+        del self.cache[lru_key]
+        del self.access_order[lru_key]
+        logger.debug(f"Evicted LRU: {lru_key}")
 
 
 class RedisCache:
@@ -1476,6 +1419,8 @@ class DynamoDBRepository:
         """Save message to DynamoDB."""
         from datetime import UTC, datetime
 
+        from boto3.dynamodb.types import TypeSerializer
+
         item = {
             "user_id": kwargs["user_id"],
             "timestamp": datetime.now(UTC).isoformat(),
@@ -1487,11 +1432,17 @@ class DynamoDBRepository:
             "ttl": int(time.time()) + 86400 * TTL_DAYS,  # TTL in seconds
         }
 
+        # Use boto3's built-in serializer
+        serializer = TypeSerializer()
+        serialized_item = {k: serializer.serialize(v) for k, v in item.items() if v is not None}
+
         async with self.session.client("dynamodb", region_name=self.region) as client:
-            await client.put_item(TableName=self.table_name, Item=self._serialize(item))
+            await client.put_item(TableName=self.table_name, Item=serialized_item)
 
     async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history from DynamoDB."""
+        from boto3.dynamodb.types import TypeDeserializer
+
         async with self.session.client("dynamodb", region_name=self.region) as client:
             response = await client.query(
                 TableName=self.table_name,
@@ -1501,9 +1452,20 @@ class DynamoDBRepository:
                 ScanIndexForward=False,  # Descending order
             )
 
+        # Use boto3's built-in deserializer
+        deserializer = TypeDeserializer()
         results: list[MessageRecord] = []
         for item in response.get("Items", []):
-            record: MessageRecord = self._deserialize(item)  # type: ignore
+            deserialized_item = {k: deserializer.deserialize(v) for k, v in item.items()}
+            record: MessageRecord = {
+                "id": deserialized_item["id"],
+                "user_id": deserialized_item["user_id"],
+                "content": deserialized_item["content"],
+                "response": deserialized_item["response"],
+                "model": deserialized_item.get("model"),
+                "usage": deserialized_item.get("usage"),
+                "timestamp": deserialized_item["timestamp"],
+            }
             results.append(record)
         return results
 
@@ -1517,56 +1479,6 @@ class DynamoDBRepository:
             return False
         else:
             return True
-
-    def _serialize(self, item: dict) -> dict:
-        """Convert Python dict to DynamoDB format."""
-        result = {}
-        for key, value in item.items():
-            if value is None:
-                continue
-            if isinstance(value, str):
-                result[key] = {"S": value}
-            elif isinstance(value, int | float):
-                result[key] = {"N": str(value)}
-            elif isinstance(value, dict):
-                result[key] = {"M": self._serialize(value)}  # type: ignore[dict-item]
-            elif isinstance(value, list):
-                result[key] = {"L": [self._serialize_value(v) for v in value]}  # type: ignore[dict-item]
-        return result
-
-    def _serialize_value(self, value) -> dict:
-        """Serialize a single value."""
-        if isinstance(value, str):
-            return {"S": value}
-        if isinstance(value, int | float):
-            return {"N": str(value)}
-        if isinstance(value, dict):
-            return {"M": self._serialize(value)}
-        return {"NULL": True}
-
-    def _deserialize(self, item: dict) -> dict:
-        """Convert DynamoDB format to Python dict."""
-        result = {}
-        for key, value in item.items():
-            if "S" in value:
-                result[key] = value["S"]
-            elif "N" in value:
-                result[key] = float(value["N"])
-            elif "M" in value:
-                result[key] = self._deserialize(value["M"])
-            elif "L" in value:
-                result[key] = [self._deserialize_value(v) for v in value["L"]]
-        return result
-
-    def _deserialize_value(self, value: dict) -> Any:
-        """Deserialize a single value."""
-        if "S" in value:
-            return value["S"]
-        if "N" in value:
-            return float(value["N"])
-        if "M" in value:
-            return self._deserialize(value["M"])
-        return None
 
 
 # ============== Factory Functions ==============

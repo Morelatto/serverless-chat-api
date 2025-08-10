@@ -17,9 +17,8 @@ from slowapi.util import get_remote_address
 from .chat import ChatMessage, ChatResponse, ChatService
 from .config import settings
 from .exceptions import ChatAPIError, LLMProviderError, StorageError, ValidationError
+from .factory import ServiceFactory
 from .middleware import add_request_id
-from .providers import create_llm_provider
-from .storage import create_cache, create_repository
 from .types import MessageRecord
 
 # Configure loguru
@@ -49,36 +48,16 @@ limiter = Limiter(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle."""
-    # Create dependencies
-    repository = create_repository(settings.database_url)
-    cache = create_cache(settings.redis_url)
-
-    # Create LLM provider
-    api_key = (
-        settings.gemini_api_key
-        if settings.llm_provider == "gemini"
-        else settings.openrouter_api_key
-    )
-    llm_provider = create_llm_provider(
-        provider_type=settings.llm_provider,
-        model=settings.llm_model,
-        api_key=api_key,
-    )
-
-    # Initialize resources
-    await repository.startup()
-    await cache.startup()
-
-    # Create service and store in app.state
-    app.state.chat_service = ChatService(repository, cache, llm_provider)
+    """Manage application lifecycle - simplified with factory pattern."""
+    # Create fully configured service for current environment
+    service = await ServiceFactory.create_for_environment()
+    app.state.chat_service = service
 
     logger.info("Application started successfully")
     yield
 
-    # Cleanup
-    await repository.shutdown()
-    await cache.shutdown()
+    # Clean shutdown
+    await ServiceFactory.shutdown_service(service)
     logger.info("Application shutdown complete")
 
 
