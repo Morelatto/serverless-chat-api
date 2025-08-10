@@ -163,7 +163,8 @@ async def chat_api_exception_handler(request: Request, exc: ChatAPIError) -> JSO
 # ============== Dependencies ==============
 async def get_chat_service(request: Request) -> ChatService:
     """Get chat service from app state."""
-    return request.app.state.chat_service
+    service: ChatService = request.app.state.chat_service
+    return service
 
 
 # ============== Routes ==============

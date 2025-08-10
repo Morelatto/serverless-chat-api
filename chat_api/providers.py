@@ -93,20 +93,31 @@ class GeminiProvider:
         )
 
         # Extract usage and calculate cost if available
-        usage_dict = {}
+        from .types import TokenUsage
+        
+        # Build properly typed usage dict
+        typed_usage: TokenUsage = {}
         if response.usage:
-            usage_dict = response.usage.model_dump()
+            usage_data = response.usage.model_dump()
+            if "prompt_tokens" in usage_data:
+                typed_usage["prompt_tokens"] = usage_data["prompt_tokens"]
+            if "completion_tokens" in usage_data:
+                typed_usage["completion_tokens"] = usage_data["completion_tokens"] 
+            if "total_tokens" in usage_data:
+                typed_usage["total_tokens"] = usage_data["total_tokens"]
+                
+            # Try to calculate cost
             try:
                 cost = litellm.completion_cost(completion_response=response)
                 if cost is not None:
-                    usage_dict["cost_usd"] = Decimal(str(cost))
+                    typed_usage["cost_usd"] = Decimal(str(cost))
             except (ValueError, KeyError, TypeError, Exception) as e:
                 logger.debug(f"Cost calculation not available for {response.model}: {e}")
 
         return LLMResponse(
             text=response.choices[0].message.content,
             model=response.model,
-            usage=usage_dict,
+            usage=typed_usage,
         )
 
     async def health_check(self) -> bool:
@@ -160,20 +171,31 @@ class OpenRouterProvider:
         )
 
         # Extract usage and calculate cost if available
-        usage_dict = {}
+        from .types import TokenUsage
+        
+        # Build properly typed usage dict
+        typed_usage: TokenUsage = {}
         if response.usage:
-            usage_dict = response.usage.model_dump()
+            usage_data = response.usage.model_dump()
+            if "prompt_tokens" in usage_data:
+                typed_usage["prompt_tokens"] = usage_data["prompt_tokens"]
+            if "completion_tokens" in usage_data:
+                typed_usage["completion_tokens"] = usage_data["completion_tokens"] 
+            if "total_tokens" in usage_data:
+                typed_usage["total_tokens"] = usage_data["total_tokens"]
+                
+            # Try to calculate cost
             try:
                 cost = litellm.completion_cost(completion_response=response)
                 if cost is not None:
-                    usage_dict["cost_usd"] = Decimal(str(cost))
+                    typed_usage["cost_usd"] = Decimal(str(cost))
             except (ValueError, KeyError, TypeError, Exception) as e:
                 logger.debug(f"Cost calculation not available for {response.model}: {e}")
 
         return LLMResponse(
             text=response.choices[0].message.content,
             model=response.model,
-            usage=usage_dict,
+            usage=typed_usage,
         )
 
     async def health_check(self) -> bool:

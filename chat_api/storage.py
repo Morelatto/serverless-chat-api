@@ -124,7 +124,7 @@ class RedisCache:
 
         try:
             await self.client.setex(key, ttl, json.dumps(value))
-        except (json.JSONEncodeError, ConnectionError, TimeoutError) as e:
+        except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
             logger.error(f"Redis set error: {e}")
 
 

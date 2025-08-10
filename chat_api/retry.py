@@ -51,6 +51,6 @@ def with_llm_retry(
                 logger.error(f"{provider_name} call failed: {e}")
                 raise LLMProviderError(f"{provider_name} API error: {e}") from e
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper  # type: ignore[return-value,no-any-return]
 
     return decorator
