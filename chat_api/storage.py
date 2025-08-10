@@ -6,6 +6,7 @@ import time
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlparse
 
+from cachetools import TTLCache  # type: ignore[import-untyped]
 from databases import Database
 from loguru import logger
 
@@ -16,6 +17,7 @@ from .types import MessageRecord
 CACHE_TTL_SECONDS = 3600  # 1 hour default cache TTL
 TTL_DAYS = 30  # DynamoDB TTL in days
 CACHE_KEY_LENGTH = 32  # Blake2b hash output length
+DEFAULT_CACHE_SIZE = 1000  # Default max cache size
 
 
 # ============== Protocols ==============
@@ -46,16 +48,16 @@ def cache_key(user_id: str, content: str) -> str:
 
 
 class InMemoryCache:
-    """Simple in-memory cache with TTL support and size limit."""
+    """In-memory cache using cachetools TTLCache."""
 
-    def __init__(self, max_size: int = 1000) -> None:
-        self.cache: dict[str, tuple[dict[str, Any], float]] = {}
-        self.max_size = max_size
-        self.access_order: list[str] = []  # Track insertion order for LRU
-        logger.info(f"Using in-memory cache with max size {max_size}")
+    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE, ttl: int = CACHE_TTL_SECONDS) -> None:
+        self.cache: TTLCache[str, dict[str, Any]] = TTLCache(maxsize=max_size, ttl=ttl)
+        self.default_ttl = ttl
+        logger.info(f"Using TTLCache with max size {max_size} and TTL {ttl}s")
 
     async def startup(self) -> None:
         """Initialize cache."""
+        pass  # TTLCache doesn't need initialization
 
     async def shutdown(self) -> None:
         """Cleanup cache."""
@@ -63,35 +65,21 @@ class InMemoryCache:
 
     async def get(self, key: str) -> dict[str, Any] | None:
         """Get value from cache."""
-        if key in self.cache:
-            value, expiry = self.cache[key]
-            if time.time() < expiry:
-                logger.debug(f"Cache hit: {key}")
-                return value
-            # Remove expired entry
-            del self.cache[key]
-            if key in self.access_order:
-                self.access_order.remove(key)
-            logger.debug(f"Cache expired: {key}")
-        return None
+        try:
+            value = self.cache[key]
+        except KeyError:
+            logger.debug(f"Cache miss: {key}")
+            return None
+        else:
+            logger.debug(f"Cache hit: {key}")
+            return value  # type: ignore[no-any-return]
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
-        """Set value in cache with TTL and enforce size limit."""
-        # Check if we need to evict old entries
-        if len(self.cache) >= self.max_size and key not in self.cache and self.access_order:
-            oldest_key = self.access_order.pop(0)
-            if oldest_key in self.cache:
-                del self.cache[oldest_key]
-                logger.debug(f"Evicted oldest cache entry: {oldest_key}")
-
-        expiry = time.time() + ttl
-        self.cache[key] = (value, expiry)
-
-        # Track access order
-        if key not in self.access_order:
-            self.access_order.append(key)
-
-        logger.debug(f"Cached: {key} (TTL: {ttl}s, size: {len(self.cache)}/{self.max_size})")
+        """Set value in cache."""
+        # Note: cachetools TTLCache uses a global TTL, not per-item
+        # If we need per-item TTL, we'd need to store expiry time with the value
+        self.cache[key] = value
+        logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.cache.maxsize})")
 
 
 class RedisCache:
@@ -112,7 +100,7 @@ class RedisCache:
             logger.info("Redis cache connected")
         except (ConnectionError, TimeoutError, OSError) as e:
             logger.warning(f"Redis connection failed: {e}. Falling back to in-memory cache.")
-            # Fallback to in-memory
+            # Fallback to in-memory with cachetools
             self._fallback = InMemoryCache()
             await self._fallback.startup()
 

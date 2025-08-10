@@ -1,0 +1,117 @@
+@startuml component-dependencies
+
+title Chat API Internal Component Dependencies
+skinparam packageStyle rectangle
+skinparam componentStyle uml2
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 12
+skinparam ArrowThickness 2
+skinparam ArrowColor #4A90E2
+skinparam ComponentBackgroundColor #E8F4FD
+skinparam ComponentBorderColor #4A90E2
+skinparam NoteBackgroundColor #FFFFCC
+
+' Legend
+legend top right
+|= Symbol |= Meaning |
+| <color:#000000>——></color> | Direct import |
+| <color:#000000>- - -></color> | Protocol implementation |
+| <color:#808080>.....</color> | Type-only import |
+| <color:#FFE6E6>Component</color> | API Layer |
+| <color:#E6F3FF>Component</color> | Service Layer |
+| <color:#E6FFE6>Component</color> | Provider Layer |
+| <color:#FFE6F9>Component</color> | Storage Layer |
+| <color:#FFF9E6>Component</color> | Shared/Common |
+| <color:#E0E0E0>Component</color> | Entry Points |
+endlegend
+
+' Layout direction
+left to right direction
+
+' Entry Points
+package "Entry Points" #E0E0E0 {
+    component "__main__.py" as main #E0E0E0
+    component "aws.py" as aws #E0E0E0
+}
+
+' API Layer
+package "API Layer" #FFE6E6 {
+    component "api.py" as api #FFE6E6
+    component "middleware.py" as middleware #FFE6E6
+}
+
+' Service Layer
+package "Service Layer" #E6F3FF {
+    component "chat.py" as chat #E6F3FF
+}
+
+' Provider Layer
+package "Provider Layer" #E6FFE6 {
+    component "providers.py" as providers #E6FFE6
+    component "retry.py" as retry_mod #E6FFE6
+}
+
+' Storage Layer
+package "Storage Layer" #FFE6F9 {
+    component "storage.py" as storage #FFE6F9
+}
+
+' Shared/Common
+package "Shared" #FFF9E6 {
+    component "config.py" as config #FFF9E6
+    component "exceptions.py" as exceptions #FFF9E6
+    component "types.py" as types #FFF9E6
+}
+
+' Entry point dependencies
+main --> api : imports app
+main --> config : imports settings
+aws --> api : imports app (via chat_api)
+
+' API Layer dependencies
+api --> chat : ChatMessage,\nChatResponse,\nChatService
+api --> config : settings
+api --> exceptions : ChatAPIError,\nLLMProviderError,\nStorageError,\nValidationError
+api --> middleware : add_request_id
+api --> providers : create_llm_provider
+api --> storage : create_cache,\ncreate_repository
+api ..> types : MessageRecord
+
+' Service Layer dependencies
+chat --> exceptions : LLMProviderError,\nStorageError
+chat ..> providers : LLMProvider (Protocol)
+chat ..> storage : Cache, Repository (Protocols),\ncache_key
+chat ..> types : ChatResult,\nHealthStatus,\nMessageRecord
+
+' Provider Layer dependencies
+providers --> exceptions : ConfigurationError
+providers --> retry_mod : with_llm_retry
+providers ..> types : TokenUsage
+retry_mod --> exceptions : LLMProviderError
+
+' Storage Layer dependencies
+storage --> exceptions : StorageError
+storage ..> types : MessageRecord
+
+' Provider implementations (dashed lines for protocol implementation)
+providers -[#008800,dashed]-> providers : GeminiProvider,\nOpenRouterProvider\nimplements LLMProvider
+
+' Storage implementations (dashed lines for protocol implementation)
+storage -[#008800,dashed]-> storage : SQLiteRepository implements Repository,\nDynamoDBRepository implements Repository,\nInMemoryCache implements Cache,\nRedisCache implements Cache
+
+' Note about dependency injection
+note bottom of chat
+  ChatService uses dependency injection
+  to receive LLMProvider, Repository, and Cache
+  implementations at runtime
+end note
+
+' Note about no circular dependencies
+note bottom of api
+  No circular dependencies detected.
+  Clean layered architecture with
+  unidirectional dependency flow.
+end note
+
+@enduml

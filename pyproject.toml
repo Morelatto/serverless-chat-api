@@ -28,7 +28,8 @@ dependencies = [
     "redis[hiredis]",
     "litellm",
     "slowapi",
-    "tenacity",
+    "stamina",  # Modern retry library with async support
+    "cachetools",  # TTLCache with size limits
     "pydantic-settings",
     "sqlalchemy",
     "loguru",
@@ -36,8 +37,6 @@ dependencies = [
     "boto3",  # For DynamoDB support
     "aioboto3",  # For async DynamoDB operations
     "mangum",  # For Lambda deployment
-    "prometheus-client",  # For litellm Prometheus integration
-    "backoff",  # Required by litellm for retries
 ]
 
 [project.optional-dependencies]
@@ -189,4 +188,5 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "types-redis>=4.6.0.20241004",
+    "types-cachetools>=5.3.0.7",
 ]

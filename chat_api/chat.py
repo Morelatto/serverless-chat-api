@@ -110,12 +110,11 @@ class ChatService:
         cached = await self.cache.get(key)
         if cached:
             logger.debug(f"Cache hit for user {user_id[:USER_ID_LOG_LENGTH]}")
-            cached["cached"] = True
             # Return as ChatResult with usage from cache if available
             cached_result: ChatResult = {
-                "id": cached["id"],
-                "content": cached["content"],
-                "model": cached["model"],
+                "id": cached.get("id", ""),
+                "content": cached.get("content", ""),
+                "model": cached.get("model", "unknown"),
                 "cached": True,
                 "usage": cached.get("usage", {}),
             }
