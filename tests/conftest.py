@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-from chat_api import app
+from chat_api.api import app
 
 # Set test environment
 os.environ["CHAT_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"

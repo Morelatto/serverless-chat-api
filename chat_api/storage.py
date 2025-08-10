@@ -398,9 +398,7 @@ def create_repository(database_url: str | None = None) -> Repository:
     if parsed.scheme in ("sqlite", "sqlite+aiosqlite") or url.startswith("sqlite"):
         logger.info("Creating SQLite repository")
         return SQLiteRepository(url)
-    raise StorageError(
-        f"Unsupported database URL scheme: {url}. " "Must be 'sqlite' or 'dynamodb://'"
-    )
+    raise StorageError(f"Unsupported database URL scheme: {url}. Must be 'sqlite' or 'dynamodb://'")
 
 
 def create_cache(redis_url: str | None = None) -> Cache:

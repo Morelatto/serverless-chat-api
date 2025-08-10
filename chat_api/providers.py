@@ -94,7 +94,7 @@ class GeminiProvider:
 
         # Extract usage and calculate cost if available
         from .types import TokenUsage
-        
+
         # Build properly typed usage dict
         typed_usage: TokenUsage = {}
         if response.usage:
@@ -102,10 +102,10 @@ class GeminiProvider:
             if "prompt_tokens" in usage_data:
                 typed_usage["prompt_tokens"] = usage_data["prompt_tokens"]
             if "completion_tokens" in usage_data:
-                typed_usage["completion_tokens"] = usage_data["completion_tokens"] 
+                typed_usage["completion_tokens"] = usage_data["completion_tokens"]
             if "total_tokens" in usage_data:
                 typed_usage["total_tokens"] = usage_data["total_tokens"]
-                
+
             # Try to calculate cost
             try:
                 cost = litellm.completion_cost(completion_response=response)
@@ -172,7 +172,7 @@ class OpenRouterProvider:
 
         # Extract usage and calculate cost if available
         from .types import TokenUsage
-        
+
         # Build properly typed usage dict
         typed_usage: TokenUsage = {}
         if response.usage:
@@ -180,10 +180,10 @@ class OpenRouterProvider:
             if "prompt_tokens" in usage_data:
                 typed_usage["prompt_tokens"] = usage_data["prompt_tokens"]
             if "completion_tokens" in usage_data:
-                typed_usage["completion_tokens"] = usage_data["completion_tokens"] 
+                typed_usage["completion_tokens"] = usage_data["completion_tokens"]
             if "total_tokens" in usage_data:
                 typed_usage["total_tokens"] = usage_data["total_tokens"]
-                
+
             # Try to calculate cost
             try:
                 cost = litellm.completion_cost(completion_response=response)
