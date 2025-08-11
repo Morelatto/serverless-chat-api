@@ -1,11 +1,17 @@
+<div align="center">
+
+<img src="docs/assets/logo-dark.svg" alt="Chat API Logo" width="200" height="60" />
+
 # Chat API - Cloud Native Python Architecture
 
-[![CI](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/ci.yml)
-[![Deploy](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml/badge.svg)](https://github.com/Morelatto/AWSDeployTest/actions/workflows/deploy.yml)
+[![CI](https://github.com/Morelatto/serverless-chat-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Morelatto/serverless-chat-api/actions/workflows/ci.yml)
+[![Deploy](https://github.com/Morelatto/serverless-chat-api/actions/workflows/deploy.yml/badge.svg)](https://github.com/Morelatto/serverless-chat-api/actions/workflows/deploy.yml)
 [![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
 Modern LLM chat processing API following Pythonic principles and cloud native patterns. Built with FastAPI, supporting multiple LLM providers with intelligent caching and fallback strategies.
+
+</div>
 
 ## 🚀 Quick Start
 

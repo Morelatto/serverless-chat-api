@@ -37,6 +37,10 @@ def generate_pngs():
         print("   Or download from: https://plantuml.com/download")
         return False
 
+    # Ensure output directory exists
+    output_dir = Path("../assets/diagrams")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Generate PNGs from existing PUML files
     puml_files = [
         "09_happy_path_sequence.puml",
@@ -48,15 +52,15 @@ def generate_pngs():
     for puml_file in puml_files:
         path = Path(puml_file)
         if path.exists():
-            # Use subprocess with list args (safer)
+            # Use subprocess with list args (safer) and specify output directory
             result = subprocess.run(  # noqa: S603
-                ["plantuml", "-tpng", str(path)],  # noqa: S607 - Safe: path is from known list
+                ["plantuml", "-tpng", f"-o{output_dir}", str(path)],  # noqa: S607 - Safe: path is from known list
                 capture_output=True,
                 text=True,
                 check=False,  # Don't raise on non-zero exit
             )
             if result.returncode == 0:
-                print(f"   ✅ Generated {puml_file.replace('.puml', '.png')}")
+                print(f"   ✅ Generated {puml_file.replace('.puml', '.png')} in {output_dir}")
             else:
                 print(f"   ❌ Failed to generate {puml_file}: {result.stderr}")
         else:

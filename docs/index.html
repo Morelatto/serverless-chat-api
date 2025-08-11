@@ -761,64 +761,8 @@
     <header class="header">
         <div class="header-content">
             <div class="logo">
-                <!-- Light mode logo -->
-                <svg class="logo-light" width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="bubbleGradientLight" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#0066CC;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#004499;stop-opacity:1" />
-                        </linearGradient>
-                        <linearGradient id="lightningGradientLight" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FF6600;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#FF8833;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-
-                    <!-- Chat bubble -->
-                    <rect x="10" y="15" width="50" height="30" rx="6" fill="url(#bubbleGradientLight)"/>
-
-                    <!-- Lightning bolt -->
-                    <path d="M32 10 L28 25 L35 25 L32 35 L40 20 L33 20 L37 10 Z"
-                          fill="url(#lightningGradientLight)" opacity="0.9"/>
-
-                    <!-- Code brackets -->
-                    <text x="35" y="34" text-anchor="middle" fill="white"
-                          font-family="Monaco, monospace" font-size="11" font-weight="bold">&lt;/&gt;</text>
-
-                    <!-- Text -->
-                    <text x="75" y="35" font-family="Segoe UI, sans-serif" font-size="24" font-weight="300" fill="#0066CC">Chat</text>
-                    <text x="125" y="35" font-family="Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#1a1a1a">API</text>
-                </svg>
-
-                <!-- Dark mode logo -->
-                <svg class="logo-dark" width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="bubbleGradientDark" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#0088FF;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#0066CC;stop-opacity:1" />
-                        </linearGradient>
-                        <linearGradient id="lightningGradientDark" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FF8833;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#FFAA55;stop-opacity:1" />
-                        </linearGradient>
-                    </defs>
-
-                    <!-- Chat bubble outline for dark mode -->
-                    <rect x="10" y="15" width="50" height="30" rx="6"
-                          fill="none" stroke="url(#bubbleGradientDark)" stroke-width="2"/>
-
-                    <!-- Lightning bolt -->
-                    <path d="M32 10 L28 25 L35 25 L32 35 L40 20 L33 20 L37 10 Z"
-                          fill="url(#lightningGradientDark)"/>
-
-                    <!-- Code brackets -->
-                    <text x="35" y="34" text-anchor="middle" fill="#0088FF"
-                          font-family="Monaco, monospace" font-size="11" font-weight="bold">&lt;/&gt;</text>
-
-                    <!-- Text -->
-                    <text x="75" y="35" font-family="Segoe UI, sans-serif" font-size="24" font-weight="300" fill="#0088FF">Chat</text>
-                    <text x="125" y="35" font-family="Segoe UI, sans-serif" font-size="24" font-weight="700" fill="#f0f6fc">API</text>
-                </svg>
+                <img src="assets/logo-light.svg" alt="Chat API Logo" width="200" height="60" class="logo-light" />
+                <img src="assets/logo-dark.svg" alt="Chat API Logo" width="200" height="60" class="logo-dark" />
             </div>
             <nav class="nav">
                 <a href="#quick-start" class="active">Quick Start</a>
@@ -918,7 +862,7 @@ async def chat_endpoint(
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-structure')">
-                    <img src="asset/01_static_structure.png" alt="Estrutura Estática dos Componentes" id="diagram-structure">
+                    <img src="assets/diagrams/01_static_structure.png" alt="Estrutura Estática dos Componentes" id="diagram-structure">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-structure')" title="Tela cheia">⛶</button>
                     </div>
@@ -1049,7 +993,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-flow')">
-                    <img src="asset/02_request_flow.png" alt="Fluxo de Requisições" id="diagram-flow">
+                    <img src="assets/diagrams/02_request_flow.png" alt="Fluxo de Requisições" id="diagram-flow">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-flow')" title="Tela cheia">⛶</button>
                     </div>
@@ -1097,7 +1041,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-dependencies')">
-                    <img src="asset/06_runtime_dependencies.png" alt="Dependências Runtime" id="diagram-dependencies">
+                    <img src="assets/diagrams/06_runtime_dependencies.png" alt="Dependências Runtime" id="diagram-dependencies">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-dependencies')" title="Tela cheia">⛶</button>
                     </div>
@@ -1107,7 +1051,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-protocols')">
-                    <img src="asset/08_protocol_pattern.png" alt="Padrão de Protocolos" id="diagram-protocols">
+                    <img src="assets/diagrams/08_protocol_pattern.png" alt="Padrão de Protocolos" id="diagram-protocols">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-protocols')" title="Tela cheia">⛶</button>
                     </div>
@@ -1147,7 +1091,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-errors')">
-                    <img src="asset/05_error_handling.png" alt="Tratamento de Erros" id="diagram-errors">
+                    <img src="assets/diagrams/05_error_handling.png" alt="Tratamento de Erros" id="diagram-errors">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-errors')" title="Tela cheia">⛶</button>
                     </div>
@@ -1288,7 +1232,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-deployments')">
-                    <img src="asset/03_deployment_environments.png" alt="Ambientes de Deploy" id="diagram-deployments">
+                    <img src="assets/diagrams/03_deployment_environments.png" alt="Ambientes de Deploy" id="diagram-deployments">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Tela cheia">⛶</button>
                     </div>
@@ -1298,7 +1242,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-aws')">
-                    <img src="asset/07_aws_infrastructure.png" alt="Infraestrutura AWS" id="diagram-aws">
+                    <img src="assets/diagrams/07_aws_infrastructure.png" alt="Infraestrutura AWS" id="diagram-aws">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Tela cheia">⛶</button>
                     </div>
@@ -1410,7 +1354,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-1')">
-                    <img src="asset/09_happy_path_sequence.png" alt="Sequência Happy Path" id="diagram-sequence-1">
+                    <img src="assets/diagrams/09_happy_path_sequence.png" alt="Sequência Happy Path" id="diagram-sequence-1">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-1')" title="Tela cheia">⛶</button>
                     </div>
@@ -1420,7 +1364,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-2')">
-                    <img src="asset/10_cache_hit_sequence.png" alt="Sequência Cache Hit" id="diagram-sequence-2">
+                    <img src="assets/diagrams/10_cache_hit_sequence.png" alt="Sequência Cache Hit" id="diagram-sequence-2">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-2')" title="Tela cheia">⛶</button>
                     </div>
@@ -1430,7 +1374,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-3')">
-                    <img src="asset/11_error_sequence.png" alt="Sequência Error Recovery" id="diagram-sequence-3">
+                    <img src="assets/diagrams/11_error_sequence.png" alt="Sequência Error Recovery" id="diagram-sequence-3">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-3')" title="Tela cheia">⛶</button>
                     </div>
@@ -1440,7 +1384,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-4')">
-                    <img src="asset/12_startup_sequence.png" alt="Sequência Startup" id="diagram-sequence-4">
+                    <img src="assets/diagrams/12_startup_sequence.png" alt="Sequência Startup" id="diagram-sequence-4">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-4')" title="Tela cheia">⛶</button>
                     </div>

@@ -71,7 +71,8 @@ def create_1_static_structure():
 
     with Diagram(
         "01. Static Structure",
-        show=False,  # Remove filename to avoid custom icon issues
+        filename="../assets/diagrams/01_static_structure",
+        show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
         direction="TB",
@@ -103,6 +104,7 @@ def create_2_request_flow():
 
     with Diagram(
         "02. Request Flow",
+        filename="../assets/diagrams/02_request_flow",
         show=False,
         graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
         node_attr=NODE_ATTR,
@@ -129,6 +131,7 @@ def create_3_deployment_environments():
 
     with Diagram(
         "03. Deployment Environments",
+        filename="../assets/diagrams/03_deployment_environments",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -157,6 +160,7 @@ def create_4_data_flow():
 
     with Diagram(
         "04. Data Transformations",
+        filename="../assets/diagrams/04_data_transformations",
         show=False,
         graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
         node_attr=NODE_ATTR,
@@ -186,6 +190,7 @@ def create_5_error_handling():
 
     with Diagram(
         "05. Error Handling",
+        filename="../assets/diagrams/05_error_handling",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -211,6 +216,7 @@ def create_6_dependencies():
 
     with Diagram(
         "06. Runtime Dependencies",
+        filename="../assets/diagrams/06_runtime_dependencies",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -239,6 +245,7 @@ def create_7_aws_infrastructure():
 
     with Diagram(
         "07. AWS Infrastructure",
+        filename="../assets/diagrams/07_aws_infrastructure",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -260,6 +267,7 @@ def create_8_protocol_pattern():
 
     with Diagram(
         "08. Protocol Pattern",
+        filename="../assets/diagrams/08_protocol_pattern",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
