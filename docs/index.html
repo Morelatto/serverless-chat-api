@@ -1099,23 +1099,23 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🏗️</div>
-                    <h4>Funções no Nível do Módulo</h4>
-                    <p>Core business logic implementado como funções assíncronas simples,
-                    não classes. Facilita testes e reduz boilerplate.</p>
+                    <h4>Module-Level Functions</h4>
+                    <p>Core business logic implemented as simple async functions,
+                    not classes. Facilitates testing and reduces boilerplate.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚙️</div>
                     <h4>Settings Singleton</h4>
-                    <p>Configuração carregada uma vez no nível do módulo.
-                    Todas as variáveis usam prefixo CHAT_ para organização.</p>
+                    <p>Configuration loaded once at module level.
+                    All variables use CHAT_ prefix for organization.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔌</div>
                     <h4>Dependency Injection</h4>
-                    <p>Repository e Cache injetados via app.state no FastAPI.
-                    Permite diferentes implementações por ambiente.</p>
+                    <p>Repository and Cache injected via app.state in FastAPI.
+                    Allows different implementations per environment.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1177,26 +1177,26 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🧪</div>
-                    <h4>Testes Unitários</h4>
-                    <p><strong>test_core.py:</strong> Lógica de negócio<br>
-                    <strong>test_models.py:</strong> Validação Pydantic<br>
-                    <strong>test_storage.py:</strong> Persistência e cache</p>
+                    <h4>Unit Tests</h4>
+                    <p><strong>test_core.py:</strong> Business logic<br>
+                    <strong>test_models.py:</strong> Pydantic validation<br>
+                    <strong>test_storage.py:</strong> Persistence and caching</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🌐</div>
-                    <h4>Testes de Integração</h4>
-                    <p><strong>test_handlers.py:</strong> Endpoints HTTP<br>
-                    <strong>test_e2e.py:</strong> Fluxos completos<br>
-                    Mocking de dependências externas</p>
+                    <h4>Integration Tests</h4>
+                    <p><strong>test_handlers.py:</strong> HTTP endpoints<br>
+                    <strong>test_e2e.py:</strong> Complete flows<br>
+                    Mocking of external dependencies</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h4>Cobertura e Métricas</h4>
-                    <p><strong>Coverage:</strong> 80.12% atual<br>
-                    <strong>Target:</strong> >75% obrigatório<br>
-                    <strong>Relatórios:</strong> HTML + terminal</p>
+                    <h4>Coverage and Metrics</h4>
+                    <p><strong>Coverage:</strong> 80.12% current<br>
+                    <strong>Target:</strong> >75% required<br>
+                    <strong>Reports:</strong> HTML + terminal</p>
                 </div>
 
                 <div class="feature-card">
@@ -1208,7 +1208,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Comandos de Desenvolvimento</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Development Commands</h4>
 
             <table class="comparison-table">
                 <thead>
@@ -1221,7 +1221,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <tbody>
                     <tr>
                         <td><code>uv run python -m pytest tests/ -v</code></td>
-                        <td>Executa todos os testes</td>
+                        <td>Run all tests</td>
                         <td>CI/CD Pipeline</td>
                     </tr>
                     <tr>
@@ -1236,8 +1236,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                     </tr>
                     <tr>
                         <td><code>uv run python -m chat_api</code></td>
-                        <td>Executa API localmente</td>
-                        <td>Desenvolvimento</td>
+                        <td>Run API locally</td>
+                        <td>Development</td>
                     </tr>
                 </tbody>
             </table>
@@ -1245,7 +1245,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-value">80.12%</div>
-                    <div class="metric-label">Cobertura de Testes</div>
+                    <div class="metric-label">Test Coverage</div>
                 </div>
                 <div class="metric-card blue">
                     <div class="metric-value">100%</div>
@@ -1269,9 +1269,9 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-deployments')">
-                    <img src="assets/diagrams/03_deployment_environments.png" alt="Ambientes de Deploy" id="diagram-deployments">
+                    <img src="assets/diagrams/03_deployment_environments.png" alt="Deployment Environments" id="diagram-deployments">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
                 <p class="diagram-caption"><strong>Figure 7:</strong> Deployment environments - Local, Docker and AWS</p>
@@ -1279,22 +1279,22 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-aws')">
-                    <img src="assets/diagrams/07_aws_infrastructure.png" alt="Infraestrutura AWS" id="diagram-aws">
+                    <img src="assets/diagrams/07_aws_infrastructure.png" alt="AWS Infrastructure" id="diagram-aws">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
                 <p class="diagram-caption"><strong>Figure 8:</strong> AWS Infrastructure - Complete serverless</p>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estratégias de Deployment</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Deployment Strategies</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
                     <h5>Local Development</h5>
-                    <p><strong>Python + SQLite:</strong> Setup rápido com uv sync --dev<br>
-                    <strong>Docker:</strong> Ambiente isolado com docker-compose<br>
-                    <strong>Hot Reload:</strong> FastAPI com --reload para desenvolvimento</p>
+                    <p><strong>Python + SQLite:</strong> Quick setup with uv sync --dev<br>
+                    <strong>Docker:</strong> Isolated environment with docker-compose<br>
+                    <strong>Hot Reload:</strong> FastAPI with --reload for development</p>
                 </div>
 
                 <div class="timeline-item">
@@ -1306,8 +1306,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
                 <div class="timeline-item">
                     <h5>Infrastructure as Code</h5>
-                    <p><strong>Terraform:</strong> Infraestrutura versionada<br>
-                    <strong>Make targets:</strong> Deploy automatizado<br>
+                    <p><strong>Terraform:</strong> Versioned infrastructure<br>
+                    <strong>Make targets:</strong> Automated deployment<br>
                     <strong>Environment configs:</strong> dev/staging/prod</p>
                 </div>
 
@@ -1337,15 +1337,15 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">🏗️</div>
                     <h4>Terraform IaC</h4>
-                    <p>Infraestrutura completa como código.
-                    API Gateway + Lambda + DynamoDB automatizado.</p>
+                    <p>Complete infrastructure as code.
+                    Automated API Gateway + Lambda + DynamoDB.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
                     <h4>Observabilidade</h4>
                     <p>CloudWatch Logs + X-Ray tracing.
-                    Métricas customizadas para monitoramento.</p>
+                    Custom metrics for monitoring.</p>
                 </div>
             </div>
         </section>
@@ -1370,8 +1370,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h4>Cache Hit</h4>
-                    <p>Resposta rápida com dados em cache,
-                    evitando chamada custosa ao LLM.</p>
+                    <p>Fast response with cached data,
+                    avoiding costly LLM calls.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1433,11 +1433,11 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
         <section class="section">
             <div class="section-header">
                 <div class="section-number">7</div>
-                <h3>Capacidades e Performance</h3>
+                <h3>Capabilities and Performance</h3>
             </div>
 
-            <p>A arquitetura atual oferece uma solução robusta e escalável para processamento de chat com LLMs,
-            otimizada para performance, custos e manutenabilidade em ambiente de produção.</p>
+            <p>The current architecture offers a robust and scalable solution for LLM chat processing,
+            optimized for performance, costs and maintainability in production environments.</p>
 
             <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Numbers Don't Lie</h4>
 
@@ -1500,13 +1500,13 @@ Running 30s test @ http://localhost:8000/chat
                 <div class="timeline-item">
                     <h5>Auto-Scaling Instantâneo</h5>
                     <p>AWS Lambda escala automaticamente de 0 a 1000 execuções concorrentes em segundos.
-                    Suporta picos súbitos de tráfego sem configuração prévia ou warming.</p>
+                    Supports sudden traffic spikes without prior configuration or warming.</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>Cache Multi-Camada Inteligente</h5>
-                    <p>Redis para produção, dict em memória para desenvolvimento.
-                    Cache key baseado em hash SHA-256 para consistência e performance.</p>
+                    <p>Redis for production, in-memory dict for development.
+                    Cache key based on SHA-256 hash for consistency and performance.</p>
                 </div>
 
                 <div class="timeline-item">
@@ -1518,11 +1518,11 @@ Running 30s test @ http://localhost:8000/chat
                 <div class="timeline-item">
                     <h5>Storage Otimizado</h5>
                     <p>DynamoDB com latência single-digit milliseconds e capacidade
-                    ilimitada. SQLite para desenvolvimento com interface transparente.</p>
+                    unlimited. SQLite for development with transparent interface.</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Funcionalidades Implementadas</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Implemented Features</h4>
 
             <div class="content-grid">
                 <div class="feature-card">
@@ -1535,40 +1535,40 @@ Running 30s test @ http://localhost:8000/chat
                 <div class="feature-card">
                     <div class="feature-icon">🤖</div>
                     <h4>Multi-Provider LLM</h4>
-                    <p>Integração com Gemini e OpenRouter via litellm.
-                    Fallback automático, retry inteligente e tracking de uso.</p>
+                    <p>Integration with Gemini and OpenRouter via litellm.
+                    Automatic fallback, intelligent retry and usage tracking.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">💾</div>
                     <h4>Storage Flexível</h4>
-                    <p>Repository Pattern com Protocol Python.
-                    SQLite (dev) e DynamoDB (prod) com interface unificada.</p>
+                    <p>Repository Pattern with Python Protocol.
+                    SQLite (dev) and DynamoDB (prod) with unified interface.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
                     <h4>Deploy Automatizado</h4>
-                    <p>Makefile com targets para local, Docker e AWS Lambda.
-                    Terraform IaC para infraestrutura completa como código.</p>
+                    <p>Makefile with targets for local, Docker and AWS Lambda.
+                    Terraform IaC for complete infrastructure as code.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
                     <h4>Observabilidade Completa</h4>
-                    <p>Logs estruturados com Loguru, request tracking via X-Request-ID.
-                    Health checks proativos e métricas de performance.</p>
+                    <p>Structured logs with Loguru, request tracking via X-Request-ID.
+                    Proactive health checks and performance metrics.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h4>Qualidade Garantida</h4>
-                    <p>80%+ cobertura de testes, MyPy type checking,
-                    Ruff linting e security scanning com Bandit.</p>
+                    <p>80%+ test coverage, MyPy type checking,
+                    Ruff linting and security scanning with Bandit.</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Arquitetura de Custos</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Cost Architecture</h4>
 
             <table class="comparison-table">
                 <thead>
