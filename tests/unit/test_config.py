@@ -72,7 +72,7 @@ class TestSettings:
             settings = Settings()
 
             assert settings.llm_provider == "openrouter"
-            assert settings.llm_model == "google/gemma-7b-it:free"
+            assert settings.llm_model == "openrouter/google/gemma-7b-it:free"
 
     def test_gemini_model_configuration(self) -> None:
         """Test Gemini model configuration."""
@@ -132,14 +132,15 @@ class TestSettings:
         ):
             Settings()
 
-        # Test missing OpenRouter key
+        # Test missing OpenRouter key - disable .env file loading
         test_env = {k: v for k, v in os.environ.items() if not k.startswith("CHAT_")}
         test_env["CHAT_LLM_PROVIDER"] = "openrouter"
         with (
             patch.dict(os.environ, test_env, clear=True),
+            patch("chat_api.config.Settings.model_config", {"env_file": None}),
             pytest.raises(ValueError, match="CHAT_OPENROUTER_API_KEY not set"),
         ):
-            Settings()
+            Settings(_env_file=None)  # Explicitly disable .env file
 
     def test_valid_provider_validation(self) -> None:
         """Test provider validation."""
@@ -298,12 +299,12 @@ class TestConfigurationIntegration:
             },
             clear=True,
         ):
-            settings = Settings()
+            settings = Settings(_env_file=None)
 
             assert settings.host == "127.0.0.1"
             assert settings.log_level == "DEBUG"
             assert settings.llm_provider == "openrouter"
-            assert settings.llm_model == "google/gemma-7b-it:free"
+            assert settings.llm_model == "openrouter/google/gemma-7b-it:free"
             assert settings.database_url == "sqlite+aiosqlite:///:memory:"
             assert settings.rate_limit == "1000/minute"
             assert settings.redis_url is None  # No Redis in dev
@@ -322,10 +323,10 @@ class TestConfigurationIntegration:
             },
             clear=True,
         ):
-            settings = Settings()
+            settings = Settings(_env_file=None)
 
             # Should auto-configure for Lambda
-            assert "dynamodb" in settings.database_url
+            assert "dynamodb" in settings.effective_database_url
             assert settings.aws_region == "us-east-1"
             assert settings.dynamodb_table == "lambda-chat-table"
 
