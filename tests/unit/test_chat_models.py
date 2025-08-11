@@ -3,9 +3,10 @@
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
+from pydantic_core import ValidationError as PydanticValidationError
 
 from chat_api.chat import ChatMessage, ChatResponse
+from chat_api.exceptions import ValidationError
 
 
 def test_chat_message_valid() -> None:
@@ -24,13 +25,13 @@ def test_chat_message_preserves_content() -> None:
 
 def test_chat_message_empty_user_id() -> None:
     """Test chat message with empty user_id."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(PydanticValidationError):
         ChatMessage(user_id="", content="Hello")
 
 
 def test_chat_message_empty_content() -> None:
     """Test chat message with empty content."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(PydanticValidationError):
         ChatMessage(user_id="test123", content="")
 
 
@@ -46,7 +47,8 @@ def test_chat_message_long_content() -> None:
     """Test chat message with too long content."""
     # Content longer than max_length (10000) should fail
     long_content = "x" * 10001
-    with pytest.raises(ValidationError):
+    # Our validator raises our custom ValidationError, not Pydantic's
+    with pytest.raises((ValidationError, PydanticValidationError)):
         ChatMessage(user_id="test123", content=long_content)
 
 

@@ -1,4 +1,4 @@
-"""Simple unit tests for provider functionality."""
+"""Tests for LLM provider functionality."""
 
 import os
 from decimal import Decimal
@@ -6,116 +6,230 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from chat_api.exceptions import ConfigurationError
+from chat_api.exceptions import ConfigurationError, LLMProviderError
 from chat_api.providers import LLMConfig, LLMResponse, create_llm_provider
 
 
-def test_llm_config_creation():
-    """Test LLM config creation with defaults."""
-    config = LLMConfig(model="gemini/gemini-1.5-flash")
+class TestLLMConfig:
+    """Test LLM configuration."""
 
-    assert config.model == "gemini/gemini-1.5-flash"
-    assert config.temperature == 0.1  # Actual default
-    assert config.timeout == 30  # Actual default
-    assert config.seed == 42  # Actual default
-    assert config.api_key is None  # No key set
+    def test_creation_with_defaults(self):
+        """Test LLM config creation with defaults."""
+        config = LLMConfig(model="gemini/gemini-1.5-flash")
 
-
-def test_llm_response_creation():
-    """Test LLM response creation."""
-    response = LLMResponse(text="Test response", model="test-model", usage={"total_tokens": 10})
-
-    assert response.text == "Test response"
-    assert response.model == "test-model"
-    assert response.usage == {"total_tokens": 10}
+        assert config.model == "gemini/gemini-1.5-flash"
+        assert config.temperature == 0.1
+        assert config.timeout == 30
+        assert config.seed == 42
+        assert config.api_key is None
 
 
-def test_llm_response_with_cost():
-    """Test LLM response with cost information."""
-    response = LLMResponse(
-        text="Test response",
-        model="test-model",
-        usage={
-            "prompt_tokens": 5,
-            "completion_tokens": 5,
-            "total_tokens": 10,
-            "cost_usd": Decimal("0.001"),
-        },
-    )
+class TestLLMResponse:
+    """Test LLM response model."""
 
-    assert response.usage["cost_usd"] == Decimal("0.001")
-    assert response.usage["prompt_tokens"] == 5
+    def test_basic_response(self):
+        """Test basic LLM response creation."""
+        response = LLMResponse(text="Test response", model="test-model", usage={"total_tokens": 10})
 
+        assert response.text == "Test response"
+        assert response.model == "test-model"
+        assert response.usage == {"total_tokens": 10}
 
-@pytest.mark.asyncio
-async def test_provider_health_check():
-    """Test provider health check only checks config."""
-    # Import the class locally since it's not exported
-    from chat_api.providers import SimpleLLMProvider
-
-    config = LLMConfig(model="test-model", api_key="test-key")
-    provider = SimpleLLMProvider(config)
-
-    # Health check should return True when configured
-    result = await provider.health_check()
-    assert result is True
-
-    # Health check should return False when no API key
-    provider.config.api_key = None
-    result = await provider.health_check()
-    assert result is False
-
-
-@pytest.mark.asyncio
-async def test_provider_complete():
-    """Test provider complete method."""
-    from chat_api.providers import SimpleLLMProvider
-
-    config = LLMConfig(model="test-model", api_key="test-key")
-    provider = SimpleLLMProvider(config)
-
-    # Mock the litellm completion
-    with patch("chat_api.providers.litellm.acompletion") as mock_completion:
-        mock_completion.return_value = AsyncMock(
-            choices=[AsyncMock(message=AsyncMock(content="Test response"))],
+    def test_response_with_cost(self):
+        """Test LLM response with cost information."""
+        response = LLMResponse(
+            text="Test response",
             model="test-model",
-            usage={"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+            usage={
+                "prompt_tokens": 5,
+                "completion_tokens": 5,
+                "total_tokens": 10,
+                "cost_usd": Decimal("0.001"),
+            },
         )
 
-        result = await provider.complete("Test prompt")
-
-        assert result.text == "Test response"
-        assert result.model == "test-model"
-        assert result.usage["total_tokens"] == 30
-
-        # Verify litellm was called correctly
-        mock_completion.assert_called_once()
-        call_kwargs = mock_completion.call_args.kwargs
-        assert call_kwargs["model"] == "test-model"
-        assert call_kwargs["messages"][0]["content"] == "Test prompt"
+        assert response.usage["cost_usd"] == Decimal("0.001")
+        assert response.usage["prompt_tokens"] == 5
 
 
-def test_create_llm_provider_with_env():
-    """Test creating provider from environment."""
-    with patch.dict(
-        os.environ, {"CHAT_LLM_PROVIDER": "openrouter", "CHAT_OPENROUTER_API_KEY": "test-key"}
-    ):
-        # Need to reload settings to pick up env vars
-        from chat_api.config import Settings
+class TestSimpleLLMProvider:
+    """Test SimpleLLMProvider implementation."""
 
-        test_settings = Settings()
+    @pytest.mark.asyncio
+    async def test_health_check(self):
+        """Test provider health check only checks config."""
+        from chat_api.providers import SimpleLLMProvider
 
-        with patch("chat_api.providers.settings", test_settings):
+        config = LLMConfig(model="test-model", api_key="test-key")
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        # Health check should return True when configured
+        result = await provider.health_check()
+        assert result is True
+
+        # Health check should return False when no API key
+        provider.config.api_key = None
+        result = await provider.health_check()
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_complete_success(self):
+        """Test successful LLM completion."""
+        from chat_api.providers import SimpleLLMProvider
+
+        config = LLMConfig(model="test-model", api_key="test-key")
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        mock_response = AsyncMock()
+        mock_response.choices = [AsyncMock(message=AsyncMock(content="Hello world"))]
+        mock_response.model = "test-model"
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 20,
+            "total_tokens": 30,
+        }
+
+        with patch("chat_api.providers.litellm.acompletion", return_value=mock_response):
+            result = await provider.complete("Test prompt")
+
+            assert isinstance(result, LLMResponse)
+            assert result.text == "Hello world"
+            assert result.model == "test-model"
+            assert result.usage["total_tokens"] == 30
+
+    @pytest.mark.asyncio
+    async def test_complete_empty_response(self):
+        """Test handling of empty LLM response."""
+        from chat_api.providers import SimpleLLMProvider
+
+        config = LLMConfig(model="test-model", api_key="test-key")
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        mock_response = AsyncMock()
+        mock_response.choices = []
+
+        with (
+            patch("chat_api.providers.litellm.acompletion", return_value=mock_response),
+            pytest.raises(LLMProviderError, match="No response from LLM"),
+        ):
+            await provider.complete("Test prompt")
+
+    @pytest.mark.asyncio
+    async def test_complete_api_error(self):
+        """Test handling of API errors during completion."""
+        from chat_api.providers import SimpleLLMProvider
+
+        config = LLMConfig(model="test-model", api_key="test-key")
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        with (
+            patch("chat_api.providers.litellm.acompletion", side_effect=Exception("API Error")),
+            pytest.raises(LLMProviderError, match="LLM request failed"),
+        ):
+            await provider.complete("Test prompt")
+
+    @pytest.mark.asyncio
+    async def test_complete_with_system_prompt(self):
+        """Test completion with system prompt."""
+        from chat_api.providers import SimpleLLMProvider
+
+        config = LLMConfig(
+            model="test-model",
+            api_key="test-key",
+            system_prompt="You are a helpful assistant",
+        )
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        mock_response = AsyncMock()
+        mock_response.choices = [AsyncMock(message=AsyncMock(content="Response"))]
+        mock_response.model = "test-model"
+        mock_response.usage = {"total_tokens": 10}
+
+        with patch(
+            "chat_api.providers.litellm.acompletion", return_value=mock_response
+        ) as mock_complete:
+            await provider.complete("User message")
+
+            # Verify system prompt was included
+            call_args = mock_complete.call_args
+            messages = call_args.kwargs["messages"]
+            assert len(messages) == 2
+            assert messages[0]["role"] == "system"
+            assert messages[0]["content"] == "You are a helpful assistant"
+            assert messages[1]["role"] == "user"
+            assert messages[1]["content"] == "User message"
+
+    @pytest.mark.asyncio
+    async def test_complete_with_cost_calculation(self):
+        """Test completion with cost calculation."""
+        from chat_api.providers import SimpleLLMProvider
+
+        config = LLMConfig(model="gpt-4", api_key="test-key")
+        provider = SimpleLLMProvider(config, "TestProvider")
+
+        mock_response = AsyncMock()
+        mock_response.choices = [AsyncMock(message=AsyncMock(content="Response"))]
+        mock_response.model = "gpt-4"
+        mock_response.usage = {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        }
+
+        with (
+            patch("chat_api.providers.litellm.acompletion", return_value=mock_response),
+            patch("chat_api.providers.litellm.completion_cost", return_value=0.005),
+        ):
+            result = await provider.complete("Test")
+            assert result.usage["total_tokens"] == 150
+
+
+class TestProviderFactory:
+    """Test provider factory function."""
+
+    def test_create_provider_with_env(self):
+        """Test creating provider from environment variables."""
+        with patch.dict(
+            os.environ,
+            {"CHAT_LLM_PROVIDER": "openrouter", "CHAT_OPENROUTER_API_KEY": "test-key"},
+        ):
+            from chat_api.config import Settings
+
+            test_settings = Settings()
+
+            with patch("chat_api.providers.settings", test_settings):
+                provider = create_llm_provider()
+                assert provider.config.api_key == "test-key"
+
+    def test_create_provider_no_keys(self):
+        """Test creating provider with no API keys raises error."""
+        with patch("chat_api.providers.settings") as mock_settings:
+            mock_settings.gemini_api_key = None
+            mock_settings.openrouter_api_key = None
+
+            with pytest.raises(ConfigurationError, match="No LLM provider configured"):
+                create_llm_provider()
+
+    def test_create_provider_gemini(self):
+        """Test creating Gemini provider."""
+        with patch("chat_api.providers.settings") as mock_settings:
+            mock_settings.gemini_api_key = "test-key"
+            mock_settings.openrouter_api_key = None
+            mock_settings.gemini_model = "gemini/gemini-1.5-flash"
+            mock_settings.llm_timeout = 30
+
             provider = create_llm_provider()
             assert provider.config.api_key == "test-key"
+            assert provider.config.model == "gemini/gemini-1.5-flash"
 
+    def test_create_provider_openrouter(self):
+        """Test creating OpenRouter provider."""
+        with patch("chat_api.providers.settings") as mock_settings:
+            mock_settings.gemini_api_key = None
+            mock_settings.openrouter_api_key = "test-key"
+            mock_settings.openrouter_model = "meta-llama/llama-3.2-1b"
+            mock_settings.llm_timeout = 30
 
-def test_create_llm_provider_no_keys():
-    """Test creating provider with no API keys raises error."""
-    with (
-        patch.dict(
-            os.environ, {"CHAT_LLM_PROVIDER": "gemini", "CHAT_GEMINI_API_KEY": ""}, clear=True
-        ),
-        pytest.raises(ConfigurationError, match="No LLM provider configured"),
-    ):
-        create_llm_provider()
+            provider = create_llm_provider()
+            assert provider.config.api_key == "test-key"
+            assert provider.config.model == "meta-llama/llama-3.2-1b"

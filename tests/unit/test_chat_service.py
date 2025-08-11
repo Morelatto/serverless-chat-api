@@ -273,11 +273,13 @@ async def test_process_message_with_usage_logging() -> None:
         mock_logger.info.assert_called_once()
         log_call = mock_logger.info.call_args
         assert "Token usage" in str(log_call[0][0])
-        assert log_call[2]["user_id"] == "user123..."
-        assert log_call[1]["model"] == "gpt-4"
-        assert log_call[1]["prompt_tokens"] == 15
-        assert log_call[1]["completion_tokens"] == 25
-        assert log_call[1]["total_tokens"] == 40
+        # The extra dict is in kwargs, not args
+        extra = log_call.kwargs.get("extra", {})
+        assert extra["user_id"] == "user123..."
+        assert extra["model"] == "gpt-4"
+        assert extra["prompt_tokens"] == 15
+        assert extra["completion_tokens"] == 25
+        assert extra["total_tokens"] == 40
 
 
 @pytest.mark.asyncio
