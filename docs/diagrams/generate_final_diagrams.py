@@ -70,7 +70,7 @@ def create_1_static_structure():
     """Q: What are the main components and their relationships?"""
 
     with Diagram(
-        "1. Static Structure",
+        "01. Static Structure",
         show=False,  # Remove filename to avoid custom icon issues
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -102,7 +102,7 @@ def create_2_request_flow():
     """Q: How does a single request flow through the system?"""
 
     with Diagram(
-        "2. Request Flow",
+        "02. Request Flow",
         show=False,
         graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
         node_attr=NODE_ATTR,
@@ -128,7 +128,7 @@ def create_3_deployment_environments():
     """Q: How is the system deployed in different environments?"""
 
     with Diagram(
-        "3. Deployment Environments",
+        "03. Deployment Environments",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -156,7 +156,7 @@ def create_4_data_flow():
     """Q: How does data transform through the system?"""
 
     with Diagram(
-        "4. Data Transformations",
+        "04. Data Transformations",
         show=False,
         graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
         node_attr=NODE_ATTR,
@@ -185,7 +185,7 @@ def create_5_error_handling():
     """Q: What happens when things fail?"""
 
     with Diagram(
-        "5. Error Handling",
+        "05. Error Handling",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -210,7 +210,7 @@ def create_6_dependencies():
     """Q: What depends on what at runtime?"""
 
     with Diagram(
-        "6. Runtime Dependencies",
+        "06. Runtime Dependencies",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -238,7 +238,7 @@ def create_7_aws_infrastructure():
     """Q: What AWS services are used in production?"""
 
     with Diagram(
-        "7. AWS Infrastructure",
+        "07. AWS Infrastructure",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
@@ -259,7 +259,7 @@ def create_8_protocol_pattern():
     """Q: How do protocols enable flexibility?"""
 
     with Diagram(
-        "8. Protocol Pattern",
+        "08. Protocol Pattern",
         show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
