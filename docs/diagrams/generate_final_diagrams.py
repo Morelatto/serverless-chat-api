@@ -68,7 +68,6 @@ def download_icons():
 
 def create_1_static_structure():
     """Q: What are the main components and their relationships?"""
-
     with Diagram(
         "01. Static Structure",
         filename="../assets/diagrams/01_static_structure",
@@ -101,7 +100,6 @@ def create_1_static_structure():
 
 def create_2_request_flow():
     """Q: How does a single request flow through the system?"""
-
     with Diagram(
         "02. Request Flow",
         filename="../assets/diagrams/02_request_flow",
@@ -128,7 +126,6 @@ def create_2_request_flow():
 
 def create_3_deployment_environments():
     """Q: How is the system deployed in different environments?"""
-
     with Diagram(
         "03. Deployment Environments",
         filename="../assets/diagrams/03_deployment_environments",
@@ -157,7 +154,6 @@ def create_3_deployment_environments():
 
 def create_4_data_flow():
     """Q: How does data transform through the system?"""
-
     with Diagram(
         "04. Data Transformations",
         filename="../assets/diagrams/04_data_transformations",
@@ -187,7 +183,6 @@ def create_4_data_flow():
 
 def create_5_error_handling():
     """Q: What happens when things fail?"""
-
     with Diagram(
         "05. Error Handling",
         filename="../assets/diagrams/05_error_handling",
@@ -213,7 +208,6 @@ def create_5_error_handling():
 
 def create_6_dependencies():
     """Q: What depends on what at runtime?"""
-
     with Diagram(
         "06. Runtime Dependencies",
         filename="../assets/diagrams/06_runtime_dependencies",
@@ -242,7 +236,6 @@ def create_6_dependencies():
 
 def create_7_aws_infrastructure():
     """Q: What AWS services are used in production?"""
-
     with Diagram(
         "07. AWS Infrastructure",
         filename="../assets/diagrams/07_aws_infrastructure",
@@ -264,7 +257,6 @@ def create_7_aws_infrastructure():
 
 def create_8_protocol_pattern():
     """Q: How do protocols enable flexibility?"""
-
     with Diagram(
         "08. Protocol Pattern",
         filename="../assets/diagrams/08_protocol_pattern",

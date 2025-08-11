@@ -57,7 +57,7 @@ class InMemoryCache:
 
     async def startup(self) -> None:
         """Initialize cache."""
-        pass  # No initialization needed
+        # No initialization needed
 
     async def shutdown(self) -> None:
         """Cleanup cache."""

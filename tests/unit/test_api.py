@@ -28,7 +28,7 @@ async def test_validation_exception_handler_missing_field():
     # Create a validation error with missing field
     mock_error = MagicMock()
     mock_error.errors.return_value = [
-        {"loc": ["body", "user_id"], "type": "missing", "msg": "Field required"}
+        {"loc": ["body", "user_id"], "type": "missing", "msg": "Field required"},
     ]
 
     exc = RequestValidationError(errors=[])

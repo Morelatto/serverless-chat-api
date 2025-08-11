@@ -152,7 +152,7 @@ class TestServiceFactory:
 
                 # Mock a shutdown error
                 service.repository.shutdown = AsyncMock(
-                    side_effect=ConnectionError("Shutdown failed")
+                    side_effect=ConnectionError("Shutdown failed"),
                 )
                 service.cache.shutdown = AsyncMock()
 

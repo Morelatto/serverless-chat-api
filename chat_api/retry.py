@@ -38,7 +38,7 @@ def with_llm_retry(
             stop=stop_after_attempt(max_retries),
             wait=wait_exponential(multiplier=1, min=1, max=10),
             before_sleep=lambda retry_state: logger.warning(
-                f"{provider_name} attempt {retry_state.attempt_number}: {retry_state.outcome.exception() if retry_state.outcome else 'Unknown error'}"
+                f"{provider_name} attempt {retry_state.attempt_number}: {retry_state.outcome.exception() if retry_state.outcome else 'Unknown error'}",
             ),
         )
         @wraps(func)

@@ -204,6 +204,7 @@ async def health_endpoint(
 
     Args:
         detailed: If True, includes version and environment information.
+
     """
     status = await service.health_check()
     all_healthy = all(status.values())

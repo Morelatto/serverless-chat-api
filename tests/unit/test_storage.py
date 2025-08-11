@@ -443,7 +443,6 @@ def test_create_repository_sqlite():
 
 def test_create_repository_dynamodb():
     """Test create_repository with DynamoDB URL - covers lines 421-422."""
-
     repo = create_repository("dynamodb://test-table?region=us-east-1")
     assert isinstance(repo, DynamoDBRepository)
     assert repo.table_name == "test-table"

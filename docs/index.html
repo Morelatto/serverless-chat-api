@@ -1316,11 +1316,11 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
         <section class="section">
             <div class="section-header">
                 <div class="section-number">6</div>
-                <h3>Arquitetura Técnica Detalhada</h3>
+                <h3>Detailed Technical Architecture</h3>
             </div>
 
-            <p>Visão completa dos diagramas de sequência mostrando interações temporais
-            entre componentes em diferentes cenários de uso.</p>
+            <p>Complete view of sequence diagrams showing temporal interactions
+            between components in different use case scenarios.</p>
 
             <div class="content-grid">
                 <div class="feature-card">
@@ -1490,9 +1490,9 @@ Running 30s test @ http://localhost:8000/chat
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h4>API REST Completa</h4>
+                    <h4>Complete REST API</h4>
                     <p>Endpoints para chat, histórico e health checks.
-                    Rate limiting, validação Pydantic e documentação OpenAPI automática.</p>
+                    Rate limiting, Pydantic validation and automatic OpenAPI documentation.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1611,8 +1611,8 @@ Running 30s test @ http://localhost:8000/chat
 
     <footer class="footer">
         <div class="footer-content">
-            <p>© 2025 Chat API | Arquitetura Cloud Native</p>
-            <p style="margin-top: 1rem; opacity: 0.8;">Documentação técnica do projeto - Python idiomático e padrões modernos</p>
+            <p>© 2025 Chat API | Cloud Native Architecture</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">Technical project documentation - Idiomatic Python and modern patterns</p>
         </div>
     </footer>
 
@@ -1762,12 +1762,22 @@ Running 30s test @ http://localhost:8000/chat
 
             if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
                 html.setAttribute('data-theme', 'dark');
-                themeIcon.textContent = '☀️';
+                if (themeIcon) themeIcon.textContent = '☀️';
             } else {
                 html.removeAttribute('data-theme');
-                themeIcon.textContent = '🌙';
+                if (themeIcon) themeIcon.textContent = '🌙';
             }
         }
+
+        // Apply theme immediately to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
 
         // Load theme on page load
         document.addEventListener('DOMContentLoaded', loadTheme);

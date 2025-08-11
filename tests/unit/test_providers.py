@@ -48,7 +48,9 @@ def test_llm_response_with_cost():
 def test_create_llm_provider_gemini():
     """Test creating Gemini provider."""
     provider = create_llm_provider(
-        provider_type="gemini", model="gemini/gemini-1.5-flash", api_key="test-key"
+        provider_type="gemini",
+        model="gemini/gemini-1.5-flash",
+        api_key="test-key",
     )
 
     assert provider.config.model == "gemini/gemini-1.5-flash"
@@ -58,7 +60,9 @@ def test_create_llm_provider_gemini():
 def test_create_llm_provider_openrouter():
     """Test creating OpenRouter provider."""
     provider = create_llm_provider(
-        provider_type="openrouter", model="openrouter/test-model", api_key="test-key"
+        provider_type="openrouter",
+        model="openrouter/test-model",
+        api_key="test-key",
     )
 
     assert provider.config.model == "openrouter/test-model"

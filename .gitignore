@@ -69,6 +69,7 @@ reports/
 .env.*.local
 *.log
 logs/
+CLAUDE.md
 
 # Docker
 docker-compose.override.yml
