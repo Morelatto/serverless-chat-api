@@ -12,11 +12,12 @@ from diagrams.onprem.client import Users
 from diagrams.onprem.container import Docker
 from diagrams.onprem.inmemory import Redis
 from diagrams.onprem.network import Internet  # For external APIs
-from diagrams.onprem.vcs import Git  # For config files
 from diagrams.programming.flowchart import (
+    Action,  # For operations/processing (rectangle)
     Decision,  # For decision points (diamond)
     Document,  # For documents
     InputOutput,  # For data representations (parallelogram)
+    Preparation,  # For error/warning states (hexagon)
 )
 from diagrams.programming.framework import FastAPI
 from diagrams.programming.language import Python
@@ -89,7 +90,7 @@ def create_2_request_flow():
         # Linear flow - no branching
         req = Users("Request")
         validate = Decision("Validate")  # Decision point (diamond)
-        cache = Storage("Cache?")
+        cache = Storage("Cache")  # Clear cache operation
         llm = Internet("LLM")  # External LLM API
         save = SQL("Save")
         resp = Users("Response")
@@ -144,19 +145,23 @@ def create_4_data_flow():
         show=False,
         direction="LR",
     ):
-        # Data formats at each stage (using InputOutput shape for data representations)
-        json_in = InputOutput("JSON\nRequest")  # Input data
-        python_obj = InputOutput("Python\nDict")  # In-memory data
+        # Differentiate data formats (parallelograms) from operations (rectangles)
+        json_in = InputOutput("JSON\nRequest")  # Input data format
+        parse = Action("Parse")  # Operation
+        python_obj = InputOutput("Python\nDict")  # In-memory data format
+        format_op = Action("Format")  # Operation
         prompt = InputOutput("LLM\nPrompt")  # Formatted data
-        completion = InputOutput("LLM\nResponse")  # API response data
+        llm_call = Action("LLM Call")  # Operation
+        completion = InputOutput("LLM\nResponse")  # Response data
+        add_meta = Action("Add Metadata")  # Operation
         db_record = InputOutput("DB\nRecord")  # Persisted data
-        json_out = InputOutput("JSON\nResponse")  # Output data
+        serialize = Action("Serialize")  # Operation
+        json_out = InputOutput("JSON\nResponse")  # Output data format
 
-        json_in >> Edge(label="parse") >> python_obj
-        python_obj >> Edge(label="format") >> prompt
-        prompt >> Edge(label="API call") >> completion
-        completion >> Edge(label="+ metadata") >> db_record
-        db_record >> Edge(label="serialize") >> json_out
+        # Flow showing data transformations through operations
+        json_in >> parse >> python_obj >> format_op >> prompt
+        prompt >> llm_call >> completion >> add_meta >> db_record
+        db_record >> serialize >> json_out
 
 
 def create_5_error_paths():
@@ -174,10 +179,10 @@ def create_5_error_paths():
         request = Users("Request")
 
         with Cluster("Failure Points"):
-            validation = Document("Validation\nError")  # Error document
-            rate_limit = Decision("Rate Limit\nExceeded")  # Decision point (correct!)
-            llm_fail = Document("LLM API\nTimeout")  # Error document
-            db_fail = Document("Database\nError")  # Error document
+            validation = Preparation("Validation\nError")  # Input validation failure (hexagon)
+            rate_limit = Decision("Rate Limit\nExceeded")  # Decision point (diamond)
+            llm_fail = Preparation("LLM API\nTimeout")  # External service failure (hexagon)
+            db_fail = Preparation("Database\nError")  # Storage failure (hexagon)
 
         error_response = Document("Error\nResponse")  # Error output
 
@@ -199,7 +204,7 @@ def create_6_dependencies():
         direction="BT",  # Bottom to top for dependencies
     ):
         # Core dependencies
-        config = Git("Config")  # Configuration file (better icon)
+        config = Document("Config")  # Configuration file (simple document)
 
         with Cluster("Services"):
             api = FastAPI("API")
