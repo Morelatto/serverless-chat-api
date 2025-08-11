@@ -88,17 +88,29 @@ logs: ## Stream Lambda function logs from CloudWatch
 	aws logs tail --follow "/aws/lambda/$$FUNCTION_NAME"
 
 .PHONY: diagrams
-diagrams: ## Generate architecture diagrams (5 essential diagrams)
+diagrams: ## Generate architecture diagrams (12 simple, focused diagrams)
 	@echo "🎨 Generating architecture diagrams..."
 	@if ! python -c "import diagrams" 2>/dev/null; then \
 		echo "📦 Installing Python diagrams..."; \
 		pip install diagrams --quiet; \
 	fi
-	@cd docs/diagrams && python generate_final_diagrams.py
-	@mv docs/diagrams/*.png docs/asset/
+	@cd docs/diagrams && python generate_simple_diagrams.py
+	@cd docs/diagrams && python sequence_diagrams.py
+	@mv docs/diagrams/*.png docs/asset/ 2>/dev/null || true
 	@echo "✅ Architecture diagrams generated!"
 	@echo "   📄 docs/ARCHITECTURE.md"
-	@echo "   📊 5 diagrams in docs/asset/"
+	@echo "   📊 12 focused diagrams in docs/asset/"
+	@echo ""
+	@echo "   Each diagram answers ONE question:"
+	@echo "   - Static Structure: What are the components?"
+	@echo "   - Request Flow: How does a request flow?"
+	@echo "   - Deployments: Where does it run?"
+	@echo "   - Data Flow: How is data transformed?"
+	@echo "   - Error Handling: What happens on failure?"
+	@echo "   - Dependencies: What depends on what?"
+	@echo "   - AWS Infrastructure: What AWS services?"
+	@echo "   - Protocols: How do protocols work?"
+	@echo "   - Plus 4 sequence diagrams for time-ordered flows"
 
 
 # Direct commands to use:

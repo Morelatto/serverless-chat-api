@@ -1,0 +1,30 @@
+
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam sequenceMessageAlign center
+
+title Happy Path: Successful Chat Request
+
+actor Client
+participant "API Gateway" as API
+participant "Handler" as Handler
+participant "Service" as Service
+participant "Cache" as Cache
+participant "LLM API" as LLM
+database "Database" as DB
+
+Client -> API: POST /chat\n{user_id, content}
+API -> Handler: validate(request)
+Handler -> Service: process_message()
+Service -> Cache: get(cache_key)
+Cache --> Service: None (miss)
+Service -> LLM: complete(prompt)
+LLM --> Service: response_text
+Service -> DB: save(message)
+Service -> Cache: set(cache_key, response)
+Service --> Handler: {id, content, model}
+Handler --> API: 200 OK
+API --> Client: JSON response
+
+@enduml

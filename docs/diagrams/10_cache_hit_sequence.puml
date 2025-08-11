@@ -1,0 +1,22 @@
+
+@startuml
+!theme plain
+skinparam backgroundColor white
+
+title Cache Hit: Fast Response
+
+actor Client
+participant "API" as API
+participant "Service" as Service
+participant "Cache" as Cache
+
+Client -> API: POST /chat
+API -> Service: process_message()
+Service -> Cache: get(cache_key)
+Cache --> Service: cached_response
+Service --> API: {cached: true}
+API --> Client: JSON response
+
+note over Cache: Response served\nfrom cache\n(no LLM call)
+
+@enduml

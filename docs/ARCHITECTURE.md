@@ -1,184 +1,207 @@
 # Chat API Architecture
 
-This document presents the essential architecture diagrams for the Chat API system.
+Simple, focused architecture diagrams. Each diagram answers ONE specific question.
 
-## Overview
+## Core Diagrams
 
-The Chat API is a **Pythonic, protocol-based** system that provides LLM chat capabilities with:
-- Clean separation of concerns through protocol abstractions
-- Environment-based dependency injection
-- Primary/fallback LLM provider strategy
-- Efficient caching layer
-- Support for both local development and AWS production deployment
+### 1. Static Structure
+**Question: What are the main components?**
 
----
+![Static Structure](asset/01_static_structure.png)
 
-## 1. System Architecture
-
-![System Architecture](asset/01_system_architecture.png)
-
-**Purpose**: Complete system overview showing all components and their relationships.
-
-**Key Components**:
-- **FastAPI**: REST API gateway with automatic OpenAPI documentation
-- **ChatService**: Core business logic in Python
-- **ServiceFactory**: Dependency injection container
-- **Protocol Abstractions**: Clean interfaces for Repository, Cache, and LLM providers
-- **Multiple Implementations**: SQLite/DynamoDB, In-Memory/Redis, Gemini/OpenRouter
-
-**Design Principles**:
-- Protocol-based abstractions for testability
-- Environment-based implementation selection
-- No hard dependencies between layers
+Simple component overview showing:
+- Client → API → Service
+- Service uses Database, Cache, and LLM API
+- No protocols or abstractions shown (kept simple)
 
 ---
 
-## 2. AWS Production Deployment
+### 2. Request Flow
+**Question: How does a request flow through the system?**
 
-![AWS Production](asset/02_aws_production.png)
+![Request Flow](asset/02_request_flow.png)
 
-**Purpose**: Production infrastructure on AWS.
-
-**Infrastructure**:
-- **API Gateway**: Rate limiting, authentication, routing
-- **Lambda Function**: Container-based Python 3.11 runtime (1GB memory)
-- **DynamoDB**: Serverless NoSQL database with on-demand scaling
-- **ElastiCache Redis**: Distributed caching layer
-- **CloudWatch**: Logging and monitoring
-- **Secrets Manager**: Secure API key storage
-
-**Deployment**:
-- Container image via ECR
-- Infrastructure as Code (Terraform)
-- GitHub Actions CI/CD pipeline
-- Estimated cost: $25-40/month for 10K requests/day
+Linear request path:
+1. POST /chat request
+2. Validation
+3. Cache check (miss shown)
+4. LLM API call
+5. Save to database
+6. Return response
 
 ---
 
-## 3. Request Processing Flow
+### 3. Deployment Environments
+**Question: Where does the system run?**
 
-![Request Flow](asset/03_request_flow.png)
+![Deployments](asset/03_deployments.png)
 
-**Purpose**: How requests are processed through the system.
-
-**Flow Steps**:
-1. **Validation & Rate Limiting**: Input validation and rate limit checks
-2. **Cache Check**: Fast path for cached responses (green arrow)
-3. **LLM Processing**: Primary provider (Gemini) with fallback to OpenRouter
-4. **Persistence**: Save to database for history and analytics
-5. **Response**: Return formatted response to client
-
-**Optimizations**:
-- Cache-first strategy reduces LLM API calls
-- Fallback mechanism ensures reliability
-- Async processing throughout
+Three deployment options:
+- **Local**: Python + SQLite
+- **Docker**: Container + SQLite
+- **AWS**: Lambda + DynamoDB
 
 ---
 
-## 4. Local Development
+### 4. Data Transformations
+**Question: How is data transformed?**
 
-![Local Development](asset/04_local_development.png)
+![Data Flow](asset/04_data_flow.png)
 
-**Purpose**: Development environment setup.
+Data format at each stage:
+- JSON Request → Python Dict → LLM Prompt
+- LLM Response → DB Record → JSON Response
 
-**Components**:
-- **Python 3.11+**: With `uv` package manager
-- **FastAPI Dev Server**: Auto-reload enabled
-- **SQLite**: File-based database
-- **In-Memory Cache**: Dictionary-based caching
-- **Docker Compose**: Alternative containerized setup
+---
 
-**Development Workflow**:
+### 5. Error Handling
+**Question: What happens when things fail?**
+
+![Error Handling](asset/05_error_handling.png)
+
+Common failure points:
+- Validation errors
+- Rate limit exceeded
+- LLM API timeout
+- Database errors
+
+All lead to structured error response.
+
+---
+
+### 6. Runtime Dependencies
+**Question: What depends on what?**
+
+![Dependencies](asset/06_dependencies.png)
+
+Dependency direction (bottom-up):
+- Config is needed by everything
+- Resources (DB, Cache, LLM) are needed by Service
+- Service is needed by API
+
+---
+
+### 7. AWS Infrastructure
+**Question: What AWS services are used?**
+
+![AWS Infrastructure](asset/07_aws_infrastructure.png)
+
+Production AWS services:
+- API Gateway → Lambda
+- Lambda uses: DynamoDB, ElastiCache, Secrets Manager
+
+---
+
+### 8. Protocol Pattern
+**Question: How do protocols enable flexibility?**
+
+![Protocols](asset/08_protocols.png)
+
+Protocol abstraction example:
+- Service uses Repository Protocol
+- SQLite and DynamoDB both implement the protocol
+- Allows switching implementations without changing service code
+
+---
+
+## Sequence Diagrams
+
+### 9. Happy Path
+**Question: What's the normal successful flow?**
+
+![Happy Path](asset/09_happy_path_sequence.png)
+
+Time-ordered successful request:
+- Client → API → Handler → Service
+- Cache miss → LLM call → Save → Response
+
+---
+
+### 10. Cache Hit
+**Question: How does caching speed up responses?**
+
+![Cache Hit](asset/10_cache_hit_sequence.png)
+
+Fast path when response is cached:
+- No LLM API call needed
+- Direct response from cache
+
+---
+
+### 11. Error Recovery
+**Question: How does fallback work?**
+
+![Error Recovery](asset/11_error_sequence.png)
+
+Primary provider fails, fallback succeeds:
+- Gemini timeout/error
+- Automatic fallback to OpenRouter
+- Transparent to client
+
+---
+
+### 12. Application Startup
+**Question: How does the app initialize?**
+
+![Startup](asset/12_startup_sequence.png)
+
+Startup sequence:
+- Load configuration
+- Factory creates implementations
+- Initialize app with dependencies
+- Start server
+
+---
+
+## Key Design Principles
+
+1. **Simple Components**: Each component has one responsibility
+2. **Protocol Abstraction**: Implementations can be swapped
+3. **Cache-First**: Check cache before expensive operations
+4. **Graceful Fallback**: Primary → Fallback for reliability
+5. **Environment-Based Config**: Automatic adaptation to runtime
+
+## Technology Choices
+
+| Component | Technology | Why |
+|-----------|------------|-----|
+| API | FastAPI | Async, fast, automatic docs |
+| Language | Python 3.11+ | Modern, async support |
+| Local DB | SQLite | Zero setup, file-based |
+| Prod DB | DynamoDB | Serverless, scales automatically |
+| Cache | Memory/Redis | Fast response for repeated queries |
+| Primary LLM | Gemini | Cost-effective, fast |
+| Fallback LLM | OpenRouter | Multi-model gateway |
+
+## Quick Reference
+
+### File Locations
+- **Diagrams**: `docs/asset/*.png`
+- **Source Code**: `chat_api/`
+- **Tests**: `tests/`
+- **Config**: `.env` (from `.env.example`)
+
+### Key Commands
 ```bash
-# Install dependencies
-uv sync --dev
-
-# Run locally
+# Local development
 uv run python -m chat_api
 
 # Run tests
-uv run pytest tests/ -v
+uv run pytest tests/
 
-# Docker alternative
+# Generate diagrams
+make diagrams
+
+# Docker
 docker-compose up
 ```
 
----
-
-## 5. Dependency Injection
-
-![Dependency Injection](asset/05_dependency_injection.png)
-
-**Purpose**: How ServiceFactory configures dependencies based on environment.
-
-**Process**:
-1. **Environment Detection**: Check for AWS Lambda, Docker, or local
-2. **Implementation Selection**: Choose appropriate implementations
-3. **Dependency Creation**: Create instances with proper configuration
-4. **Service Injection**: Inject dependencies into ChatService
-
-**Benefits**:
-- Zero configuration changes between environments
-- Easy testing with mock implementations
-- Clean separation of concerns
+### Environment Variables
+- `CHAT_LLM_PROVIDER`: gemini or openrouter
+- `CHAT_DATABASE_URL`: SQLite or DynamoDB
+- `CHAT_REDIS_URL`: Optional Redis cache
+- `CHAT_RATE_LIMIT`: Requests per minute
 
 ---
 
-## Key Technologies
-
-| Component | Technology | Icon | Purpose |
-|-----------|------------|------|---------|
-| API Framework | FastAPI | 🚀 | High-performance async REST API |
-| Language | Python 3.11+ | 🐍 | Modern Python with type hints |
-| Local DB | SQLite | 🗄️ | File-based development database |
-| Production DB | DynamoDB | 🔥 | Serverless NoSQL database |
-| Local Cache | In-Memory | 💾 | Dictionary-based caching |
-| Production Cache | Redis | ⚡ | Distributed caching |
-| Primary LLM | Google Gemini | 🤖 | Fast, cost-effective LLM |
-| Fallback LLM | OpenRouter | 🌐 | Multi-model LLM gateway |
-| Container | Docker | 🐳 | Consistent deployment |
-| Cloud | AWS Lambda | ☁️ | Serverless compute |
-
----
-
-## Quick Start
-
-### Local Development
-```bash
-# Clone and setup
-git clone <repository>
-cd chat-api
-make dev
-
-# Configure
-cp .env.example .env
-# Add your API keys to .env
-
-# Run
-make run
-```
-
-### View Diagrams
-All architecture diagrams are in `docs/asset/`:
-- 5 essential high-resolution PNGs
-- Source: `docs/diagrams/generate_final_diagrams.py`
-- Regenerate with `make diagrams`
-
----
-
-## Architecture Decisions
-
-1. **Protocol-Based Design**: Enables easy testing and swapping of implementations
-2. **Async Throughout**: Maximizes performance with FastAPI's async capabilities
-3. **Environment Detection**: Automatic configuration based on runtime environment
-4. **Fallback Strategy**: Ensures reliability with multiple LLM providers
-5. **Cache-First**: Reduces costs and improves response times
-
----
-
-## More Information
-
-- [API Documentation](/docs) - Interactive Swagger UI
-- [ADRs](adr/) - Architecture Decision Records
-- [Deployment Guide](DEPLOYMENT.md) - Production deployment instructions
-- [Testing Strategy](TESTING.md) - Test coverage and strategies
+*These diagrams prioritize clarity over completeness. Each answers one specific question without unnecessary detail.*

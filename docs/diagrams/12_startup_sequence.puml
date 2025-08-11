@@ -1,0 +1,25 @@
+
+@startuml
+!theme plain
+skinparam backgroundColor white
+
+title Application Startup
+
+participant "Main" as Main
+participant "Config" as Config
+participant "Factory" as Factory
+participant "App" as App
+
+Main -> Config: load_settings()
+Config --> Main: settings
+Main -> Factory: create_repository(settings)
+Factory --> Main: repository
+Main -> Factory: create_cache(settings)
+Factory --> Main: cache
+Main -> App: initialize(repository, cache)
+App --> Main: ready
+Main -> App: start_server()
+
+note over Factory: Creates appropriate\nimplementations based\non environment
+
+@enduml
