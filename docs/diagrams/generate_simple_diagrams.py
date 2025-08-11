@@ -6,12 +6,17 @@ from diagrams.aws.compute import LambdaFunction
 from diagrams.aws.database import DynamodbTable
 from diagrams.aws.network import APIGateway
 from diagrams.aws.security import SecretsManager
-from diagrams.generic.blank import Blank
 from diagrams.generic.database import SQL
 from diagrams.generic.storage import Storage
 from diagrams.onprem.client import Users
 from diagrams.onprem.container import Docker
 from diagrams.onprem.inmemory import Redis
+from diagrams.onprem.network import Internet  # For external APIs
+from diagrams.programming.flowchart import (
+    Action,  # For processing steps
+    Decision,
+    Document,
+)
 from diagrams.programming.framework import FastAPI
 from diagrams.programming.language import Python
 
@@ -58,7 +63,7 @@ def create_1_static_structure():
             cache = Storage("Cache")
 
         with Cluster("External"):
-            llm = Blank("LLM API")
+            llm = Internet("LLM API")  # External API service
 
         # Simple relationships
         client >> api
@@ -82,9 +87,9 @@ def create_2_request_flow():
     ):
         # Linear flow - no branching
         req = Users("Request")
-        validate = Blank("Validate")
+        validate = Document("Validate")  # Validation step
         cache = Storage("Cache?")
-        llm = Blank("LLM")
+        llm = Internet("LLM")  # External LLM API
         save = SQL("Save")
         resp = Users("Response")
 
@@ -139,12 +144,12 @@ def create_4_data_flow():
         direction="LR",
     ):
         # Data formats at each stage
-        json_in = Blank("JSON\nRequest")
-        python_obj = Blank("Python\nDict")
-        prompt = Blank("LLM\nPrompt")
-        completion = Blank("LLM\nResponse")
-        db_record = Blank("DB\nRecord")
-        json_out = Blank("JSON\nResponse")
+        json_in = Document("JSON\nRequest")  # Input document
+        python_obj = Action("Python\nDict")  # Processing step
+        prompt = Document("LLM\nPrompt")  # Formatted prompt
+        completion = Document("LLM\nResponse")  # API response
+        db_record = Storage("DB\nRecord")  # Stored data
+        json_out = Document("JSON\nResponse")  # Output document
 
         json_in >> Edge(label="parse") >> python_obj
         python_obj >> Edge(label="format") >> prompt
@@ -168,12 +173,12 @@ def create_5_error_paths():
         request = Users("Request")
 
         with Cluster("Failure Points"):
-            validation = Blank("Validation\nError")
-            rate_limit = Blank("Rate Limit\nExceeded")
-            llm_fail = Blank("LLM API\nTimeout")
-            db_fail = Blank("Database\nError")
+            validation = Document("Validation\nError")  # Input error
+            rate_limit = Decision("Rate Limit\nExceeded")  # Decision point
+            llm_fail = Internet("LLM API\nTimeout")  # External failure
+            db_fail = SQL("Database\nError")  # Storage failure
 
-        error_response = Blank("Error\nResponse")
+        error_response = Document("Error\nResponse")  # Error output
 
         # All failures lead to error response
         request >> [validation, rate_limit, llm_fail, db_fail]
@@ -193,7 +198,7 @@ def create_6_dependencies():
         direction="BT",  # Bottom to top for dependencies
     ):
         # Core dependencies
-        config = Blank("Config")
+        config = Document("Config")  # Configuration file
 
         with Cluster("Services"):
             api = FastAPI("API")
@@ -202,7 +207,7 @@ def create_6_dependencies():
         with Cluster("Resources"):
             db = SQL("Database")
             cache = Storage("Cache")
-            llm = Blank("LLM Client")
+            llm = Internet("LLM Client")  # External API client
 
         # Dependencies point upward
         config >> [api, service, db, cache, llm]
@@ -248,18 +253,19 @@ def create_8_protocol_abstraction():
         service = Python("Service")
 
         with Cluster("Protocol"):
-            protocol = Blank("Repository\nProtocol")
+            protocol = Document("Repository\nProtocol")  # Interface definition
 
         with Cluster("Implementations"):
             sqlite = SQL("SQLite")
             dynamo = DynamodbTable("DynamoDB")
 
-        # Service uses protocol
+        # Service depends on protocol (uses abstraction)
         service >> Edge(label="uses") >> protocol
 
-        # Implementations satisfy protocol (dashed = realizes)
-        sqlite >> Edge(style="dashed") >> protocol
-        dynamo >> Edge(style="dashed") >> protocol
+        # Protocol defines contract for implementations
+        # Using UML-style "realizes" relationship (implementations realize the protocol)
+        protocol >> Edge(label="defines", style="dashed") >> sqlite
+        protocol >> Edge(label="defines", style="dashed") >> dynamo
 
 
 if __name__ == "__main__":
