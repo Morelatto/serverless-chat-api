@@ -88,18 +88,19 @@ logs: ## Stream Lambda function logs from CloudWatch
 	aws logs tail --follow "/aws/lambda/$$FUNCTION_NAME"
 
 .PHONY: diagrams
-diagrams: ## Generate architecture diagrams (12 simple, focused diagrams)
-	@echo "🎨 Generating architecture diagrams..."
+diagrams: ## Generate architecture diagrams (12 professional diagrams with custom icons)
+	@echo "🎨 Generating architecture diagrams with custom icons..."
 	@if ! python -c "import diagrams" 2>/dev/null; then \
 		echo "📦 Installing Python diagrams..."; \
 		pip install diagrams --quiet; \
 	fi
-	@cd docs/diagrams && python generate_simple_diagrams.py
+	@cd docs/diagrams && python generate_final_diagrams.py
 	@cd docs/diagrams && python sequence_diagrams.py
 	@mv docs/diagrams/*.png docs/asset/ 2>/dev/null || true
-	@echo "✅ Architecture diagrams generated!"
+	@echo "✅ Professional architecture diagrams generated!"
 	@echo "   📄 docs/ARCHITECTURE.md"
-	@echo "   📊 12 focused diagrams in docs/asset/"
+	@echo "   📊 12 professional diagrams in docs/asset/"
+	@echo "   🎨 Custom icons for validation, config, errors, APIs"
 	@echo ""
 	@echo "   Each diagram answers ONE question:"
 	@echo "   - Static Structure: What are the components?"

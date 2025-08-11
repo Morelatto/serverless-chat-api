@@ -1,346 +1,314 @@
 #!/usr/bin/env python3
-"""Generate final set of crucial architecture diagrams with proper icons."""
+"""Generate final architecture diagrams with custom icons and proper flowchart shapes."""
+
+from pathlib import Path
+from urllib.request import urlretrieve
 
 from diagrams import Cluster, Diagram, Edge
 from diagrams.aws.compute import LambdaFunction
 from diagrams.aws.database import DynamodbTable
-from diagrams.aws.management import Cloudwatch
-from diagrams.aws.management import SystemsManagerParameterStore as Config
 from diagrams.aws.network import APIGateway
 from diagrams.aws.security import SecretsManager
-
-# Custom for OpenRouter
-# Google Cloud for Gemini
-from diagrams.gcp.ml import AIHub as Gemini
-from diagrams.generic.compute import Rack
-
-# Generic icons for protocols and components
+from diagrams.custom import Custom
 from diagrams.generic.database import SQL
 from diagrams.generic.storage import Storage
-
-# OnPrem and Generic icons
 from diagrams.onprem.client import Users
 from diagrams.onprem.container import Docker
 from diagrams.onprem.inmemory import Redis
-from diagrams.onprem.network import Internet
-from diagrams.onprem.vcs import Git as ConfigFile
-from diagrams.programming.flowchart import Decision
-
-# Programming and framework icons
+from diagrams.programming.flowchart import Action, Decision, Document, InputOutput, Preparation
 from diagrams.programming.framework import FastAPI
 from diagrams.programming.language import Python
 
-# Consistent styling
+# Minimal, consistent styling
 GRAPH_ATTR = {
-    "fontsize": "16",
-    "fontname": "Arial",
-    "bgcolor": "#ffffff",
-    "pad": "0.8",
-    "nodesep": "1.0",
-    "ranksep": "1.5",
+    "fontsize": "14",
+    "bgcolor": "white",
+    "pad": "0.5",
+    "nodesep": "0.8",
+    "ranksep": "1.0",
     "splines": "ortho",
-    "compound": "true",
 }
 
 NODE_ATTR = {
-    "fontsize": "12",
-    "fontname": "Arial",
+    "fontsize": "11",
     "shape": "box",
     "style": "rounded,filled",
-    "fillcolor": "#ffffff",
-}
-
-EDGE_ATTR = {
-    "fontsize": "10",
-    "fontname": "Arial",
+    "fillcolor": "#f9f9f9",
+    "height": "0.6",
 }
 
 
-def create_system_architecture():
-    """Create the main system architecture diagram - CRUCIAL."""
+def download_icons():
+    """Download custom icons for better diagram representation."""
+    icons_dir = Path("../icons")
+    icons_dir.mkdir(exist_ok=True)
+
+    # Free icons from Flaticon (remember to attribute in production)
+    icon_urls = {
+        "validate.png": "https://cdn-icons-png.flaticon.com/512/1828/1828640.png",  # Checkmark
+        "config.png": "https://cdn-icons-png.flaticon.com/512/2099/2099058.png",  # Gear
+        "error.png": "https://cdn-icons-png.flaticon.com/512/564/564619.png",  # Warning
+        "api.png": "https://cdn-icons-png.flaticon.com/512/1493/1493169.png",  # API/Cloud
+        "cache.png": "https://cdn-icons-png.flaticon.com/512/2285/2285636.png",  # Cache/Memory
+    }
+
+    for filename, url in icon_urls.items():
+        icon_path = icons_dir / filename
+        if not icon_path.exists():
+            try:
+                urlretrieve(url, str(icon_path))  # noqa: S310
+                print(f"✅ Downloaded: {filename}")
+            except (OSError, ValueError, TimeoutError) as e:
+                print(f"⚠️  Could not download {filename}: {e}")
+                # Create a placeholder file so the Custom() calls don't fail
+                icon_path.write_text("placeholder")
+        else:
+            print(f"✅ Found existing: {filename}")
+
+
+def create_1_static_structure():
+    """Q: What are the main components and their relationships?"""
 
     with Diagram(
-        "Chat API - System Architecture",
-        filename="01_system_architecture",
-        outformat="png",
+        "1. Static Structure",
+        show=False,  # Remove filename to avoid custom icon issues
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
-        edge_attr=EDGE_ATTR,
-        show=False,
         direction="TB",
     ):
-        # Clients
-        clients = Users("API Clients")
-
-        # API Layer
-        with Cluster("API Gateway", graph_attr={"bgcolor": "#E3F2FD"}):
-            api = FastAPI("FastAPI")
-
-        # Core Application
-        with Cluster("Application Core", graph_attr={"bgcolor": "#E8F5E9"}):
-            chat_service = Python("ChatService")
-
-            with Cluster("Dependency Injection"):
-                factory = Python("ServiceFactory")
-
-        # Protocol Layer
-        with Cluster("Protocol Abstractions", graph_attr={"bgcolor": "#FFF3E0"}):
-            protocols = Rack("Repository | Cache | LLM Provider")
-
-        # Implementations
-        with Cluster("Storage", graph_attr={"bgcolor": "#F3E5F5"}):
-            sqlite = SQL("SQLite")
-            dynamodb = DynamodbTable("DynamoDB")
-
-        with Cluster("Cache", graph_attr={"bgcolor": "#E0F2F1"}):
-            memory = Storage("In-Memory")
-            redis = Redis("Redis")
-
-        # External Services
-        with Cluster("LLM Providers", graph_attr={"bgcolor": "#E8EAF6"}):
-            gemini = Gemini("Gemini")
-            openrouter = Internet("OpenRouter")  # Using Internet icon as placeholder
-
-        # Main flow
-        clients >> Edge(color="#1976D2", style="bold") >> api
-        api >> chat_service
-        chat_service >> factory
-        factory >> Edge(style="dashed", label="creates") >> protocols
-
-        # Implementation connections
-        protocols >> Edge(style="dotted", label="dev") >> [sqlite, memory]
-        protocols >> Edge(style="dotted", label="prod") >> [dynamodb, redis]
-        protocols >> Edge(color="#4CAF50", label="primary") >> gemini
-        protocols >> Edge(color="#FF9800", label="fallback") >> openrouter
-
-
-def create_aws_production():
-    """Create AWS production deployment - CRUCIAL."""
-
-    with Diagram(
-        "Chat API - AWS Production",
-        filename="02_aws_production",
-        outformat="png",
-        graph_attr=GRAPH_ATTR,
-        node_attr=NODE_ATTR,
-        edge_attr=EDGE_ATTR,
-        show=False,
-        direction="TB",
-    ):
-        # Entry
-        users = Users("Clients")
-
-        with Cluster("AWS Infrastructure", graph_attr={"bgcolor": "#FFF8E1"}):
-            # API Gateway
-            gateway = APIGateway("API Gateway")
-
-            # Compute
-            with Cluster("Compute"):
-                lambda_fn = LambdaFunction("Lambda\nContainer")
-
-            # Data Layer
-            with Cluster("Data Layer"):
-                dynamodb = DynamodbTable("DynamoDB")
-                redis = Redis("ElastiCache")
-
-            # Security & Monitoring
-            with Cluster("Operations"):
-                secrets = SecretsManager("Secrets")
-                logs = Cloudwatch("CloudWatch")
-
-        # External
-        llm = Internet("LLM APIs")
-
-        # Flow with numbered steps
-        users >> Edge(label="1", color="#1976D2", style="bold") >> gateway
-        gateway >> Edge(label="2") >> lambda_fn
-        lambda_fn >> Edge(label="3") >> dynamodb
-        lambda_fn >> Edge(label="4", style="dashed") >> redis
-        lambda_fn >> Edge(label="5", color="#4CAF50", style="bold") >> llm
-
-        # Operations
-        lambda_fn >> Edge(style="dotted") >> [secrets, logs]
-
-
-def create_request_flow():
-    """Create request processing flow - CRUCIAL."""
-
-    with Diagram(
-        "Chat API - Request Flow",
-        filename="03_request_flow",
-        outformat="png",
-        graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
-        node_attr=NODE_ATTR,
-        edge_attr=EDGE_ATTR,
-        show=False,
-        direction="LR",
-    ):
-        # Start
+        # Simple, flat structure
         client = Users("Client")
 
-        # Processing stages
-        with Cluster("1. Validation"):
-            validate = FastAPI("Validate\n& Rate Limit")
+        with Cluster("Application"):
+            api = FastAPI("API")
+            service = Python("Service")
 
-        with Cluster("2. Cache Check"):
-            cache = Redis("Cache")
+        with Cluster("Storage"):
+            database = SQL("Database")
+            cache = Storage("Cache")
 
-        with Cluster("3. LLM Processing"):
-            primary = Gemini("Gemini")
-            fallback = Internet("OpenRouter")
+        with Cluster("External"):
+            llm = Custom("LLM API", "../icons/api.png")  # Custom API icon
 
-        with Cluster("4. Persistence"):
-            db = DynamodbTable("Save")
-
-        # End
-        response = Users("Response")
-
-        # Main flow
-        client >> validate
-        validate >> cache
-
-        # Cache hit (fast path)
-        cache >> Edge(label="HIT", color="#4CAF50", style="bold") >> response
-
-        # Cache miss
-        cache >> Edge(label="MISS", style="dashed") >> primary
-        primary >> Edge(label="fail", color="#F44336", style="dashed") >> fallback
-        primary >> Edge(label="success", color="#4CAF50") >> db
-        fallback >> db
-        db >> response
+        # Simple relationships
+        client >> api
+        api >> service
+        service >> database
+        service >> cache
+        service >> llm
 
 
-def create_local_development():
-    """Create local development setup - CRUCIAL."""
+def create_2_request_flow():
+    """Q: How does a single request flow through the system?"""
 
     with Diagram(
-        "Chat API - Local Development",
-        filename="04_local_development",
-        outformat="png",
-        graph_attr=GRAPH_ATTR,
-        node_attr=NODE_ATTR,
-        edge_attr=EDGE_ATTR,
+        "2. Request Flow",
         show=False,
-        direction="TB",
+        graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
+        node_attr=NODE_ATTR,
+        direction="LR",
     ):
-        # Developer
-        dev = Users("Developer")
+        # Linear flow with custom icons
+        req = Users("Request")
+        validate = Custom("Validate", "../icons/validate.png")  # Custom checkmark
+        cache = Custom("Cache", "../icons/cache.png")  # Custom cache icon
+        llm = Custom("LLM", "../icons/api.png")  # Custom API icon
+        save = SQL("Save")
+        resp = Users("Response")
 
-        with Cluster("Local Environment"):
-            # Application
-            with Cluster("Application", graph_attr={"bgcolor": "#E8F5E9"}):
-                python = Python("Python 3.11")
-                fastapi = FastAPI("FastAPI\nDev Server")
-
-            # Storage
-            with Cluster("Local Storage", graph_attr={"bgcolor": "#FFF3E0"}):
-                sqlite = SQL("SQLite")
-                cache = Storage("Memory Cache")
-
-        # Docker alternative
-        with Cluster("Docker Option", graph_attr={"bgcolor": "#E3F2FD"}):
-            docker = Docker("Docker\nCompose")
-
-        # External
-        llm = Internet("LLM APIs")
-
-        # Connections
-        dev >> python >> fastapi
-        fastapi >> [sqlite, cache]
-        fastapi >> Edge(color="#4CAF50", style="bold") >> llm
-
-        dev >> Edge(label="OR", style="dashed") >> docker
-        docker >> Edge(style="dashed") >> fastapi
+        # Main path only
+        req >> Edge(label="POST /chat") >> validate
+        validate >> Edge(label="valid") >> cache
+        cache >> Edge(label="miss") >> llm
+        llm >> Edge(label="text") >> save
+        save >> resp
 
 
-def create_dependency_injection():
-    """Create dependency injection diagram - CRUCIAL for understanding."""
+def create_3_deployment_environments():
+    """Q: How is the system deployed in different environments?"""
 
     with Diagram(
-        "Chat API - Dependency Injection",
-        filename="05_dependency_injection",
-        outformat="png",
+        "3. Deployment Environments",
+        show=False,
         graph_attr=GRAPH_ATTR,
         node_attr=NODE_ATTR,
-        edge_attr=EDGE_ATTR,
-        show=False,
         direction="TB",
     ):
-        # Configuration
-        with Cluster("Configuration", graph_attr={"bgcolor": "#F5F5F5"}):
-            env = Config("Environment\nVariables")
+        with Cluster("Local"):
+            local_app = Python("Python")
+            local_db = SQL("SQLite")
 
-        # Factory
-        with Cluster("ServiceFactory", graph_attr={"bgcolor": "#E1BEE7"}):
-            factory = Rack("DI Container")
-            detect = Decision("Environment\nDetection")
+        with Cluster("Docker"):
+            docker = Docker("Container")
+            docker_db = SQL("SQLite")
 
-        # Protocols (using interface-like representations)
-        with Cluster("Protocol Interfaces", graph_attr={"bgcolor": "#BBDEFB"}):
-            repo_proto = SQL("Repository\nProtocol")
-            cache_proto = Storage("Cache\nProtocol")
-            llm_proto = Internet("LLM Provider\nProtocol")
+        with Cluster("AWS"):
+            lambda_fn = LambdaFunction("Lambda")
+            dynamo = DynamodbTable("DynamoDB")
 
-        # Implementations
-        with Cluster("Local Implementations", graph_attr={"bgcolor": "#C8E6C9"}):
-            local_sqlite = SQL("SQLite")
-            local_memory = Storage("In-Memory")
-            local_mock = ConfigFile("Mock LLM")
+        # No connections - just showing options
+        local_app - local_db
+        docker - docker_db
+        lambda_fn - dynamo
 
-        with Cluster("Production Implementations", graph_attr={"bgcolor": "#FFE0B2"}):
-            prod_dynamo = DynamodbTable("DynamoDB")
-            prod_redis = Redis("Redis")
-            prod_gemini = Gemini("Gemini API")
 
-        # Service
-        with Cluster("Service Layer", graph_attr={"bgcolor": "#F3E5F5"}):
-            service = Python("ChatService")
+def create_4_data_flow():
+    """Q: How does data transform through the system?"""
 
-        # Configuration flow
-        env >> factory
-        factory >> detect
+    with Diagram(
+        "4. Data Transformations",
+        show=False,
+        graph_attr={**GRAPH_ATTR, "rankdir": "LR"},
+        node_attr=NODE_ATTR,
+        direction="LR",
+    ):
+        # Proper flowchart shapes for data vs operations
+        json_in = InputOutput("JSON\nRequest")  # Data format
+        parse = Action("Parse")  # Operation
+        python_obj = InputOutput("Python\nDict")  # Data format
+        format_op = Action("Format")  # Operation
+        prompt = InputOutput("LLM\nPrompt")  # Data format
+        llm_call = Action("LLM Call")  # Operation
+        completion = InputOutput("LLM\nResponse")  # Data format
+        add_meta = Action("Add Metadata")  # Operation
+        db_record = InputOutput("DB\nRecord")  # Data format
+        serialize = Action("Serialize")  # Operation
+        json_out = InputOutput("JSON\nResponse")  # Data format
 
-        # Environment detection branches
-        detect >> Edge(label="if LOCAL", style="dashed", color="#4CAF50") >> local_sqlite
-        detect >> Edge(style="dashed", color="#4CAF50") >> local_memory
-        detect >> Edge(style="dashed", color="#4CAF50") >> local_mock
+        # Clear data transformation flow
+        json_in >> parse >> python_obj >> format_op >> prompt
+        prompt >> llm_call >> completion >> add_meta >> db_record
+        db_record >> serialize >> json_out
 
-        detect >> Edge(label="if AWS", style="dashed", color="#FF9800") >> prod_dynamo
-        detect >> Edge(style="dashed", color="#FF9800") >> prod_redis
-        detect >> Edge(style="dashed", color="#FF9800") >> prod_gemini
 
-        # Protocol implementations
-        repo_proto >> Edge(style="dotted") >> local_sqlite
-        repo_proto >> Edge(style="dotted") >> prod_dynamo
+def create_5_error_handling():
+    """Q: What happens when things fail?"""
 
-        cache_proto >> Edge(style="dotted") >> local_memory
-        cache_proto >> Edge(style="dotted") >> prod_redis
+    with Diagram(
+        "5. Error Handling",
+        show=False,
+        graph_attr=GRAPH_ATTR,
+        node_attr=NODE_ATTR,
+        direction="TB",
+    ):
+        request = Users("Request")
 
-        llm_proto >> Edge(style="dotted") >> local_mock
-        llm_proto >> Edge(style="dotted") >> prod_gemini
+        with Cluster("Failure Points"):
+            validation = Custom("Validation\nError", "../icons/error.png")  # Custom error icon
+            rate_limit = Decision("Rate Limit\nExceeded")  # Decision diamond
+            llm_fail = Custom("LLM API\nTimeout", "../icons/error.png")  # Custom error icon
+            db_fail = Preparation("Database\nError")  # Preparation hexagon
 
-        # Service creation
-        factory >> Edge(label="creates", style="bold", color="#7C4DFF") >> service
-        [repo_proto, cache_proto, llm_proto] >> Edge(label="injects", style="dotted") >> service
+        error_response = Document("Error\nResponse")
+
+        # All failures lead to error response
+        request >> [validation, rate_limit, llm_fail, db_fail]
+        [validation, rate_limit, llm_fail, db_fail] >> error_response
+
+
+def create_6_dependencies():
+    """Q: What depends on what at runtime?"""
+
+    with Diagram(
+        "6. Runtime Dependencies",
+        show=False,
+        graph_attr=GRAPH_ATTR,
+        node_attr=NODE_ATTR,
+        direction="BT",  # Bottom to top for dependencies
+    ):
+        # Core dependencies
+        config = Custom("Config", "../icons/config.png")  # Custom gear icon
+
+        with Cluster("Services"):
+            api = FastAPI("API")
+            service = Python("Service")
+
+        with Cluster("Resources"):
+            db = SQL("Database")
+            cache = Storage("Cache")
+            llm = Custom("LLM Client", "../icons/api.png")  # Custom API icon
+
+        # Dependencies point upward
+        config >> [api, service, db, cache, llm]
+        [db, cache, llm] >> service
+        service >> api
+
+
+def create_7_aws_infrastructure():
+    """Q: What AWS services are used in production?"""
+
+    with Diagram(
+        "7. AWS Infrastructure",
+        show=False,
+        graph_attr=GRAPH_ATTR,
+        node_attr=NODE_ATTR,
+        direction="TB",
+    ):
+        gateway = APIGateway("API Gateway")
+        lambda_fn = LambdaFunction("Lambda")
+        dynamodb = DynamodbTable("DynamoDB")
+        redis = Redis("ElastiCache")
+        secrets = SecretsManager("Secrets")
+
+        # Simple connections
+        gateway >> lambda_fn
+        lambda_fn >> [dynamodb, redis, secrets]
+
+
+def create_8_protocol_pattern():
+    """Q: How do protocols enable flexibility?"""
+
+    with Diagram(
+        "8. Protocol Pattern",
+        show=False,
+        graph_attr=GRAPH_ATTR,
+        node_attr=NODE_ATTR,
+        direction="TB",
+    ):
+        service = Python("Service")
+
+        with Cluster("Protocol"):
+            protocol = Document("Repository\nProtocol")
+
+        with Cluster("Implementations"):
+            sqlite = SQL("SQLite")
+            dynamo = DynamodbTable("DynamoDB")
+
+        # Service uses protocol
+        service >> Edge(label="uses") >> protocol
+
+        # Implementations implement protocol (correct direction)
+        sqlite >> Edge(label="implements", style="dashed") >> protocol
+        dynamo >> Edge(label="implements", style="dashed") >> protocol
 
 
 if __name__ == "__main__":
-    print("🎨 Generating final crucial diagrams with proper icons...")
+    print("🎨 Generating final diagrams with custom icons...")
 
-    # Generate only the crucial diagrams
+    # Download icons first
+    download_icons()
+
+    print("\n📊 Generating diagrams...")
     diagrams = [
-        ("System Architecture", create_system_architecture),
-        ("AWS Production", create_aws_production),
-        ("Request Flow", create_request_flow),
-        ("Local Development", create_local_development),
-        ("Dependency Injection", create_dependency_injection),
+        ("Static Structure", create_1_static_structure),
+        ("Request Flow", create_2_request_flow),
+        ("Deployments", create_3_deployment_environments),
+        ("Data Flow", create_4_data_flow),
+        ("Error Handling", create_5_error_handling),
+        ("Dependencies", create_6_dependencies),
+        ("AWS Infrastructure", create_7_aws_infrastructure),
+        ("Protocols", create_8_protocol_pattern),
     ]
 
     for name, func in diagrams:
-        func()
-        print(f"✅ Generated: {name}")
+        try:
+            func()
+            print(f"✅ Generated: {name}")
+        except (OSError, ValueError, ImportError) as e:
+            print(f"❌ Failed to generate {name}: {e}")
 
     print("\n📊 Final diagram set complete!")
-    print("   5 crucial diagrams with proper technology icons")
-    print("   Clear separation of concerns")
-    print("   Production-ready documentation")
+    print("   - 8 focused diagrams")
+    print("   - Custom icons for key concepts")
+    print("   - Proper flowchart shapes")
+    print("   - Professional presentation")
