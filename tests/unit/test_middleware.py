@@ -16,8 +16,12 @@ class TestRequestIDMiddleware:
         """Test middleware preserves existing X-Request-ID header."""
         # Create mock request with existing header
         request = Mock(spec=Request)
-        request.headers = {"x-request-id": "existing-id-123"}
+        request.headers = Mock()
+        request.headers.get = Mock(return_value="existing-id-123")
         request.state = Mock()
+        request.method = "GET"
+        request.url = Mock(path="/test")
+        request.client = None
 
         # Mock call_next
         async def mock_call_next(req):
@@ -38,8 +42,12 @@ class TestRequestIDMiddleware:
         """Test middleware generates new ID when header missing."""
         # Create mock request without header
         request = Mock(spec=Request)
-        request.headers = {}
+        request.headers = Mock()
+        request.headers.get = Mock(return_value=None)
         request.state = Mock()
+        request.method = "GET"
+        request.url = Mock(path="/test")
+        request.client = None
 
         # Mock call_next
         async def mock_call_next(req):
@@ -50,7 +58,8 @@ class TestRequestIDMiddleware:
 
         # Mock uuid generation
         with patch("chat_api.middleware.uuid.uuid4") as mock_uuid:
-            mock_uuid.return_value = Mock(hex="generated-uuid-456")
+            mock_uuid.return_value.hex = "generated-uuid-456"
+            mock_uuid.return_value.__str__ = Mock(return_value="generated-uuid-456")
 
             # Call middleware
             response = await add_request_id(request, mock_call_next)
@@ -63,8 +72,12 @@ class TestRequestIDMiddleware:
     async def test_add_request_id_propagates_to_response(self):
         """Test request ID is propagated to response headers."""
         request = Mock(spec=Request)
-        request.headers = {"x-request-id": "test-id-789"}
+        request.headers = Mock()
+        request.headers.get = Mock(return_value="test-id-789")
         request.state = Mock()
+        request.method = "GET"
+        request.url = Mock(path="/test")
+        request.client = None
 
         async def mock_call_next(req):
             # Verify request has ID set
@@ -83,14 +96,19 @@ class TestRequestIDMiddleware:
     async def test_add_request_id_handles_exception(self):
         """Test middleware handles exceptions from downstream."""
         request = Mock(spec=Request)
-        request.headers = {}
+        request.headers = Mock()
+        request.headers.get = Mock(return_value=None)
         request.state = Mock()
+        request.method = "GET"
+        request.url = Mock(path="/test")
+        request.client = None
 
         async def mock_call_next(req):
             raise ValueError("Test error")
 
         with patch("chat_api.middleware.uuid.uuid4") as mock_uuid:
-            mock_uuid.return_value = Mock(hex="error-uuid-000")
+            mock_uuid.return_value.hex = "error-uuid-000"
+            mock_uuid.return_value.__str__ = Mock(return_value="error-uuid-000")
 
             # Should propagate the exception
             with pytest.raises(ValueError, match="Test error"):
