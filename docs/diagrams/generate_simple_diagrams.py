@@ -12,10 +12,11 @@ from diagrams.onprem.client import Users
 from diagrams.onprem.container import Docker
 from diagrams.onprem.inmemory import Redis
 from diagrams.onprem.network import Internet  # For external APIs
+from diagrams.onprem.vcs import Git  # For config files
 from diagrams.programming.flowchart import (
-    Action,  # For processing steps
-    Decision,
-    Document,
+    Decision,  # For decision points (diamond)
+    Document,  # For documents
+    InputOutput,  # For data representations (parallelogram)
 )
 from diagrams.programming.framework import FastAPI
 from diagrams.programming.language import Python
@@ -87,7 +88,7 @@ def create_2_request_flow():
     ):
         # Linear flow - no branching
         req = Users("Request")
-        validate = Document("Validate")  # Validation step
+        validate = Decision("Validate")  # Decision point (diamond)
         cache = Storage("Cache?")
         llm = Internet("LLM")  # External LLM API
         save = SQL("Save")
@@ -143,13 +144,13 @@ def create_4_data_flow():
         show=False,
         direction="LR",
     ):
-        # Data formats at each stage
-        json_in = Document("JSON\nRequest")  # Input document
-        python_obj = Action("Python\nDict")  # Processing step
-        prompt = Document("LLM\nPrompt")  # Formatted prompt
-        completion = Document("LLM\nResponse")  # API response
-        db_record = Storage("DB\nRecord")  # Stored data
-        json_out = Document("JSON\nResponse")  # Output document
+        # Data formats at each stage (using InputOutput shape for data representations)
+        json_in = InputOutput("JSON\nRequest")  # Input data
+        python_obj = InputOutput("Python\nDict")  # In-memory data
+        prompt = InputOutput("LLM\nPrompt")  # Formatted data
+        completion = InputOutput("LLM\nResponse")  # API response data
+        db_record = InputOutput("DB\nRecord")  # Persisted data
+        json_out = InputOutput("JSON\nResponse")  # Output data
 
         json_in >> Edge(label="parse") >> python_obj
         python_obj >> Edge(label="format") >> prompt
@@ -173,10 +174,10 @@ def create_5_error_paths():
         request = Users("Request")
 
         with Cluster("Failure Points"):
-            validation = Document("Validation\nError")  # Input error
-            rate_limit = Decision("Rate Limit\nExceeded")  # Decision point
-            llm_fail = Internet("LLM API\nTimeout")  # External failure
-            db_fail = SQL("Database\nError")  # Storage failure
+            validation = Document("Validation\nError")  # Error document
+            rate_limit = Decision("Rate Limit\nExceeded")  # Decision point (correct!)
+            llm_fail = Document("LLM API\nTimeout")  # Error document
+            db_fail = Document("Database\nError")  # Error document
 
         error_response = Document("Error\nResponse")  # Error output
 
@@ -198,7 +199,7 @@ def create_6_dependencies():
         direction="BT",  # Bottom to top for dependencies
     ):
         # Core dependencies
-        config = Document("Config")  # Configuration file
+        config = Git("Config")  # Configuration file (better icon)
 
         with Cluster("Services"):
             api = FastAPI("API")
@@ -262,10 +263,10 @@ def create_8_protocol_abstraction():
         # Service depends on protocol (uses abstraction)
         service >> Edge(label="uses") >> protocol
 
-        # Protocol defines contract for implementations
-        # Using UML-style "realizes" relationship (implementations realize the protocol)
-        protocol >> Edge(label="defines", style="dashed") >> sqlite
-        protocol >> Edge(label="defines", style="dashed") >> dynamo
+        # Implementations realize/implement the protocol (correct UML direction)
+        # Arrows point FROM implementations TO protocol (they implement it)
+        sqlite >> Edge(label="implements", style="dashed") >> protocol
+        dynamo >> Edge(label="implements", style="dashed") >> protocol
 
 
 if __name__ == "__main__":
