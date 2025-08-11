@@ -87,6 +87,20 @@ logs: ## Stream Lambda function logs from CloudWatch
 	fi; \
 	aws logs tail --follow "/aws/lambda/$$FUNCTION_NAME"
 
+.PHONY: diagrams
+diagrams: ## Generate architecture diagrams (5 essential diagrams)
+	@echo "🎨 Generating architecture diagrams..."
+	@if ! python -c "import diagrams" 2>/dev/null; then \
+		echo "📦 Installing Python diagrams..."; \
+		pip install diagrams --quiet; \
+	fi
+	@cd docs/diagrams && python generate_final_diagrams.py
+	@mv docs/diagrams/*.png docs/asset/
+	@echo "✅ Architecture diagrams generated!"
+	@echo "   📄 docs/ARCHITECTURE.md"
+	@echo "   📊 5 diagrams in docs/asset/"
+
+
 # Direct commands to use:
 #   pytest tests/                           # Run all tests
 #   pytest tests/unit/                      # Run unit tests only
