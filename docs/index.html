@@ -1121,8 +1121,8 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h4>Type Safety</h4>
-                    <p>Protocolo Python para contratos claros.
-                    MyPy validation garante type safety sem overhead runtime.</p>
+                    <p>Python Protocol for clear contracts.
+                    MyPy validation ensures type safety without runtime overhead.</p>
                 </div>
             </div>
 
@@ -1231,8 +1231,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                     </tr>
                     <tr>
                         <td><code>mypy chat_api/</code></td>
-                        <td>Verificação de tipos</td>
-                        <td>Validação estática</td>
+                        <td>Type checking</td>
+                        <td>Static validation</td>
                     </tr>
                     <tr>
                         <td><code>uv run python -m chat_api</code></td>
@@ -1253,7 +1253,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 </div>
                 <div class="metric-card green">
                     <div class="metric-value">Zero</div>
-                    <div class="metric-label">Issues de Segurança</div>
+                    <div class="metric-label">Security Issues</div>
                 </div>
             </div>
         </section>
@@ -1299,9 +1299,9 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
                 <div class="timeline-item">
                     <h5>AWS Lambda Production</h5>
-                    <p><strong>Serverless:</strong> Zero manutenção de servidor<br>
-                    <strong>Auto-scaling:</strong> 0 a 1000 execuções concorrentes<br>
-                    <strong>Cost-effective:</strong> Pague apenas pelo que usar</p>
+                    <p><strong>Serverless:</strong> Zero server maintenance<br>
+                    <strong>Auto-scaling:</strong> 0 to 1000 concurrent executions<br>
+                    <strong>Cost-effective:</strong> Pay only for what you use</p>
                 </div>
 
                 <div class="timeline-item">
@@ -1313,9 +1313,9 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
                 <div class="timeline-item">
                     <h5>CI/CD Pipeline</h5>
-                    <p><strong>Pre-commit hooks:</strong> Qualidade garantida<br>
-                    <strong>GitHub Actions ready:</strong> Deploy automatizado<br>
-                    <strong>Health checks:</strong> Validação pós-deploy</p>
+                    <p><strong>Pre-commit hooks:</strong> Quality assured<br>
+                    <strong>GitHub Actions ready:</strong> Automated deployment<br>
+                    <strong>Health checks:</strong> Post-deploy validation</p>
                 </div>
             </div>
 
@@ -1323,8 +1323,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">🐳</div>
                     <h4>Docker Multi-stage</h4>
-                    <p>Build otimizado com imagem distroless.
-                    Redução de 80% no tamanho final da imagem.</p>
+                    <p>Optimized build with distroless image.
+                    80% reduction in final image size.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1363,8 +1363,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
                     <h4>Happy Path</h4>
-                    <p>Fluxo normal de requisição com cache miss,
-                    chamada LLM e persistência bem-sucedida.</p>
+                    <p>Normal request flow with cache miss,
+                    LLM call and successful persistence.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1377,8 +1377,8 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">🔄</div>
                     <h4>Error Recovery</h4>
-                    <p>Tratamento de falhas com fallback
-                    entre providers LLM diferentes.</p>
+                    <p>Error handling with fallback
+                    between different LLM providers.</p>
                 </div>
 
                 <div class="feature-card">
@@ -1498,27 +1498,27 @@ Running 30s test @ http://localhost:8000/chat
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>Auto-Scaling Instantâneo</h5>
-                    <p>AWS Lambda escala automaticamente de 0 a 1000 execuções concorrentes em segundos.
+                    <h5>Instant Auto-Scaling</h5>
+                    <p>AWS Lambda automatically scales from 0 to 1000 concurrent executions in seconds.
                     Supports sudden traffic spikes without prior configuration or warming.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Cache Multi-Camada Inteligente</h5>
+                    <h5>Intelligent Multi-Layer Cache</h5>
                     <p>Redis for production, in-memory dict for development.
                     Cache key based on SHA-256 hash for consistency and performance.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Fallback Resiliente</h5>
-                    <p>Sistema dual Gemini (primário) + OpenRouter (fallback) com retry
-                    exponencial. Garante alta disponibilidade mesmo com falha de provider.</p>
+                    <h5>Resilient Fallback</h5>
+                    <p>Dual system Gemini (primary) + OpenRouter (fallback) with exponential
+                    retry. Ensures high availability even with provider failure.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Storage Otimizado</h5>
-                    <p>DynamoDB com latência single-digit milliseconds e capacidade
-                    unlimited. SQLite for development with transparent interface.</p>
+                    <h5>Optimized Storage</h5>
+                    <p>DynamoDB with single-digit millisecond latency and unlimited
+                    capacity. SQLite for development with transparent interface.</p>
                 </div>
             </div>
 
@@ -1541,28 +1541,28 @@ Running 30s test @ http://localhost:8000/chat
 
                 <div class="feature-card">
                     <div class="feature-icon">💾</div>
-                    <h4>Storage Flexível</h4>
+                    <h4>Flexible Storage</h4>
                     <p>Repository Pattern with Python Protocol.
                     SQLite (dev) and DynamoDB (prod) with unified interface.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
-                    <h4>Deploy Automatizado</h4>
+                    <h4>Automated Deployment</h4>
                     <p>Makefile with targets for local, Docker and AWS Lambda.
                     Terraform IaC for complete infrastructure as code.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
-                    <h4>Observabilidade Completa</h4>
+                    <h4>Complete Observability</h4>
                     <p>Structured logs with Loguru, request tracking via X-Request-ID.
                     Proactive health checks and performance metrics.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
-                    <h4>Qualidade Garantida</h4>
+                    <h4>Quality Assured</h4>
                     <p>80%+ test coverage, MyPy type checking,
                     Ruff linting and security scanning with Bandit.</p>
                 </div>
@@ -1573,17 +1573,17 @@ Running 30s test @ http://localhost:8000/chat
             <table class="comparison-table">
                 <thead>
                     <tr>
-                        <th>Componente</th>
-                        <th>Modelo de Cobrança</th>
-                        <th>Custo Base</th>
-                        <th>Otimização</th>
+                        <th>Component</th>
+                        <th>Billing Model</th>
+                        <th>Base Cost</th>
+                        <th>Optimization</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>AWS Lambda</td>
                         <td>Pay-per-request</td>
-                        <td>1M requests grátis/mês</td>
+                        <td>1M free requests/month</td>
                         <td class="check">Zero idle cost</td>
                     </tr>
                     <tr>
@@ -1594,15 +1594,15 @@ Running 30s test @ http://localhost:8000/chat
                     </tr>
                     <tr>
                         <td>API Gateway</td>
-                        <td>Por chamada</td>
-                        <td>1M calls grátis/mês</td>
-                        <td class="check">Cache integrado</td>
+                        <td>Per call</td>
+                        <td>1M free calls/month</td>
+                        <td class="check">Integrated cache</td>
                     </tr>
                     <tr>
                         <td>LLM APIs</td>
-                        <td>Por token</td>
-                        <td>Variável por provider</td>
-                        <td class="check">Cache agressivo</td>
+                        <td>Per token</td>
+                        <td>Variable per provider</td>
+                        <td class="check">Aggressive caching</td>
                     </tr>
                 </tbody>
             </table>
