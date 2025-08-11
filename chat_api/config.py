@@ -3,7 +3,7 @@
 import os
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -78,9 +78,12 @@ class Settings(BaseSettings):
         # openrouter
         return f"openrouter/{self.openrouter_model}"
 
-    class Config:
-        env_file = ".env"
-        env_prefix = "CHAT_"  # CHAT_PORT=8000
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="CHAT_",  # CHAT_PORT=8000
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 def get_settings() -> Settings:

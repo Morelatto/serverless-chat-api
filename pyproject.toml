@@ -33,9 +33,9 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "loguru>=0.7.0",
     "orjson>=3.10.0",
-    "boto3>=1.35.0",  # For DynamoDB support
-    "aioboto3>=13.0.0",  # For async DynamoDB operations
-    "mangum>=0.17.0",  # For Lambda deployment
+    "boto3>=1.35.0",
+    "aioboto3>=13.0.0",
+    "mangum>=0.17.0",
 ]
 
 [project.optional-dependencies]
@@ -50,13 +50,6 @@ dev = [
     "pre-commit>=4.0.0",
     "types-redis>=4.6.0",
     "types-cachetools>=5.5.0",
-]
-
-test = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=5.0.0",
-    "httpx>=0.27.0",
 ]
 
 [project.scripts]
@@ -80,29 +73,28 @@ fix = true
 
 [tool.ruff.lint]
 select = [
-    # Core error checking
     "E4", "E7", "E9", "F",
-    # Bug prevention
-    "B", "BLE", "TRY",
-    # Performance & Security
-    "S", "G", "PERF",
-    # Code quality
+    "W",
+    "I",
+    "B", "BLE",
+    "S",
+    "PERF",
     "SIM", "RET", "RUF", "PTH",
-    # FastAPI/Modern Python
-    "ASYNC", "I", "UP", "TCH",
+    "ASYNC",
+    "UP", "TCH",
 ]
 
 ignore = [
-    "E501",    # Line length (formatter handles)
-    "S101",    # Assert in tests
-    "S104",    # Bind 0.0.0.0 (Docker)
-    "TRY003",  # Long exception messages
-    "B008",    # FastAPI Depends()
+    "E501",     # Line length
+    "S104",     # Bind 0.0.0.0 (Docker)
+    "B008",     # FastAPI Depends()
+    "TRY003",   # Long exception messages
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S", "ARG", "PLR2004"]
+"tests/**/*.py" = ["S101", "S105", "ARG001", "ARG002", "PLR2004"]
 "*/lambda_handler.py" = ["G004"]
+"*/aws.py" = ["ARG002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["chat_api"]
@@ -126,7 +118,7 @@ disallow_untyped_defs = false
 check_untyped_defs = true
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "venv"]
+exclude_dirs = ["tests", ".venv", "venv", "htmlcov"]
 skips = ["B101"]
 
 [tool.pytest.ini_options]
@@ -147,8 +139,9 @@ markers = [
     "unit: unit tests",
 ]
 filterwarnings = [
-    "ignore::DeprecationWarning:pydantic.*",
+    "default",
     "ignore::DeprecationWarning:httpx.*",
+    "ignore::DeprecationWarning:litellm.llms.custom_httpx.*",
 ]
 
 [tool.coverage.run]
@@ -158,7 +151,7 @@ omit = [
     "*/tests/*",
     "*/__main__.py",
     "*/lambda_handler.py",
-    "*/aws.py",  # Deployment-only code
+    "*/aws.py",
 ]
 
 [tool.coverage.report]
