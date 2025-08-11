@@ -17,13 +17,9 @@ async def add_request_id(request: Request, call_next):
         Response with X-Request-ID header.
 
     """
-    # Generate or use existing request ID
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-
-    # Add to request state for access in handlers
     request.state.request_id = request_id
 
-    # Add context for structured logging
     with logger.contextualize(request_id=request_id):
         logger.debug(
             "Request started",
@@ -32,10 +28,7 @@ async def add_request_id(request: Request, call_next):
             client=request.client.host if request.client else None,
         )
 
-        # Process request
         response = await call_next(request)
-
-        # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
 
         logger.debug(

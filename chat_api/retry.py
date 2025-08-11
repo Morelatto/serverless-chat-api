@@ -12,8 +12,6 @@ from tenacity import (
     wait_exponential,
 )
 
-from .exceptions import LLMProviderError
-
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -24,7 +22,7 @@ def with_llm_retry(
     """Decorator to add retry logic to LLM provider methods.
 
     Args:
-        provider_name: Name of the provider for error messages
+        provider_name: Name of the provider for logging
         max_retries: Maximum number of retry attempts
 
     Returns:
@@ -38,19 +36,14 @@ def with_llm_retry(
             stop=stop_after_attempt(max_retries),
             wait=wait_exponential(multiplier=1, min=1, max=10),
             before_sleep=lambda retry_state: logger.warning(
-                f"{provider_name} attempt {retry_state.attempt_number}: {retry_state.outcome.exception() if retry_state.outcome else 'Unknown error'}",
+                f"Retry attempt {retry_state.attempt_number}/{max_retries}: "
+                f"{type(retry_state.outcome.exception()).__name__ if retry_state.outcome else 'Unknown error'}"
+                f" (Provider: {provider_name})",
             ),
         )
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            try:
-                return await func(*args, **kwargs)
-            except (TimeoutError, ConnectionError):
-                # Tenacity will handle retries
-                raise
-            except Exception as e:
-                logger.error(f"{provider_name} API error: {e}")
-                raise LLMProviderError(f"{provider_name} API error: {e}") from e
+            return await func(*args, **kwargs)
 
         return wrapper  # type: ignore[return-value,no-any-return]
 

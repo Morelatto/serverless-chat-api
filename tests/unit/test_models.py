@@ -36,14 +36,16 @@ def test_chat_message_empty_content() -> None:
 
 def test_chat_message_long_user_id() -> None:
     """Test chat message with too long user_id."""
+    # User ID longer than 100 chars gets truncated by sanitizer
     long_id = "x" * 101
-    with pytest.raises(ValidationError):
-        ChatMessage(user_id=long_id, content="Hello")
+    message = ChatMessage(user_id=long_id, content="Hello")
+    assert len(message.user_id) == 100  # Truncated to max length
 
 
 def test_chat_message_long_content() -> None:
     """Test chat message with too long content."""
-    long_content = "x" * 4001
+    # Content longer than max_length (10000) should fail
+    long_content = "x" * 10001
     with pytest.raises(ValidationError):
         ChatMessage(user_id="test123", content=long_content)
 

@@ -18,6 +18,7 @@ class HealthStatus(TypedDict):
 
     storage: bool
     llm: bool
+    cache: bool
 
 
 class ChatResult(TypedDict):

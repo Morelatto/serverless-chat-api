@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from chat_api.storage import (
-    DEFAULT_CACHE_SIZE,
     DynamoDBRepository,
     InMemoryCache,
     RedisCache,
@@ -91,8 +90,8 @@ def test_cache_key_generation() -> None:
     assert key1 != key4
     assert key3 != key4
 
-    # Keys should be reasonable length and format (blake2b with 16-byte digest = 32 hex chars)
-    assert len(key1) == 32
+    # Keys should be in expected format
+    assert key1.startswith("user123:")
     assert isinstance(key1, str)
 
 
@@ -118,7 +117,7 @@ def test_inmemory_cache_creation():
     """Test in-memory cache creation."""
     cache = InMemoryCache()
 
-    assert cache.max_size == DEFAULT_CACHE_SIZE
+    assert cache.max_size == 1000  # Default from settings
     assert cache.cache == {}
 
 

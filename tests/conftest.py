@@ -15,7 +15,6 @@ from chat_api.api import app
 os.environ["CHAT_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["CHAT_LLM_PROVIDER"] = "gemini"
 os.environ["CHAT_GEMINI_API_KEY"] = "test-key"
-os.environ["CHAT_OPENROUTER_API_KEY"] = "test-key"  # Set both to avoid validation issues
 os.environ["CHAT_RATE_LIMIT"] = "1000/minute"
 os.environ["CHAT_LOG_LEVEL"] = "ERROR"  # Reduce log noise
 

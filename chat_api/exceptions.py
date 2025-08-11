@@ -1,8 +1,4 @@
-"""Domain-specific exceptions for the Chat API.
-
-Simple, flat hierarchy with clear error messages.
-Keep only what's actually used - YAGNI principle.
-"""
+"""Domain-specific exceptions for the Chat API."""
 
 
 class ChatAPIError(Exception):

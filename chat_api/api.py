@@ -1,9 +1,9 @@
-"""FastAPI application - All routes and middleware in one place (Python 2025 style)."""
+"""FastAPI application and route handlers."""
 
 import sys
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -15,17 +15,18 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from .chat import ChatMessage, ChatResponse, ChatService
-from .config import get_settings
+from .config import settings
 from .exceptions import ChatAPIError, LLMProviderError, StorageError, ValidationError
-from .factory import ServiceFactory
 from .middleware import add_request_id
+from .providers import create_llm_provider
+from .storage import create_cache, create_repository
 from .types import MessageRecord
 
+_chat_service: ChatService | None = None
 
-# Configure loguru - defer to runtime
-def configure_logging():
-    """Configure logging with current settings."""
-    settings = get_settings()
+
+def configure_logging() -> None:
+    """Configure logging - should be called at startup, not import time."""
     logger.remove()
     logger.add(
         sys.stderr,
@@ -43,14 +44,8 @@ def configure_logging():
         )
 
 
-# Configure logging at module load
-configure_logging()
-
-
-# Rate limiter - defer to runtime
-def create_limiter():
-    """Create rate limiter with current settings."""
-    settings = get_settings()
+def get_limiter() -> Limiter:
+    """Get or create rate limiter."""
     return Limiter(
         key_func=get_remote_address,
         storage_uri=settings.redis_url or "memory://",
@@ -58,25 +53,39 @@ def create_limiter():
     )
 
 
-limiter = create_limiter()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle - simplified with factory pattern."""
-    # Create fully configured service for current environment
-    service = await ServiceFactory.create_for_environment()
-    app.state.chat_service = service
+    """Manage application lifecycle."""
+    global _chat_service
+    configure_logging()
+
+    # Create service components
+    repository = create_repository()
+    cache = create_cache()
+    llm_provider = create_llm_provider()
+
+    # Initialize components
+    await repository.startup()
+    await cache.startup()
+
+    # Create service
+    _chat_service = ChatService(
+        repository=repository,
+        cache=cache,
+        llm_provider=llm_provider,
+    )
 
     logger.info("Application started successfully")
+
     yield
 
-    # Clean shutdown
-    await ServiceFactory.shutdown_service(service)
+    # Shutdown components
+    await repository.shutdown()
+    await cache.shutdown()
+    _chat_service = None
     logger.info("Application shutdown complete")
 
 
-# Create app
 app = FastAPI(
     title="Chat API",
     version="1.0.0",
@@ -84,7 +93,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add middleware
 app.middleware("http")(add_request_id)
 app.add_middleware(
     CORSMiddleware,
@@ -93,11 +101,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.state.limiter = limiter
+
+limiter = get_limiter()
+app.state.limiter = limiter  # Required by slowapi
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
-# Validation error handler
 async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError,
@@ -135,18 +144,12 @@ async def chat_api_exception_handler(request: Request, exc: ChatAPIError) -> JSO
     """Handle domain-specific errors."""
     logger.error(f"Chat API error: {exc}")
 
-    # Map exception types to status codes
-    status_map = {
-        LLMProviderError: 503,
-        StorageError: 503,
-        ValidationError: 400,
-    }
-
-    status_code = 500
-    for exc_type, code in status_map.items():
-        if isinstance(exc, exc_type):
-            status_code = code
-            break
+    if isinstance(exc, ValidationError):
+        status_code = status.HTTP_400_BAD_REQUEST
+    elif isinstance(exc, LLMProviderError | StorageError):
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    else:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     return JSONResponse(
         status_code=status_code,
@@ -154,26 +157,19 @@ async def chat_api_exception_handler(request: Request, exc: ChatAPIError) -> JSO
     )
 
 
-# ============== Routes ==============
-# ============== Dependencies ==============
-async def get_chat_service(request: Request) -> ChatService:
-    """Get chat service from app state."""
-    service: ChatService = request.app.state.chat_service
-    return service
+def get_chat_service() -> ChatService:
+    """Get chat service singleton."""
+    if _chat_service is None:
+        raise RuntimeError("Service not initialized")
+    return _chat_service
 
 
-def get_current_settings():
-    """Dependency to get current settings."""
-    return get_settings()
-
-
-# ============== Routes ==============
 @app.post("/chat", tags=["chat"])
-@limiter.limit("60/minute")  # Default rate limit
+@limiter.limit(settings.rate_limit)
 async def chat_endpoint(
     request: Request,
     message: ChatMessage,
-    service: ChatService = Depends(get_chat_service),
+    service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> ChatResponse:
     """Process a chat message."""
     try:
@@ -188,28 +184,58 @@ async def chat_endpoint(
         )
     except LLMProviderError as e:
         logger.error(f"LLM provider error: {e}")
-        raise HTTPException(status_code=503, detail=f"Service temporarily unavailable: {e}") from e
+        raise HTTPException(
+            status_code=503,
+            detail="Service temporarily unavailable",
+            headers={
+                "X-Request-ID": request.state.request_id
+                if hasattr(request.state, "request_id")
+                else ""
+            },
+        ) from e
     except StorageError as e:
         logger.error(f"Storage error: {e}")
-        raise HTTPException(status_code=503, detail=f"Storage error: {e}") from e
+        raise HTTPException(
+            status_code=503,
+            detail="Storage service unavailable",
+            headers={
+                "X-Request-ID": request.state.request_id
+                if hasattr(request.state, "request_id")
+                else ""
+            },
+        ) from e
     except ValidationError as e:
-        logger.error(f"Validation error: {e}")
+        logger.warning(f"Validation error: {e}")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Unexpected error in chat handler: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error") from e
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error",
+            headers={
+                "X-Request-ID": request.state.request_id
+                if hasattr(request.state, "request_id")
+                else ""
+            },
+        ) from e
 
 
 @app.get("/history/{user_id}", tags=["chat"])
 async def history_endpoint(
+    request: Request,
     response: Response,
     user_id: str,
-    limit: int = 10,
-    service: ChatService = Depends(get_chat_service),
+    service: Annotated[ChatService, Depends(get_chat_service)],
+    limit: int = Query(10, ge=1, le=100),
 ) -> list[MessageRecord]:
     """Retrieve chat history for a user."""
-    if limit > 100:
-        raise HTTPException(400, "Limit cannot exceed 100")
+    # Basic validation for path parameter
+    if not user_id or len(user_id) > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid user ID",
+            headers={"X-Request-ID": getattr(request.state, "request_id", "")},
+        )
 
     return await service.get_history(user_id, limit)
 
@@ -217,9 +243,8 @@ async def history_endpoint(
 @app.get("/health", tags=["health"])
 async def health_endpoint(
     response: Response,
+    service: Annotated[ChatService, Depends(get_chat_service)],
     detailed: bool = Query(False, description="Include detailed environment information"),
-    service: ChatService = Depends(get_chat_service),
-    current_settings=Depends(get_current_settings),
 ) -> dict[str, Any]:
     """Check health status of all components.
 
@@ -230,7 +255,6 @@ async def health_endpoint(
     status = await service.health_check()
     all_healthy = all(status.values())
 
-    # Set status code based on health
     if not all_healthy:
         response.status_code = 503
 
@@ -240,12 +264,11 @@ async def health_endpoint(
         "services": status,
     }
 
-    # Add detailed info if requested
     if detailed:
         result["version"] = "1.0.0"
         result["environment"] = {
-            "llm_provider": current_settings.llm_provider,
-            "rate_limit": current_settings.rate_limit,
+            "llm_provider": settings.llm_provider,
+            "rate_limit": settings.rate_limit,
         }
 
     return result
@@ -262,14 +285,12 @@ async def root_endpoint(response: Response) -> dict[str, str]:
     }
 
 
-# OpenAPI customization
 app.openapi_tags = [
     {"name": "chat", "description": "Chat operations"},
     {"name": "health", "description": "Health checks"},
 ]
 
 
-# Export for use in other modules
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     return app

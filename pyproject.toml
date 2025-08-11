@@ -33,9 +33,9 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "loguru>=0.7.0",
     "orjson>=3.10.0",
-    "boto3>=1.35.0",
-    "aioboto3>=13.0.0",
-    "mangum>=0.17.0",
+    "boto3>=1.35.0",  # For DynamoDB support
+    "aioboto3>=13.0.0",  # For async DynamoDB operations
+    "mangum>=0.17.0",  # For Lambda deployment
 ]
 
 [project.optional-dependencies]
@@ -73,28 +73,29 @@ fix = true
 
 [tool.ruff.lint]
 select = [
+    # Core error checking
     "E4", "E7", "E9", "F",
-    "W",
-    "I",
-    "B", "BLE",
-    "S",
-    "PERF",
+    # Bug prevention
+    "B", "BLE", "TRY",
+    # Performance & Security
+    "S", "G", "PERF",
+    # Code quality
     "SIM", "RET", "RUF", "PTH",
-    "ASYNC",
-    "UP", "TCH",
+    # FastAPI/Modern Python
+    "ASYNC", "I", "UP", "TCH",
 ]
 
 ignore = [
-    "E501",     # Line length
-    "S104",     # Bind 0.0.0.0 (Docker)
-    "B008",     # FastAPI Depends()
-    "TRY003",   # Long exception messages
+    "E501",    # Line length (formatter handles)
+    "S101",    # Assert in tests
+    "S104",    # Bind 0.0.0.0 (Docker)
+    "TRY003",  # Long exception messages
+    "B008",    # FastAPI Depends()
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S105", "ARG001", "ARG002", "PLR2004"]
+"tests/*" = ["S", "ARG", "PLR2004"]
 "*/lambda_handler.py" = ["G004"]
-"*/aws.py" = ["ARG002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["chat_api"]
@@ -118,7 +119,7 @@ disallow_untyped_defs = false
 check_untyped_defs = true
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "venv", "htmlcov"]
+exclude_dirs = ["tests", ".venv", "venv"]
 skips = ["B101"]
 
 [tool.pytest.ini_options]
@@ -139,9 +140,8 @@ markers = [
     "unit: unit tests",
 ]
 filterwarnings = [
-    "default",
+    "ignore::DeprecationWarning:pydantic.*",
     "ignore::DeprecationWarning:httpx.*",
-    "ignore::DeprecationWarning:litellm.llms.custom_httpx.*",
 ]
 
 [tool.coverage.run]
@@ -151,7 +151,7 @@ omit = [
     "*/tests/*",
     "*/__main__.py",
     "*/lambda_handler.py",
-    "*/aws.py",
+    "*/aws.py",  # Deployment-only code
 ]
 
 [tool.coverage.report]

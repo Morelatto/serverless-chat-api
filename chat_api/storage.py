@@ -1,25 +1,19 @@
-"""Unified storage layer - SQLite, DynamoDB, and caching (Python 2025 style)."""
+"""Storage layer implementations for chat API."""
 
-import hashlib
 import json
 import time
+from datetime import UTC, datetime
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlparse
 
 from databases import Database
 from loguru import logger
 
+from .config import settings
 from .exceptions import StorageError
 from .types import MessageRecord
 
-# Constants
-CACHE_TTL_SECONDS = 3600  # 1 hour default cache TTL
-TTL_DAYS = 30  # DynamoDB TTL in days
-CACHE_KEY_LENGTH = 32  # Blake2b hash output length
-DEFAULT_CACHE_SIZE = 1000  # Default max cache size
 
-
-# ============== Protocols ==============
 class Repository(Protocol):
     """Storage repository protocol."""
 
@@ -36,28 +30,28 @@ class Cache(Protocol):
     async def startup(self) -> None: ...
     async def shutdown(self) -> None: ...
     async def get(self, key: str) -> dict[str, Any] | None: ...
-    async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None: ...
+    async def set(self, key: str, value: dict[str, Any], ttl: int | None = None) -> None: ...
 
 
-# ============== Cache Implementations ==============
 def cache_key(user_id: str, content: str) -> str:
-    """Generate secure cache key from user ID and content."""
-    combined = f"{user_id}:{content}"
-    return hashlib.blake2b(combined.encode(), digest_size=16, salt=b"chat-cache-v1").hexdigest()
+    """Generate cache key from user ID and content hash."""
+    import hashlib
+
+    content_hash = hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:16]  # nosec B324
+    return f"{user_id}:{content_hash}"
 
 
 class InMemoryCache:
-    """Simple in-memory cache using Python's dict - no custom LRU/TTL complexity."""
+    """Simple in-memory cache using Python's dict."""
 
-    def __init__(self, max_size: int = DEFAULT_CACHE_SIZE) -> None:
-        # Simple dict - let Python handle the memory management
-        self.cache: dict[str, tuple[dict[str, Any], float]] = {}  # key -> (data, expiry_time)
-        self.max_size = max_size
-        logger.info(f"In-memory cache initialized with max size {max_size}")
+    def __init__(self, max_size: int | None = None) -> None:
+        self.cache: dict[str, tuple[dict[str, Any], float]] = {}
+        self.max_size = max_size or settings.cache_max_size
+        logger.info(f"In-memory cache initialized with max size {self.max_size}")
 
     async def startup(self) -> None:
         """Initialize cache."""
-        # No initialization needed
+        pass
 
     async def shutdown(self) -> None:
         """Cleanup cache."""
@@ -71,7 +65,6 @@ class InMemoryCache:
 
         data, expiry_time = self.cache[key]
 
-        # Check if expired
         if time.time() > expiry_time:
             del self.cache[key]
             logger.debug(f"Cache expired: {key}")
@@ -80,16 +73,15 @@ class InMemoryCache:
         logger.debug(f"Cache hit: {key}")
         return data
 
-    async def set(self, key: str, value: dict[str, Any], ttl: int = CACHE_TTL_SECONDS) -> None:
+    async def set(self, key: str, value: dict[str, Any], ttl: int | None = None) -> None:
         """Set value in cache with TTL."""
-        # Simple size management - remove oldest if at max size
+        ttl = ttl or settings.cache_ttl_seconds
+
         if len(self.cache) >= self.max_size and key not in self.cache:
-            # Remove one item (oldest by insertion order in Python 3.7+)
             oldest_key = next(iter(self.cache))
             del self.cache[oldest_key]
             logger.debug(f"Evicted oldest: {oldest_key}")
 
-        # Store with expiration time
         expiry_time = time.time() + ttl
         self.cache[key] = (value, expiry_time)
         logger.debug(f"Cached: {key} (size: {len(self.cache)}/{self.max_size}, TTL: {ttl}s)")
@@ -105,7 +97,7 @@ class InMemoryCache:
 
 
 class RedisCache:
-    """Redis cache implementation - fail fast, no silent fallbacks."""
+    """Redis cache implementation."""
 
     def __init__(self, redis_url: str) -> None:
         self.redis_url = redis_url
@@ -113,7 +105,7 @@ class RedisCache:
         logger.info(f"Redis cache configured: {redis_url}")
 
     async def startup(self) -> None:
-        """Initialize Redis connection - fail fast if Redis is unavailable."""
+        """Initialize Redis connection."""
         import redis.asyncio as redis
 
         try:
@@ -122,7 +114,6 @@ class RedisCache:
             logger.info("Redis cache connected successfully")
         except (ConnectionError, TimeoutError, OSError) as e:
             logger.error(f"Redis connection failed: {e}")
-            # Fail fast - don't hide infrastructure problems with silent fallbacks
             raise ConnectionError(f"Failed to connect to Redis at {self.redis_url}: {e}") from e
 
     async def shutdown(self) -> None:
@@ -145,12 +136,12 @@ class RedisCache:
                 result = json.loads(data)
                 logger.debug(f"Redis cache hit: {key}")
                 return result  # type: ignore[no-any-return]
-            logger.debug(f"Redis cache miss: {key}")
-            return None  # noqa: TRY300
         except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
             logger.error(f"Redis get error for key {key}: {e}")
-            # Re-raise to make Redis problems visible
             raise
+        else:
+            logger.debug(f"Redis cache miss: {key}")
+            return None
 
     async def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None:
         """Set value in Redis with TTL."""
@@ -163,18 +154,14 @@ class RedisCache:
             logger.debug(f"Redis cached: {key} (TTL: {ttl}s)")
         except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
             logger.error(f"Redis set error for key {key}: {e}")
-            # Re-raise to make Redis problems visible
             raise
 
 
-# ============== Repository Implementations ==============
 class SQLiteRepository:
-    """SQLite repository with connection pooling for production use."""
+    """SQLite repository with connection pooling."""
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        # SQLite doesn't support connection pooling parameters like PostgreSQL
-        # The databases library handles SQLite connections appropriately
         self.database = Database(database_url)
         logger.info(f"SQLite repository configured: {database_url}")
 
@@ -182,7 +169,6 @@ class SQLiteRepository:
         """Initialize database connection and create tables."""
         await self.database.connect()
 
-        # Create table if not exists
         await self.database.execute("""
             CREATE TABLE IF NOT EXISTS chat_history (
                 id TEXT PRIMARY KEY,
@@ -195,10 +181,9 @@ class SQLiteRepository:
             )
         """)
 
-        # Create index for user_id
         await self.database.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_id
-            ON chat_history(user_id, timestamp DESC)
+            ON chat_history(user_id, timestamp)
         """)
 
         logger.info("SQLite repository initialized")
@@ -275,7 +260,6 @@ class DynamoDBRepository:
         parsed = urlparse(database_url)
         self.table_name = parsed.netloc or parsed.path.lstrip("/")
 
-        # Parse query parameters
         params = parse_qs(parsed.query) if parsed.query else {}
         self.region = params.get("region", ["us-east-1"])[0]
 
@@ -288,57 +272,54 @@ class DynamoDBRepository:
 
         self.session = aioboto3.Session()
 
-        # Check if table exists, create if not
         try:
             async with self.session.client("dynamodb", region_name=self.region) as client:
                 await client.describe_table(TableName=self.table_name)
                 logger.info(f"DynamoDB table {self.table_name} exists")
-        except (ConnectionError, TimeoutError, OSError) as e:
-            logger.info(f"Table {self.table_name} does not exist, creating: {e}")
-            await self._create_table()
+        except Exception:  # noqa: BLE001
+            logger.info(f"Table {self.table_name} does not exist, creating")
+            async with self.session.client("dynamodb", region_name=self.region) as client:
+                await self._create_table_with_client(client)
 
-    async def _create_table(self) -> None:
-        """Create DynamoDB table."""
-        async with self.session.client("dynamodb", region_name=self.region) as client:
-            await client.create_table(
-                TableName=self.table_name,
-                KeySchema=[
-                    {"AttributeName": "user_id", "KeyType": "HASH"},
-                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
-                ],
-                AttributeDefinitions=[
-                    {"AttributeName": "user_id", "AttributeType": "S"},
-                    {"AttributeName": "timestamp", "AttributeType": "S"},
-                ],
-                BillingMode="PAY_PER_REQUEST",
-            )
+    async def _create_table_with_client(self, client) -> None:
+        """Create DynamoDB table if it doesn't exist."""
+        await client.create_table(
+            TableName=self.table_name,
+            KeySchema=[
+                {"AttributeName": "user_id", "KeyType": "HASH"},
+                {"AttributeName": "timestamp", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "user_id", "AttributeType": "S"},
+                {"AttributeName": "timestamp", "AttributeType": "N"},
+            ],
+            BillingMode="PAY_PER_REQUEST",
+        )
 
-            # Wait for table to be active
-            waiter = client.get_waiter("table_exists")
-            await waiter.wait(TableName=self.table_name)
+        waiter = client.get_waiter("table_exists")
+        await waiter.wait(TableName=self.table_name)
+
+        logger.info(f"DynamoDB table {self.table_name} created")
 
     async def shutdown(self) -> None:
-        """Clean up DynamoDB session."""
-        # Session doesn't need explicit cleanup in aioboto3
+        """Close session."""
+        pass
 
     async def save(self, **kwargs) -> None:
         """Save message to DynamoDB."""
-        from datetime import UTC, datetime
-
         from boto3.dynamodb.types import TypeSerializer
 
         item = {
             "user_id": kwargs["user_id"],
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": int(time.time() * 1000),
             "id": kwargs["id"],
             "content": kwargs["content"],
             "response": kwargs["response"],
             "model": kwargs.get("model"),
             "usage": kwargs.get("usage"),
-            "ttl": int(time.time()) + 86400 * TTL_DAYS,  # TTL in seconds
+            "ttl": int(time.time()) + 86400 * settings.dynamodb_ttl_days,
         }
 
-        # Use boto3's built-in serializer
         serializer = TypeSerializer()
         serialized_item = {k: serializer.serialize(v) for k, v in item.items() if v is not None}
 
@@ -354,25 +335,34 @@ class DynamoDBRepository:
                 TableName=self.table_name,
                 KeyConditionExpression="user_id = :user_id",
                 ExpressionAttributeValues={":user_id": {"S": user_id}},
+                ScanIndexForward=False,
                 Limit=limit,
-                ScanIndexForward=False,  # Descending order
             )
 
-        # Use boto3's built-in deserializer
         deserializer = TypeDeserializer()
         results: list[MessageRecord] = []
+
         for item in response.get("Items", []):
-            deserialized_item = {k: deserializer.deserialize(v) for k, v in item.items()}
+            deserialized = {k: deserializer.deserialize(v) for k, v in item.items()}
+
+            timestamp_ms = deserialized.get("timestamp", 0)
+            if timestamp_ms:
+                dt = datetime.fromtimestamp(timestamp_ms / 1000, UTC)
+                timestamp_str = dt.isoformat()
+            else:
+                timestamp_str = ""
+
             record: MessageRecord = {
-                "id": deserialized_item["id"],
-                "user_id": deserialized_item["user_id"],
-                "content": deserialized_item["content"],
-                "response": deserialized_item["response"],
-                "model": deserialized_item.get("model"),
-                "usage": deserialized_item.get("usage"),
-                "timestamp": deserialized_item["timestamp"],
+                "id": deserialized.get("id", ""),
+                "user_id": deserialized.get("user_id", ""),
+                "content": deserialized.get("content", ""),
+                "response": deserialized.get("response", ""),
+                "model": deserialized.get("model"),
+                "usage": deserialized.get("usage"),
+                "timestamp": timestamp_str,
             }
             results.append(record)
+
         return results
 
     async def health_check(self) -> bool:
@@ -380,21 +370,17 @@ class DynamoDBRepository:
         try:
             async with self.session.client("dynamodb", region_name=self.region) as client:
                 await client.describe_table(TableName=self.table_name)
-        except (ConnectionError, TimeoutError, OSError) as e:
+                return True
+        except Exception as e:  # noqa: BLE001
             logger.error(f"DynamoDB health check failed: {e}")
             return False
-        else:
-            return True
 
 
-# ============== Factory Functions ==============
 def create_repository(database_url: str | None = None) -> Repository:
     """Create repository instance based on database URL."""
-    from .config import get_settings
+    from .config import settings
 
-    # Use provided URL or get effective URL from settings
     if database_url is None:
-        settings = get_settings()
         url = settings.effective_database_url
         if settings.is_lambda_environment:
             logger.info(f"AWS Lambda detected, using DynamoDB: {settings.dynamodb_table}")
@@ -403,7 +389,7 @@ def create_repository(database_url: str | None = None) -> Repository:
 
     parsed = urlparse(url)
 
-    if parsed.scheme == "dynamodb":
+    if parsed.scheme == "dynamodb" or url.startswith("dynamodb://"):
         logger.info("Creating DynamoDB repository")
         return DynamoDBRepository(url)
     if parsed.scheme in ("sqlite", "sqlite+aiosqlite") or url.startswith("sqlite"):
@@ -414,29 +400,12 @@ def create_repository(database_url: str | None = None) -> Repository:
 
 def create_cache(redis_url: str | None = None) -> Cache:
     """Create cache instance based on configuration."""
-    from .config import get_settings
+    from .config import settings
 
-    # Try Redis if configured
-    settings = get_settings()
     url = redis_url or settings.redis_url
     if url:
         logger.info("Creating Redis cache")
-        return RedisCache(url)
+        return RedisCache(url)  # type: ignore[return-value]
 
-    # Default to in-memory cache
     logger.info("Using in-memory cache")
-    return InMemoryCache()
-
-
-# Export public API
-__all__ = [
-    "Cache",
-    "DynamoDBRepository",
-    "InMemoryCache",
-    "RedisCache",
-    "Repository",
-    "SQLiteRepository",
-    "cache_key",
-    "create_cache",
-    "create_repository",
-]
+    return InMemoryCache()  # type: ignore[return-value]

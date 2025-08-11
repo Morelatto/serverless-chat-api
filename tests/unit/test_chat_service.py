@@ -177,7 +177,7 @@ async def test_health_check_all_healthy() -> None:
     service = ChatService(mock_repository, mock_cache, mock_llm_provider)
     result = await service.health_check()
 
-    assert result == {"storage": True, "llm": True}
+    assert result == {"storage": True, "llm": True, "cache": True}
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_health_check_storage_unhealthy() -> None:
     service = ChatService(mock_repository, mock_cache, mock_llm_provider)
     result = await service.health_check()
 
-    assert result == {"storage": False, "llm": True}
+    assert result == {"storage": False, "llm": True, "cache": True}
 
 
 @pytest.mark.asyncio
@@ -211,7 +211,7 @@ async def test_health_check_llm_unhealthy() -> None:
     service = ChatService(mock_repository, mock_cache, mock_llm_provider)
     result = await service.health_check()
 
-    assert result == {"storage": True, "llm": False}
+    assert result == {"storage": True, "llm": False, "cache": True}
 
 
 @pytest.mark.asyncio
@@ -273,7 +273,7 @@ async def test_process_message_with_usage_logging() -> None:
         mock_logger.info.assert_called_once()
         log_call = mock_logger.info.call_args
         assert "Token usage" in str(log_call[0][0])
-        assert log_call[1]["user_id"] == "user123"
+        assert log_call[2]["user_id"] == "user123..."
         assert log_call[1]["model"] == "gpt-4"
         assert log_call[1]["prompt_tokens"] == 15
         assert log_call[1]["completion_tokens"] == 25

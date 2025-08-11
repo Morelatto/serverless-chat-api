@@ -1,61 +1,85 @@
-"""Chat service - Core business logic and models (Python 2025 style)."""
+"""Chat service core business logic and models."""
 
+import re
 import uuid
 from datetime import datetime
+from typing import Any
 
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
-from .exceptions import LLMProviderError, StorageError
+from .exceptions import LLMProviderError, StorageError, ValidationError
 from .providers import LLMProvider
 from .storage import Cache, Repository, cache_key
 from .types import ChatResult, HealthStatus, MessageRecord
 
-# Constants
-USER_ID_LOG_LENGTH = 8  # Characters to show in logs for privacy
+
+def sanitize_user_id(user_id: str) -> str:
+    """Sanitize user ID for safe storage and logging."""
+    if not user_id or not user_id.strip():
+        raise ValidationError("User ID cannot be empty")
+
+    user_id = user_id.strip()
+    sanitized = re.sub(r"[^a-zA-Z0-9._-]", "", user_id)
+
+    if not sanitized:
+        raise ValidationError("User ID contains no valid characters")
+
+    if len(sanitized) < 3:
+        raise ValidationError("User ID must be at least 3 characters")
+
+    return sanitized[:100]
 
 
-# ============== Models ==============
+def sanitize_content(content: str) -> str:
+    """Sanitize and validate message content."""
+    if not content or not content.strip():
+        raise ValidationError("Message content cannot be empty")
+
+    content = content.strip()
+
+    if len(content) > 10000:
+        raise ValidationError("Message content exceeds maximum length (10000 characters)")
+
+    suspicious_patterns = [
+        (r"<script", "Script tags not allowed"),
+        (r"javascript:", "JavaScript URLs not allowed"),
+        (r"data:text/html", "Data URLs not allowed"),
+        (r"\x00", "Null bytes not allowed"),
+    ]
+
+    for pattern, message in suspicious_patterns:
+        if re.search(pattern, content, re.IGNORECASE):
+            logger.warning(f"Suspicious pattern detected: {pattern}")
+            raise ValidationError(message)
+
+    return content
+
+
 class ChatMessage(BaseModel):
     """Input message from user."""
 
-    user_id: str = Field(..., min_length=1, max_length=100)
-    content: str = Field(..., min_length=1, max_length=4000)
+    user_id: str = Field(..., min_length=3, max_length=100)
+    content: str = Field(..., min_length=1, max_length=10000)
 
     @field_validator("user_id", mode="before")
     @classmethod
     def validate_user_id(cls, value: str) -> str:
+        """Validate and sanitize user ID."""
         if not value or not value.strip():
-            msg = "empty_user_id"
-            raise PydanticCustomError(msg, "User ID cannot be empty", {"input": value})
-        if len(value.strip()) > 100:
-            msg = "user_id_too_long"
-            raise PydanticCustomError(
-                msg,
-                "User ID is too long (max 100 characters)",
-                {"length": len(value), "max_length": 100},
-            )
-        return value.strip()
+            raise PydanticCustomError("empty_user_id", "User ID cannot be empty", {"input": value})
+        return sanitize_user_id(value.strip())
 
     @field_validator("content", mode="before")
     @classmethod
     def validate_content(cls, value: str) -> str:
+        """Validate and sanitize content."""
         if not value or not value.strip():
-            msg = "empty_content"
             raise PydanticCustomError(
-                msg,
-                "Message content cannot be empty",
-                {"input": value},
+                "empty_content", "Message content cannot be empty", {"input": value}
             )
-        if len(value.strip()) > 4000:
-            msg = "content_too_long"
-            raise PydanticCustomError(
-                msg,
-                "Message is too long (max 4000 characters)",
-                {"length": len(value), "max_length": 4000},
-            )
-        return value.strip()
+        return sanitize_content(value)
 
 
 class ChatResponse(BaseModel):
@@ -68,9 +92,8 @@ class ChatResponse(BaseModel):
     model: str | None = None
 
 
-# ============== Core Service ==============
 class ChatService:
-    """Chat service handling message processing with injected dependencies."""
+    """Chat service handling message processing."""
 
     def __init__(
         self,
@@ -78,14 +101,7 @@ class ChatService:
         cache: Cache,
         llm_provider: LLMProvider,
     ) -> None:
-        """Initialize chat service with dependencies.
-
-        Args:
-            repository: Storage repository for persistence.
-            cache: Cache instance for response caching.
-            llm_provider: LLM provider for generating responses.
-
-        """
+        """Initialize with injected dependencies."""
         self.repository = repository
         self.cache = cache
         self.llm_provider = llm_provider
@@ -95,44 +111,28 @@ class ChatService:
         user_id: str,
         content: str,
     ) -> ChatResult:
-        """Process a chat message.
+        """Process a chat message with caching and persistence."""
 
-        Args:
-            user_id: User identifier.
-            content: Message content to process.
+        safe_user_id = user_id[:8] + "..." if len(user_id) > 8 else user_id
+        logger.debug("Processing message", extra={"user_id": safe_user_id})
 
-        Returns:
-            Dictionary with message ID, response content, model, and cache status.
-
-        """
-        # Check cache
         key = cache_key(user_id, content)
-        cached = await self.cache.get(key)
+        cached = await self._try_cache_get(key)
         if cached:
-            logger.debug(f"Cache hit for user {user_id[:USER_ID_LOG_LENGTH]}")
-            # Return as ChatResult with usage from cache if available
-            cached_result: ChatResult = {
-                "id": cached.get("id", ""),
-                "content": cached.get("content", ""),
-                "model": cached.get("model", "unknown"),
-                "cached": True,
-                "usage": cached.get("usage", {}),
-            }
-            return cached_result
+            logger.debug("Cache hit", extra={"user_id": safe_user_id})
+            cached["cached"] = True
+            return cached  # type: ignore
 
-        logger.debug(f"Cache miss for user {user_id[:USER_ID_LOG_LENGTH]}")
+        logger.debug("Cache miss", extra={"user_id": safe_user_id})
 
-        # Generate response
         try:
             llm_response = await self.llm_provider.complete(content)
         except LLMProviderError:
-            # Re-raise known provider errors
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during LLM completion: {e}")
+            logger.error(f"Unexpected LLM error: {e}", extra={"user_id": safe_user_id})
             raise LLMProviderError(f"Failed to generate response: {e}") from e
 
-        # Save to database with usage tracking
         message_id = str(uuid.uuid4())
         try:
             await self.repository.save(
@@ -144,19 +144,24 @@ class ChatService:
                 usage=llm_response.usage,
             )
         except Exception as e:
-            logger.error(f"Failed to save message {message_id}: {e}")
-            raise StorageError(f"Failed to save chat message: {e}") from e
+            logger.error(
+                "Failed to save message",
+                extra={"message_id": message_id, "user_id": safe_user_id, "error": str(e)},
+            )
+            raise StorageError(f"Failed to save message: {e}") from e
 
-        # Log token usage for monitoring (structured logging for modern observability tools)
         if llm_response.usage:
             logger.info(
                 "Token usage",
-                user_id=user_id,
-                model=llm_response.model,
-                **llm_response.usage,
+                extra={
+                    "user_id": safe_user_id,
+                    "model": llm_response.model,
+                    "prompt_tokens": llm_response.usage.get("prompt_tokens"),
+                    "completion_tokens": llm_response.usage.get("completion_tokens"),
+                    "total_tokens": llm_response.usage.get("total_tokens"),
+                },
             )
 
-        # Prepare response
         result: ChatResult = {
             "id": message_id,
             "content": llm_response.text,
@@ -165,47 +170,67 @@ class ChatService:
             "usage": llm_response.usage,
         }
 
-        # Cache it (exclude usage from cache)
-        cache_data = {
-            "id": message_id,
-            "content": llm_response.text,
-            "model": llm_response.model,
-            "cached": False,
-        }
-        await self.cache.set(key, cache_data)
+        await self._try_cache_set(key, dict(result))
 
         return result
 
     async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
-        """Get chat history for a user.
-
-        Args:
-            user_id: User identifier.
-            limit: Maximum number of messages to return.
-
-        Returns:
-            List of message dictionaries.
-
-        """
-        return await self.repository.get_history(user_id, limit)  # type: ignore
+        """Retrieve chat history for a user."""
+        return await self.repository.get_history(user_id, limit)
 
     async def health_check(self) -> HealthStatus:
-        """Check health of all system components.
-
-        Returns:
-            Dictionary with health status of each component.
-
-        """
+        """Check health of all components."""
         logger.debug("Performing health checks")
-        storage_ok = await self.repository.health_check()
 
-        llm_ok = False
+        storage_ok = await self._check_storage_health()
+        llm_ok = await self._check_llm_health()
+        cache_ok = await self._check_cache_health()
+
+        return {
+            "storage": storage_ok,
+            "llm": llm_ok,
+            "cache": cache_ok,
+        }
+
+    async def _try_cache_get(self, key: str) -> dict[str, Any] | None:
+        """Try to get from cache with graceful fallback."""
         try:
-            llm_ok = await self.llm_provider.health_check()
-            logger.debug(f"LLM health check: ok={llm_ok}")
+            return await self.cache.get(key)
         except Exception as e:  # noqa: BLE001
-            logger.warning("LLM health check failed: {}", e)
-            llm_ok = False
+            logger.warning(f"Cache get failed (non-critical): {e}")
+            return None
 
-        result: HealthStatus = {"storage": storage_ok, "llm": llm_ok}
-        return result
+    async def _try_cache_set(self, key: str, value: dict[str, Any]) -> None:
+        """Try to set cache with graceful fallback."""
+        try:
+            cache_data = {k: v for k, v in value.items() if k != "usage"}
+            await self.cache.set(key, cache_data)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Cache set failed (non-critical): {e}")
+
+    async def _check_storage_health(self) -> bool:
+        """Check storage health."""
+        try:
+            return await self.repository.health_check()
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Storage health check failed: {e}")
+            return False
+
+    async def _check_llm_health(self) -> bool:
+        """Check LLM provider health."""
+        try:
+            return await self.llm_provider.health_check()
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"LLM health check failed: {e}")
+            return False
+
+    async def _check_cache_health(self) -> bool:
+        """Check cache health."""
+        try:
+            test_key = "__health_check__"
+            await self.cache.set(test_key, {"test": True}, ttl=1)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Cache health check failed: {e}")
+            return False
+        else:
+            return True
