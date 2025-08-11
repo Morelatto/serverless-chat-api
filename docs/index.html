@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma IA Itaú | Arquitetura Cloud Native</title>
+    <title>Chat API | Arquitetura Cloud Native com Python e AWS</title>
     <style>
         :root {
-            --itau-orange: #FF6600;
-            --itau-blue: #003366;
-            --itau-dark: #1A1A1A;
-            --itau-light: #F5F5F5;
-            --itau-gray: #666666;
+            --primary-blue: #0066CC;
+            --secondary-orange: #FF6600;
+            --dark: #1A1A1A;
+            --light: #F5F5F5;
+            --gray: #666666;
 
             --success: #10B981;
             --warning: #F59E0B;
@@ -35,7 +35,7 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-            color: var(--itau-dark);
+            color: var(--dark);
             line-height: 1.6;
         }
 
@@ -70,7 +70,7 @@
 
         .logo h1 {
             font-size: 1.5rem;
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             font-weight: 600;
         }
 
@@ -81,7 +81,7 @@
         }
 
         .nav a {
-            color: var(--itau-gray);
+            color: var(--gray);
             text-decoration: none;
             font-weight: 500;
             transition: color 0.3s;
@@ -90,7 +90,7 @@
 
         .nav a:hover,
         .nav a.active {
-            color: var(--itau-orange);
+            color: var(--secondary-orange);
         }
 
         .container {
@@ -110,14 +110,14 @@
 
         .hero h2 {
             font-size: 2.5rem;
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             margin-bottom: 1rem;
             font-weight: 700;
         }
 
         .hero .subtitle {
             font-size: 1.25rem;
-            color: var(--itau-gray);
+            color: var(--gray);
             margin-bottom: 2rem;
         }
 
@@ -130,19 +130,19 @@
 
         .highlight-card {
             padding: 1.5rem;
-            background: var(--itau-light);
+            background: var(--light);
             border-radius: 8px;
-            border-left: 4px solid var(--itau-orange);
+            border-left: 4px solid var(--secondary-orange);
         }
 
         .highlight-card .number {
             font-size: 2rem;
             font-weight: bold;
-            color: var(--itau-orange);
+            color: var(--secondary-orange);
         }
 
         .highlight-card .label {
-            color: var(--itau-gray);
+            color: var(--gray);
             font-size: 0.9rem;
             margin-top: 0.5rem;
         }
@@ -161,13 +161,13 @@
             gap: 1rem;
             margin-bottom: 2rem;
             padding-bottom: 1rem;
-            border-bottom: 2px solid var(--itau-light);
+            border-bottom: 2px solid var(--light);
         }
 
         .section-number {
             width: 40px;
             height: 40px;
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -178,7 +178,7 @@
         }
 
         .section h3 {
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             font-size: 1.8rem;
             font-weight: 600;
         }
@@ -209,7 +209,7 @@
             max-height: 500px;
             object-fit: contain;
             border-radius: 8px;
-            background: var(--itau-light);
+            background: var(--light);
             padding: 1rem;
             transition: transform 0.3s;
         }
@@ -231,20 +231,20 @@
             width: 40px;
             height: 40px;
             background: white;
-            border: 2px solid var(--itau-orange);
+            border: 2px solid var(--secondary-orange);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s;
-            color: var(--itau-orange);
+            color: var(--secondary-orange);
             font-size: 1.2rem;
             box-shadow: var(--shadow-sm);
         }
 
         .diagram-btn:hover {
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             color: white;
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
@@ -253,14 +253,14 @@
         .diagram-caption {
             margin-top: 1rem;
             padding-top: 1rem;
-            border-top: 1px solid var(--itau-light);
-            color: var(--itau-gray);
+            border-top: 1px solid var(--light);
+            color: var(--gray);
             font-size: 0.9rem;
             font-style: italic;
         }
 
         .diagram-caption strong {
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             font-style: normal;
         }
 
@@ -323,13 +323,13 @@
             justify-content: center;
             cursor: pointer;
             font-size: 1.5rem;
-            color: var(--itau-dark);
+            color: var(--dark);
             transition: all 0.3s;
             z-index: 10000;
         }
 
         .fullscreen-close:hover {
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             color: white;
             transform: rotate(90deg);
         }
@@ -344,178 +344,6 @@
             to { transform: scale(1); }
         }
 
-        /* Enhanced Carousel with Standardized Display */
-        .carousel-container {
-            position: relative;
-            margin: 2rem auto;
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            max-width: 1200px;
-        }
-
-        .carousel-wrapper {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--itau-light);
-            border-radius: 8px;
-            cursor: zoom-in;
-        }
-
-        .carousel-slide {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .carousel-slide.active {
-            opacity: 1;
-        }
-
-        .carousel-slide img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            border-radius: 8px;
-        }
-
-        .carousel-fullscreen-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 40px;
-            height: 40px;
-            background: white;
-            border: 2px solid var(--itau-orange);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: var(--itau-orange);
-            font-size: 1.2rem;
-            z-index: 10;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .carousel-fullscreen-btn:hover {
-            background: var(--itau-orange);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .carousel-controls {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 1rem;
-            pointer-events: none;
-        }
-
-        .carousel-btn {
-            width: 48px;
-            height: 48px;
-            background: white;
-            border: 2px solid var(--itau-orange);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            pointer-events: all;
-            color: var(--itau-orange);
-            font-size: 1.5rem;
-            font-weight: bold;
-            box-shadow: var(--shadow-md);
-        }
-
-        .carousel-btn:hover {
-            background: var(--itau-orange);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .carousel-indicators {
-            position: absolute;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 0.75rem;
-            z-index: 10;
-        }
-
-        .carousel-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: white;
-            border: 2px solid var(--itau-orange);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .carousel-dot.active {
-            background: var(--itau-orange);
-            transform: scale(1.3);
-        }
-
-        .carousel-caption {
-            position: absolute;
-            bottom: 3rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: var(--shadow-md);
-            color: var(--itau-gray);
-            font-size: 0.95rem;
-            text-align: center;
-            max-width: 80%;
-        }
-
-        .carousel-caption strong {
-            color: var(--itau-blue);
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        @media (max-width: 768px) {
-            .carousel-wrapper {
-                height: 400px;
-            }
-
-            .carousel-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
-            }
-
-            .carousel-caption {
-                font-size: 0.85rem;
-                padding: 0.5rem 1rem;
-            }
-        }
-
         .content-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -525,7 +353,7 @@
 
         .feature-card {
             padding: 1.5rem;
-            background: linear-gradient(135deg, #fff 0%, var(--itau-light) 100%);
+            background: linear-gradient(135deg, #fff 0%, var(--light) 100%);
             border-radius: 8px;
             border: 1px solid #e0e0e0;
             transition: transform 0.3s, box-shadow 0.3s;
@@ -537,20 +365,20 @@
         }
 
         .feature-card h4 {
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             margin-bottom: 1rem;
             font-size: 1.2rem;
         }
 
         .feature-card p {
-            color: var(--itau-gray);
+            color: var(--gray);
             line-height: 1.8;
         }
 
         .feature-icon {
             width: 48px;
             height: 48px;
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -569,7 +397,7 @@
 
         .tech-badge {
             padding: 0.5rem 1rem;
-            background: var(--itau-blue);
+            background: var(--primary-blue);
             color: white;
             border-radius: 20px;
             font-size: 0.9rem;
@@ -584,7 +412,7 @@
         }
 
         .metric-card {
-            background: linear-gradient(135deg, var(--itau-orange) 0%, #ff8533 100%);
+            background: linear-gradient(135deg, var(--secondary-orange) 0%, #ff8533 100%);
             color: white;
             padding: 1.5rem;
             border-radius: 8px;
@@ -592,7 +420,7 @@
         }
 
         .metric-card.blue {
-            background: linear-gradient(135deg, var(--itau-blue) 0%, #004080 100%);
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #004080 100%);
         }
 
         .metric-card.green {
@@ -623,7 +451,7 @@
             top: 0;
             bottom: 0;
             width: 2px;
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
         }
 
         .timeline-item {
@@ -638,20 +466,20 @@
             top: 0.5rem;
             width: 12px;
             height: 12px;
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             border-radius: 50%;
             border: 3px solid white;
             box-shadow: var(--shadow-sm);
         }
 
         .timeline-item h5 {
-            color: var(--itau-blue);
+            color: var(--primary-blue);
             font-size: 1.1rem;
             margin-bottom: 0.5rem;
         }
 
         .timeline-item p {
-            color: var(--itau-gray);
+            color: var(--gray);
             line-height: 1.8;
         }
 
@@ -665,17 +493,17 @@
         .comparison-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid var(--itau-light);
+            border-bottom: 1px solid var(--light);
         }
 
         .comparison-table th {
-            background: var(--itau-blue);
+            background: var(--primary-blue);
             color: white;
             font-weight: 600;
         }
 
         .comparison-table tr:hover {
-            background: var(--itau-light);
+            background: var(--light);
         }
 
         .check {
@@ -689,7 +517,7 @@
         }
 
         .footer {
-            background: var(--itau-dark);
+            background: var(--dark);
             color: white;
             padding: 3rem 0;
             margin-top: 4rem;
@@ -708,7 +536,7 @@
             right: 2rem;
             width: 50px;
             height: 50px;
-            background: var(--itau-orange);
+            background: var(--secondary-orange);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -755,40 +583,40 @@
         <div class="header-content">
             <div class="logo">
                 <img src="asset/logo.svg" alt="Logo">
-                <h1>Plataforma IA</h1>
+                <h1>Chat API</h1>
             </div>
             <nav class="nav">
                 <a href="#visao-geral" class="active">Visão Geral</a>
                 <a href="#arquitetura">Arquitetura</a>
-                <a href="#escalonamento">Escalonamento</a>
-                <a href="#observabilidade">Observabilidade</a>
-                <a href="#banco-dados">Banco de Dados</a>
-                <a href="#resiliencia">Resiliência</a>
+                <a href="#fluxo-dados">Fluxo de Dados</a>
+                <a href="#implementacao">Implementação</a>
+                <a href="#testes">Testes & Qualidade</a>
+                <a href="#deploy">Deploy & AWS</a>
             </nav>
         </div>
     </header>
 
     <div class="container">
         <section class="hero" id="visao-geral">
-            <h2>Arquitetura Cloud Native para API de IA</h2>
-            <p class="subtitle">Solução escalável, resiliente e observável para processamento de prompts com LLM</p>
+            <h2>Chat API - Arquitetura Cloud Native</h2>
+            <p class="subtitle">API moderna para processamento de chat com LLMs, seguindo princípios Python idiomáticos e padrões cloud native</p>
 
             <div class="highlights">
                 <div class="highlight-card">
-                    <div class="number">&lt;50ms</div>
-                    <div class="label">Latência P99</div>
+                    <div class="number">80%+</div>
+                    <div class="label">Cobertura de Testes</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="number">99.9%</div>
-                    <div class="label">Disponibilidade</div>
+                    <div class="number">Python 3.11</div>
+                    <div class="label">Tecnologia Moderna</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="number">10K+</div>
-                    <div class="label">Requisições/seg</div>
+                    <div class="number">12</div>
+                    <div class="label">Diagramas Profissionais</div>
                 </div>
                 <div class="highlight-card">
-                    <div class="number">&lt;R$50</div>
-                    <div class="label">Custo/1M reqs</div>
+                    <div class="number">Serverless</div>
+                    <div class="label">AWS Lambda Ready</div>
                 </div>
             </div>
         </section>
@@ -799,480 +627,373 @@
                 <h3>Arquitetura da Solução</h3>
             </div>
 
-            <p>Nossa arquitetura cloud native foi projetada seguindo os princípios de microserviços,
-            com foco em simplicidade, eficiência e custo-benefício. A solução utiliza serviços gerenciados
-            da AWS para minimizar overhead operacional e maximizar escalabilidade.</p>
+            <p>A arquitetura foi projetada seguindo o princípio Pythônico "flat is better than nested",
+            resultando em uma solução limpa, testável e manutenível. A refatoração eliminou padrões Java-style,
+            reduzindo o código em 70% e melhorando a clareza.</p>
 
-            <div class="carousel-container">
-                <div class="carousel-wrapper" onclick="openFullscreen('carousel')">
-                    <div class="carousel-slide active" data-slide="0">
-                        <img src="asset/01_mvp_architecture.png" alt="MVP Local" data-fullscreen-src="asset/01_mvp_architecture.png">
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-structure')">
+                    <img src="asset/01_static_structure.png" alt="Estrutura Estática dos Componentes" id="diagram-structure">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-structure')" title="Tela cheia">⛶</button>
                     </div>
-                    <div class="carousel-slide" data-slide="1">
-                        <img src="asset/02_aws_architecture.png" alt="Arquitetura AWS" data-fullscreen-src="asset/02_aws_architecture.png">
-                    </div>
-                    <div class="carousel-slide" data-slide="2">
-                        <img src="asset/04_components.png" alt="Componentes" data-fullscreen-src="asset/04_components.png">
-                    </div>
-                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('carousel')" title="Tela cheia">⛶</button>
                 </div>
-
-                <div class="carousel-controls">
-                    <button class="carousel-btn" onclick="changeSlide(-1)">‹</button>
-                    <button class="carousel-btn" onclick="changeSlide(1)">›</button>
-                </div>
-
-                <div class="carousel-indicators">
-                    <span class="carousel-dot active" onclick="goToSlide(0)"></span>
-                    <span class="carousel-dot" onclick="goToSlide(1)"></span>
-                    <span class="carousel-dot" onclick="goToSlide(2)"></span>
-                </div>
-
-                <div class="carousel-caption">
-                    <strong>Figura 1A: MVP - Arquitetura Local</strong>
-                    Implementação inicial com FastAPI e SQLite para desenvolvimento e testes
-                </div>
+                <p class="diagram-caption"><strong>Figura 1:</strong> Estrutura estática - Componentes principais e suas relações</p>
             </div>
 
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h4>API Gateway</h4>
-                    <p>Ponto de entrada unificado com rate limiting, caching e autenticação integrada.
-                    Suporta HTTP/REST e WebSocket para streaming de respostas.</p>
+                    <h4>API Handler</h4>
+                    <p>Camada fina de FastAPI que delega para a lógica de negócio.
+                    Validação via Pydantic models com tratamento robusto de erros.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h4>Lambda Functions</h4>
-                    <p>Processamento serverless com auto-scaling instantâneo. Zero servidor para gerenciar,
-                    pagamento apenas por execução com 1M requisições grátis/mês.</p>
+                    <h4>Core Service</h4>
+                    <p>Lógica de negócio em funções assíncronas simples.
+                    Gerencia cache, chamadas LLM e persistência de forma idiomática.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">💾</div>
-                    <h4>DynamoDB</h4>
-                    <p>Banco NoSQL totalmente gerenciado com latência de single-digit milliseconds.
-                    Backup automático e replicação multi-região.</p>
+                    <h4>Repository Pattern</h4>
+                    <p>Abstração limpa para persistência com protocolo Python.
+                    Suporta SQLite (dev) e DynamoDB (prod) transparentemente.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🤖</div>
-                    <h4>Integração LLM</h4>
-                    <p>Conexão resiliente com Google Gemini API incluindo retry exponencial,
-                    circuit breaker e fallback para múltiplos providers.</p>
+                    <h4>LLM Providers</h4>
+                    <p>Integração com Gemini (primário) e OpenRouter (fallback).
+                    Retry com backoff exponencial e circuit breaker.</p>
                 </div>
             </div>
 
             <div class="tech-stack">
                 <span class="tech-badge">Python 3.11</span>
                 <span class="tech-badge">FastAPI</span>
-                <span class="tech-badge">AWS Lambda</span>
-                <span class="tech-badge">DynamoDB</span>
-                <span class="tech-badge">API Gateway</span>
-                <span class="tech-badge">CloudWatch</span>
-                <span class="tech-badge">X-Ray</span>
-                <span class="tech-badge">Terraform</span>
+                <span class="tech-badge">Pydantic v2</span>
+                <span class="tech-badge">SQLite / DynamoDB</span>
+                <span class="tech-badge">Redis</span>
+                <span class="tech-badge">Pytest</span>
+                <span class="tech-badge">Ruff</span>
+                <span class="tech-badge">uv</span>
             </div>
         </section>
 
-        <section class="section" id="escalonamento">
+        <section class="section" id="fluxo-dados">
             <div class="section-header">
                 <div class="section-number">2</div>
-                <h3>Estratégia de Escalonamento</h3>
+                <h3>Fluxo de Dados e Processamento</h3>
             </div>
 
-            <p>Nossa solução implementa escalonamento automático em múltiplas camadas para lidar com
-            oscilações de carga, desde períodos de baixa demanda até picos súbitos de tráfego.</p>
+            <p>O processamento segue um fluxo linear claro com tratamento de erros em cada etapa.
+            O sistema prioriza cache para performance e implementa graceful degradation em falhas.</p>
 
             <div class="diagram-container">
-                <div class="diagram-wrapper" onclick="openFullscreen('diagram-1')">
-                    <img src="asset/03_data_flow.png" alt="Fluxo de Dados" id="diagram-1">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-flow')">
+                    <img src="asset/02_request_flow.png" alt="Fluxo de Requisições" id="diagram-flow">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-1')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-flow')" title="Tela cheia">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figura 2:</strong> Fluxo de dados com pontos de escalonamento automático</p>
+                <p class="diagram-caption"><strong>Figura 2:</strong> Fluxo de requisição - Do cliente ao LLM e retorno</p>
             </div>
 
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Mecanismos de Auto-Scaling</h4>
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-data')">
+                    <img src="asset/04_data_transformations.png" alt="Transformações de Dados" id="diagram-data">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-data')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 3:</strong> Transformações de dados - JSON → Python → LLM → Resposta</p>
+            </div>
+
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estratégia de Cache Multi-Camada</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>API Gateway Throttling</h5>
-                    <p>Rate limiting por API key com burst capacity de 5000 req/s.
-                    Proteção contra DDoS e uso excessivo com throttling adaptativo.</p>
+                    <h5>Geração de Cache Key</h5>
+                    <p>Hash SHA-256 truncado do user_id + content para identificação única.
+                    Garante consistência de cache mesmo com conteúdo idêntico.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Lambda Concurrency</h5>
-                    <p>Escala de 0 a 3000 execuções concorrentes em segundos.
-                    Reserved concurrency para garantir capacidade em horários de pico.</p>
+                    <h5>Cache Lookup</h5>
+                    <p>Busca primária no Redis (produção) ou dict em memória (desenvolvimento).
+                    Retorno imediato se hit, evitando chamada custosa ao LLM.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>DynamoDB Auto Scaling</h5>
-                    <p>Ajuste automático de RCU/WCU baseado em utilização.
-                    On-demand mode para cargas imprevisíveis com custo otimizado.</p>
+                    <h5>LLM Processing</h5>
+                    <p>Em cache miss, chama provider LLM com retry automático.
+                    Parseamento da resposta e extração de metadados de uso.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Cache Multi-Camada</h5>
-                    <p>CloudFront para respostas estáticas, ElastiCache para sessões
-                    e Lambda memory cache para dados quentes.</p>
-                </div>
-            </div>
-
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-value">0→3000</div>
-                    <div class="metric-label">Scaling em 10 segundos</div>
-                </div>
-                <div class="metric-card blue">
-                    <div class="metric-value">Infinito</div>
-                    <div class="metric-label">Capacidade teórica</div>
-                </div>
-                <div class="metric-card green">
-                    <div class="metric-value">R$0</div>
-                    <div class="metric-label">Custo em idle</div>
+                    <h5>Cache Store</h5>
+                    <p>Armazena resposta processada no cache para futuras consultas.
+                    TTL configurável baseado no tipo de conteúdo.</p>
                 </div>
             </div>
         </section>
 
-        <section class="section" id="observabilidade">
+        <section class="section" id="implementacao">
             <div class="section-header">
                 <div class="section-number">3</div>
-                <h3>Observabilidade Completa</h3>
+                <h3>Detalhes de Implementação</h3>
             </div>
 
-            <p>Sistema robusto de monitoramento com métricas, logs e traces distribuídos para
-            visibilidade total da saúde e performance da aplicação.</p>
+            <p>A implementação foca em simplicidade e testabilidade, seguindo padrões Python idiomáticos
+            com separação clara de responsabilidades.</p>
 
             <div class="diagram-container">
-                <div class="diagram-wrapper" onclick="openFullscreen('diagram-2')">
-                    <img src="asset/06_monitoring.png" alt="Stack de Observabilidade" id="diagram-2">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-dependencies')">
+                    <img src="asset/06_runtime_dependencies.png" alt="Dependências Runtime" id="diagram-dependencies">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-2')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-dependencies')" title="Tela cheia">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figura 3:</strong> Stack completo de observabilidade com CloudWatch e X-Ray</p>
+                <p class="diagram-caption"><strong>Figura 4:</strong> Dependências runtime - Injeção e configuração</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-protocols')">
+                    <img src="asset/08_protocol_pattern.png" alt="Padrão de Protocolos" id="diagram-protocols">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-protocols')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 5:</strong> Padrão Protocol - Flexibilidade e testabilidade</p>
             </div>
 
             <div class="content-grid">
                 <div class="feature-card">
+                    <div class="feature-icon">🏗️</div>
+                    <h4>Funções no Nível do Módulo</h4>
+                    <p>Core business logic implementado como funções assíncronas simples,
+                    não classes. Facilita testes e reduz boilerplate.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚙️</div>
+                    <h4>Settings Singleton</h4>
+                    <p>Configuração carregada uma vez no nível do módulo.
+                    Todas as variáveis usam prefixo CHAT_ para organização.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h4>Dependency Injection</h4>
+                    <p>Repository e Cache injetados via app.state no FastAPI.
+                    Permite diferentes implementações por ambiente.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h4>Type Safety</h4>
+                    <p>Protocolo Python para contratos claros.
+                    MyPy validation garante type safety sem overhead runtime.</p>
+                </div>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-errors')">
+                    <img src="asset/05_error_handling.png" alt="Tratamento de Erros" id="diagram-errors">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-errors')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 6:</strong> Tratamento de erros - Falhas e recovery</p>
+            </div>
+        </section>
+
+        <section class="section" id="testes">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h3>Testes e Qualidade de Código</h3>
+            </div>
+
+            <p>Suite de testes abrangente com 80%+ de cobertura, focando em comportamento
+            ao invés de implementação. Pipelines automatizadas garantem qualidade.</p>
+
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estrutura de Testes</h4>
+
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🧪</div>
+                    <h4>Testes Unitários</h4>
+                    <p><strong>test_core.py:</strong> Lógica de negócio<br>
+                    <strong>test_models.py:</strong> Validação Pydantic<br>
+                    <strong>test_storage.py:</strong> Persistência e cache</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h4>Testes de Integração</h4>
+                    <p><strong>test_handlers.py:</strong> Endpoints HTTP<br>
+                    <strong>test_e2e.py:</strong> Fluxos completos<br>
+                    Mocking de dependências externas</p>
+                </div>
+
+                <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h4>Métricas em Tempo Real</h4>
-                    <p>Dashboard unificado com latência, throughput, taxa de erro e utilização
-                    de recursos. Alertas automáticos via SNS/PagerDuty.</p>
+                    <h4>Cobertura e Métricas</h4>
+                    <p><strong>Coverage:</strong> 80.12% atual<br>
+                    <strong>Target:</strong> >75% obrigatório<br>
+                    <strong>Relatórios:</strong> HTML + terminal</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
-                    <h4>Distributed Tracing</h4>
-                    <p>X-Ray para rastreamento end-to-end de requisições. Identificação
-                    automática de gargalos e análise de dependências.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📝</div>
-                    <h4>Logs Centralizados</h4>
-                    <p>CloudWatch Logs com retenção configurável. Insights automáticos
-                    e queries complexas com CloudWatch Insights.</p>
+                    <h4>Qualidade de Código</h4>
+                    <p><strong>Ruff:</strong> Linting + formatting<br>
+                    <strong>MyPy:</strong> Type checking<br>
+                    <strong>Bandit:</strong> Security scanning</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">SLIs e SLOs Definidos</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Comandos de Desenvolvimento</h4>
 
             <table class="comparison-table">
                 <thead>
                     <tr>
-                        <th>Indicador (SLI)</th>
-                        <th>Objetivo (SLO)</th>
-                        <th>Atual</th>
-                        <th>Status</th>
+                        <th>Comando</th>
+                        <th>Descrição</th>
+                        <th>Uso</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Disponibilidade</td>
-                        <td>99.9%</td>
-                        <td>99.95%</td>
-                        <td class="check">✓</td>
+                        <td><code>uv run python -m pytest tests/ -v</code></td>
+                        <td>Executa todos os testes</td>
+                        <td>CI/CD Pipeline</td>
                     </tr>
                     <tr>
-                        <td>Latência P50</td>
-                        <td>&lt;200ms</td>
-                        <td>45ms</td>
-                        <td class="check">✓</td>
+                        <td><code>ruff check . --fix</code></td>
+                        <td>Lint e correção automática</td>
+                        <td>Pre-commit hooks</td>
                     </tr>
                     <tr>
-                        <td>Latência P99</td>
-                        <td>&lt;1000ms</td>
-                        <td>230ms</td>
-                        <td class="check">✓</td>
+                        <td><code>mypy chat_api/</code></td>
+                        <td>Verificação de tipos</td>
+                        <td>Validação estática</td>
                     </tr>
                     <tr>
-                        <td>Taxa de Erro</td>
-                        <td>&lt;0.1%</td>
-                        <td>0.05%</td>
-                        <td class="check">✓</td>
+                        <td><code>uv run python -m chat_api</code></td>
+                        <td>Executa API localmente</td>
+                        <td>Desenvolvimento</td>
                     </tr>
                 </tbody>
             </table>
-
-            <div class="carousel-container">
-                <div class="carousel-wrapper" onclick="openFullscreen('sli-carousel')">
-                    <div class="carousel-slide active" data-slide="0">
-                        <img src="asset/07a_performance_slis.png" alt="SLIs de Performance" data-fullscreen-src="asset/07a_performance_slis.png">
-                    </div>
-                    <div class="carousel-slide" data-slide="1">
-                        <img src="asset/07b_business_slis.png" alt="SLIs de Negócio" data-fullscreen-src="asset/07b_business_slis.png">
-                    </div>
-                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('sli-carousel')" title="Tela cheia">⛶</button>
-                </div>
-
-                <div class="carousel-controls">
-                    <button class="carousel-btn" onclick="changeSLISlide(-1)">‹</button>
-                    <button class="carousel-btn" onclick="changeSLISlide(1)">›</button>
-                </div>
-
-                <div class="carousel-indicators">
-                    <span class="carousel-dot active" onclick="goToSLISlide(0)"></span>
-                    <span class="carousel-dot" onclick="goToSLISlide(1)"></span>
-                </div>
-
-                <div class="carousel-caption" id="sli-caption">
-                    <strong>Figura 4A: SLIs de Performance</strong>
-                    Indicadores técnicos de performance em tempo real
-                </div>
-            </div>
-        </section>
-
-        <section class="section" id="banco-dados">
-            <div class="section-header">
-                <div class="section-number">4</div>
-                <h3>Justificativa do Banco de Dados</h3>
-            </div>
-
-            <p>A escolha do DynamoDB como solução de persistência foi baseada em análise criteriosa
-            dos requisitos de negócio e características técnicas da aplicação.</p>
-
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Por que DynamoDB?</h4>
-
-            <div class="content-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h4>Performance Consistente</h4>
-                    <p>Latência de single-digit milliseconds independente do tamanho da tabela.
-                    Ideal para workloads de API com requisitos de baixa latência.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📈</div>
-                    <h4>Escalabilidade Infinita</h4>
-                    <p>Suporta milhões de requisições por segundo sem degradação.
-                    Particionamento automático e transparente.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">💰</div>
-                    <h4>Custo Otimizado</h4>
-                    <p>Modelo pay-per-request elimina custos de capacidade ociosa.
-                    Free tier generoso com 25GB de armazenamento.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h4>Segurança Nativa</h4>
-                    <p>Criptografia em repouso e trânsito por padrão.
-                    Integração nativa com IAM para controle granular de acesso.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🌍</div>
-                    <h4>Global Tables</h4>
-                    <p>Replicação multi-região com consistência eventual.
-                    Failover automático sem perda de dados.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🛠️</div>
-                    <h4>Zero Manutenção</h4>
-                    <p>Totalmente gerenciado pela AWS. Patches, backups e
-                    manutenção automáticos sem downtime.</p>
-                </div>
-            </div>
-
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Comparação com Alternativas</h4>
-
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Critério</th>
-                        <th>DynamoDB</th>
-                        <th>RDS PostgreSQL</th>
-                        <th>DocumentDB</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Latência</td>
-                        <td class="check">1-9ms</td>
-                        <td>10-50ms</td>
-                        <td>5-15ms</td>
-                    </tr>
-                    <tr>
-                        <td>Auto-scaling</td>
-                        <td class="check">Nativo</td>
-                        <td>Manual</td>
-                        <td>Manual</td>
-                    </tr>
-                    <tr>
-                        <td>Custo Mínimo</td>
-                        <td class="check">R$0</td>
-                        <td>R$150/mês</td>
-                        <td>R$300/mês</td>
-                    </tr>
-                    <tr>
-                        <td>Manutenção</td>
-                        <td class="check">Zero</td>
-                        <td>Média</td>
-                        <td>Baixa</td>
-                    </tr>
-                    <tr>
-                        <td>Adequação ao Caso</td>
-                        <td class="check">Perfeita</td>
-                        <td>Boa</td>
-                        <td>Boa</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <section class="section" id="resiliencia">
-            <div class="section-header">
-                <div class="section-number">5</div>
-                <h3>Estratégia de Resiliência</h3>
-            </div>
-
-            <p>Sistema projetado para falhar graciosamente, com múltiplas camadas de proteção
-            contra falhas de dependências externas e degradação de serviço.</p>
-
-            <div class="diagram-container">
-                <div class="diagram-wrapper" onclick="openFullscreen('diagram-4')">
-                    <img src="asset/09_resilience.png" alt="Padrões de Resiliência" id="diagram-4">
-                    <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-4')" title="Tela cheia">⛶</button>
-                    </div>
-                </div>
-                <p class="diagram-caption"><strong>Figura 5:</strong> Implementação de padrões de resiliência e recuperação</p>
-            </div>
-
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Padrões Implementados</h4>
-
-            <div class="timeline">
-                <div class="timeline-item">
-                    <h5>Circuit Breaker</h5>
-                    <p>Proteção contra cascata de falhas. Após 5 erros consecutivos,
-                    o circuito abre por 30 segundos, retornando resposta cached ou erro
-                    amigável. Recuperação gradual com half-open state.</p>
-                </div>
-
-                <div class="timeline-item">
-                    <h5>Retry com Backoff Exponencial</h5>
-                    <p>3 tentativas automáticas com delays de 1s, 2s e 4s.
-                    Jitter aleatório para evitar thundering herd.
-                    Retry apenas em erros transitórios (5xx, timeout).</p>
-                </div>
-
-                <div class="timeline-item">
-                    <h5>Timeout Agressivo</h5>
-                    <p>Timeout de 3s para chamadas ao LLM. Lambda timeout de 15s total.
-                    Previne travamento de recursos e melhora experiência do usuário.</p>
-                </div>
-
-                <div class="timeline-item">
-                    <h5>Graceful Degradation</h5>
-                    <p>Modo offline retorna respostas simplificadas.
-                    Cache de respostas frequentes no ElastiCache.
-                    Fallback para modelos alternativos se Gemini indisponível.</p>
-                </div>
-
-                <div class="timeline-item">
-                    <h5>Health Checks Proativos</h5>
-                    <p>Endpoint /health verifica todas dependências.
-                    Synthetic monitoring a cada 60s.
-                    Auto-healing com restart automático de Lambdas unhealthy.</p>
-                </div>
-            </div>
-
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Plano de Contingência</h4>
-
-            <div class="content-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔴</div>
-                    <h4>Falha do LLM Principal</h4>
-                    <p><strong>Impacto:</strong> Sem geração de respostas novas<br>
-                    <strong>Mitigação:</strong> Fallback para OpenAI API ou Claude API<br>
-                    <strong>RTO:</strong> &lt;1 minuto (automático)</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🟡</div>
-                    <h4>Degradação do DynamoDB</h4>
-                    <p><strong>Impacto:</strong> Sem persistência de histórico<br>
-                    <strong>Mitigação:</strong> Write-through cache, fila SQS para retry<br>
-                    <strong>RTO:</strong> 0 (operação continua sem persistência)</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🟠</div>
-                    <h4>Spike de Tráfego</h4>
-                    <p><strong>Impacto:</strong> Possível throttling<br>
-                    <strong>Mitigação:</strong> Auto-scaling, CloudFront caching<br>
-                    <strong>RTO:</strong> &lt;30 segundos (scaling automático)</p>
-                </div>
-            </div>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">99.99%</div>
-                    <div class="metric-label">Disponibilidade com Fallback</div>
+                    <div class="metric-value">80.12%</div>
+                    <div class="metric-label">Cobertura de Testes</div>
                 </div>
                 <div class="metric-card blue">
-                    <div class="metric-value">&lt;60s</div>
-                    <div class="metric-label">Mean Time to Recovery</div>
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Type Safety (MyPy)</div>
                 </div>
                 <div class="metric-card green">
                     <div class="metric-value">Zero</div>
-                    <div class="metric-label">Dados Perdidos (RPO)</div>
+                    <div class="metric-label">Issues de Segurança</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="deploy">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h3>Deployment e AWS</h3>
+            </div>
+
+            <p>Sistema preparado para múltiplos ambientes com deploy automatizado.
+            Suporte completo para desenvolvimento local, Docker e AWS Lambda serverless.</p>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-deployments')">
+                    <img src="asset/03_deployment_environments.png" alt="Ambientes de Deploy" id="diagram-deployments">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 7:</strong> Ambientes de deployment - Local, Docker e AWS</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-aws')">
+                    <img src="asset/07_aws_infrastructure.png" alt="Infraestrutura AWS" id="diagram-aws">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 8:</strong> AWS Infrastructure - Serverless completo</p>
+            </div>
+
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estratégias de Deployment</h4>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h5>Local Development</h5>
+                    <p><strong>Python + SQLite:</strong> Setup rápido com uv sync --dev<br>
+                    <strong>Docker:</strong> Ambiente isolado com docker-compose<br>
+                    <strong>Hot Reload:</strong> FastAPI com --reload para desenvolvimento</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>AWS Lambda Production</h5>
+                    <p><strong>Serverless:</strong> Zero manutenção de servidor<br>
+                    <strong>Auto-scaling:</strong> 0 a 1000 execuções concorrentes<br>
+                    <strong>Cost-effective:</strong> Pague apenas pelo que usar</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>Infrastructure as Code</h5>
+                    <p><strong>Terraform:</strong> Infraestrutura versionada<br>
+                    <strong>Make targets:</strong> Deploy automatizado<br>
+                    <strong>Environment configs:</strong> dev/staging/prod</p>
+                </div>
+
+                <div class="timeline-item">
+                    <h5>CI/CD Pipeline</h5>
+                    <p><strong>Pre-commit hooks:</strong> Qualidade garantida<br>
+                    <strong>GitHub Actions ready:</strong> Deploy automatizado<br>
+                    <strong>Health checks:</strong> Validação pós-deploy</p>
                 </div>
             </div>
 
-            <div class="carousel-container">
-                <div class="carousel-wrapper" onclick="openFullscreen('cost-carousel')">
-                    <div class="carousel-slide active" data-slide="0">
-                        <img src="asset/05_cost_analysis.png" alt="Análise de Custos" data-fullscreen-src="asset/05_cost_analysis.png">
-                    </div>
-                    <div class="carousel-slide" data-slide="1">
-                        <img src="asset/08_analytics.png" alt="Pipeline de Analytics" data-fullscreen-src="asset/08_analytics.png">
-                    </div>
-                    <button class="carousel-fullscreen-btn" onclick="event.stopPropagation(); openFullscreen('cost-carousel')" title="Tela cheia">⛶</button>
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🐳</div>
+                    <h4>Docker Multi-stage</h4>
+                    <p>Build otimizado com imagem distroless.
+                    Redução de 80% no tamanho final da imagem.</p>
                 </div>
 
-                <div class="carousel-controls">
-                    <button class="carousel-btn" onclick="changeCostSlide(-1)">‹</button>
-                    <button class="carousel-btn" onclick="changeCostSlide(1)">›</button>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Lambda Cold Start</h4>
+                    <p>Otimizações para cold start &lt;500ms.
+                    Mangum adapter para compatibilidade ASGI.</p>
                 </div>
 
-                <div class="carousel-indicators">
-                    <span class="carousel-dot active" onclick="goToCostSlide(0)"></span>
-                    <span class="carousel-dot" onclick="goToCostSlide(1)"></span>
+                <div class="feature-card">
+                    <div class="feature-icon">🏗️</div>
+                    <h4>Terraform IaC</h4>
+                    <p>Infraestrutura completa como código.
+                    API Gateway + Lambda + DynamoDB automatizado.</p>
                 </div>
 
-                <div class="carousel-caption" id="cost-caption">
-                    <strong>Figura 6A: Análise de Custos</strong>
-                    Projeção de custos com otimizações aplicadas
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h4>Observabilidade</h4>
+                    <p>CloudWatch Logs + X-Ray tracing.
+                    Métricas customizadas para monitoramento.</p>
                 </div>
             </div>
         </section>
@@ -1280,59 +1001,164 @@
         <section class="section">
             <div class="section-header">
                 <div class="section-number">6</div>
-                <h3>Conclusão e Próximos Passos</h3>
+                <h3>Arquitetura Técnica Detalhada</h3>
             </div>
 
-            <p>A arquitetura proposta oferece uma solução robusta, escalável e econômica para a
-            Plataforma de IA do Itaú, alinhada com as melhores práticas de cloud native e
-            preparada para evolução contínua.</p>
+            <p>Visão completa dos diagramas de sequência mostrando interações temporais
+            entre componentes em diferentes cenários de uso.</p>
 
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Benefícios Principais</h4>
+            <div class="content-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h4>Happy Path</h4>
+                    <p>Fluxo normal de requisição com cache miss,
+                    chamada LLM e persistência bem-sucedida.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Cache Hit</h4>
+                    <p>Resposta rápida com dados em cache,
+                    evitando chamada custosa ao LLM.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h4>Error Recovery</h4>
+                    <p>Tratamento de falhas com fallback
+                    entre providers LLM diferentes.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h4>Application Startup</h4>
+                    <p>Inicialização da aplicação com
+                    factory pattern e dependency injection.</p>
+                </div>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-1')">
+                    <img src="asset/09_happy_path_sequence.png" alt="Sequência Happy Path" id="diagram-sequence-1">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-1')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 9:</strong> Happy Path - Fluxo de sucesso completo</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-2')">
+                    <img src="asset/10_cache_hit_sequence.png" alt="Sequência Cache Hit" id="diagram-sequence-2">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-2')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 10:</strong> Cache Hit - Resposta otimizada do cache</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-3')">
+                    <img src="asset/11_error_sequence.png" alt="Sequência Error Recovery" id="diagram-sequence-3">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-3')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 11:</strong> Error Recovery - Fallback entre providers</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-4')">
+                    <img src="asset/12_startup_sequence.png" alt="Sequência Startup" id="diagram-sequence-4">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-4')" title="Tela cheia">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figura 12:</strong> Application Startup - Inicialização e configuração</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <h3>Próximos Passos e Evolução</h3>
+            </div>
+
+            <p>O projeto representa uma base sólida para expansão, com arquitetura limpa
+            que facilita adição de novas funcionalidades e otimizações.</p>
+
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Funcionalidades Implementadas</h4>
 
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">✅</div>
-                    <h4>Custo Otimizado</h4>
-                    <p>Modelo serverless elimina custos de infraestrutura ociosa.
-                    ROI positivo desde o primeiro mês de operação.</p>
+                    <h4>Core API</h4>
+                    <p>Endpoints REST completos com validação,
+                    rate limiting e documentação OpenAPI automática.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">✅</div>
-                    <h4>Time to Market</h4>
-                    <p>Deploy completo em menos de 1 hora com Terraform.
-                    Atualizações sem downtime via blue-green deployment.</p>
+                    <h4>Multi-Provider LLM</h4>
+                    <p>Suporte a Gemini e OpenRouter com
+                    fallback automático e retry inteligente.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">✅</div>
-                    <h4>Conformidade</h4>
-                    <p>Aderente a LGPD, SOC2 e PCI-DSS.
-                    Auditoria completa via CloudTrail.</p>
+                    <h4>Storage Flexível</h4>
+                    <p>SQLite para desenvolvimento, DynamoDB para produção,
+                    interface única via Repository Pattern.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h4>Deploy Automation</h4>
+                    <p>Makefile com targets para desenvolvimento,
+                    Docker e AWS Lambda deployment.</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--itau-blue); margin: 2rem 0 1rem;">Roadmap de Evolução</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Roadmap de Melhorias</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>Fase 1: MVP (Atual)</h5>
-                    <p>API básica com integração Gemini, persistência e observabilidade essencial.</p>
+                    <h5>Streaming Responses</h5>
+                    <p>Implementar Server-Sent Events para streaming de respostas LLM.
+                    Melhor UX para interações longas com WebSocket support.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Fase 2: Multi-Provider</h5>
-                    <p>Suporte a múltiplos LLMs com roteamento inteligente baseado em custo/performance.</p>
+                    <h5>Authentication & Authorization</h5>
+                    <p>Sistema de API keys com rate limiting por usuário.
+                    Integração com OAuth2/JWT para autenticação robusta.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Fase 3: Analytics Avançado</h5>
-                    <p>Pipeline de dados com Kinesis para análise de prompts e otimização de respostas.</p>
+                    <h5>Advanced Analytics</h5>
+                    <p>Dashboard de métricas com usage patterns,
+                    cost analysis e performance insights.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Fase 4: Edge Computing</h5>
-                    <p>Deploy em CloudFront Edge Locations para latência ultra-baixa global.</p>
+                    <h5>Multi-Modal Support</h5>
+                    <p>Suporte a imagens e arquivos além de texto.
+                    Integração com vision models para casos de uso avançados.</p>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">70%</div>
+                    <div class="metric-label">Redução de Código</div>
+                </div>
+                <div class="metric-card blue">
+                    <div class="metric-value">12</div>
+                    <div class="metric-label">Diagramas Profissionais</div>
+                </div>
+                <div class="metric-card green">
+                    <div class="metric-value">Modern</div>
+                    <div class="metric-label">Python Architecture</div>
                 </div>
             </div>
         </section>
@@ -1340,8 +1166,8 @@
 
     <footer class="footer">
         <div class="footer-content">
-            <p>© 2025 Plataforma IA Itaú | Arquitetura Cloud Native</p>
-            <p style="margin-top: 1rem; opacity: 0.8;">Documentação técnica para processo seletivo</p>
+            <p>© 2025 Chat API | Arquitetura Cloud Native</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">Documentação técnica do projeto - Python idiomático e padrões modernos</p>
         </div>
     </footer>
 
@@ -1415,205 +1241,7 @@
             }
         });
 
-        // Enhanced Carousel System with proper isolation
-        class CarouselManager {
-            constructor(containerId, captions) {
-                this.container = document.querySelector(containerId);
-                if (!this.container) return;
-
-                this.carouselWrapper = this.container.querySelector('.carousel-container');
-                if (!this.carouselWrapper) return;
-
-                this.slides = this.carouselWrapper.querySelectorAll('.carousel-slide');
-                this.dots = this.carouselWrapper.querySelectorAll('.carousel-dot');
-                this.caption = this.carouselWrapper.querySelector('.carousel-caption');
-                this.captions = captions;
-                this.currentSlide = 0;
-                this.autoAdvanceTimer = null;
-                this.autoAdvanceDelay = 5000;
-
-                this.init();
-            }
-
-            init() {
-                if (this.slides.length === 0) return;
-
-                // Set up controls
-                const prevBtn = this.carouselWrapper.querySelector('.carousel-btn:first-child');
-                const nextBtn = this.carouselWrapper.querySelector('.carousel-btn:last-child');
-
-                if (prevBtn) {
-                    prevBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.changeSlide(-1);
-                    });
-                }
-
-                if (nextBtn) {
-                    nextBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.changeSlide(1);
-                    });
-                }
-
-                // Set up dots
-                this.dots.forEach((dot, index) => {
-                    dot.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.goToSlide(index);
-                    });
-                });
-
-                // Set up hover pause
-                this.carouselWrapper.addEventListener('mouseenter', () => {
-                    this.stopAutoAdvance();
-                });
-
-                this.carouselWrapper.addEventListener('mouseleave', () => {
-                    this.startAutoAdvance();
-                });
-
-                // Initialize display
-                this.updateCarousel();
-                this.startAutoAdvance();
-            }
-
-            updateCarousel() {
-                this.slides.forEach((slide, index) => {
-                    slide.classList.toggle('active', index === this.currentSlide);
-                });
-
-                this.dots.forEach((dot, index) => {
-                    dot.classList.toggle('active', index === this.currentSlide);
-                });
-
-                if (this.caption && this.captions[this.currentSlide]) {
-                    this.caption.innerHTML = `
-                        <strong>${this.captions[this.currentSlide].title}</strong>
-                        ${this.captions[this.currentSlide].text}
-                    `;
-                }
-            }
-
-            changeSlide(direction) {
-                this.currentSlide += direction;
-
-                if (this.currentSlide >= this.slides.length) {
-                    this.currentSlide = 0;
-                } else if (this.currentSlide < 0) {
-                    this.currentSlide = this.slides.length - 1;
-                }
-
-                this.updateCarousel();
-                this.resetAutoAdvance();
-            }
-
-            goToSlide(index) {
-                if (index >= 0 && index < this.slides.length) {
-                    this.currentSlide = index;
-                    this.updateCarousel();
-                    this.resetAutoAdvance();
-                }
-            }
-
-            startAutoAdvance() {
-                if (this.slides.length <= 1) return;
-                this.stopAutoAdvance();
-                this.autoAdvanceTimer = setInterval(() => {
-                    this.changeSlide(1);
-                }, this.autoAdvanceDelay);
-            }
-
-            stopAutoAdvance() {
-                if (this.autoAdvanceTimer) {
-                    clearInterval(this.autoAdvanceTimer);
-                    this.autoAdvanceTimer = null;
-                }
-            }
-
-            resetAutoAdvance() {
-                this.stopAutoAdvance();
-                this.startAutoAdvance();
-            }
-
-            getCurrentSlide() {
-                return this.currentSlide;
-            }
-
-            getActiveImage() {
-                const activeSlide = this.slides[this.currentSlide];
-                return activeSlide ? activeSlide.querySelector('img') : null;
-            }
-
-            getCurrentCaption() {
-                return this.captions[this.currentSlide] || null;
-            }
-        }
-
-        // Initialize carousels
-        const mainCarousel = new CarouselManager('#arquitetura', [
-            {
-                title: 'Figura 1A: MVP - Arquitetura Local',
-                text: 'Implementação inicial com FastAPI e SQLite para desenvolvimento e testes'
-            },
-            {
-                title: 'Figura 1B: Arquitetura AWS Serverless',
-                text: 'Solução em produção com Lambda, API Gateway e DynamoDB'
-            },
-            {
-                title: 'Figura 1C: Visão de Componentes',
-                text: 'Detalhamento dos módulos e suas responsabilidades'
-            }
-        ]);
-
-        const sliCarousel = new CarouselManager('#observabilidade', [
-            {
-                title: 'Figura 4A: SLIs de Performance',
-                text: 'Indicadores técnicos de performance em tempo real'
-            },
-            {
-                title: 'Figura 4B: SLIs de Negócio',
-                text: 'Métricas de negócio e experiência do usuário'
-            }
-        ]);
-
-        const costCarousel = new CarouselManager('#resiliencia', [
-            {
-                title: 'Figura 6A: Análise de Custos',
-                text: 'Projeção de custos com otimizações aplicadas'
-            },
-            {
-                title: 'Figura 6B: Pipeline de Analytics',
-                text: 'Arquitetura de processamento e análise de dados'
-            }
-        ]);
-
-        // Legacy function mappings for onclick handlers
-        function changeSlide(direction) {
-            if (mainCarousel) mainCarousel.changeSlide(direction);
-        }
-
-        function goToSlide(index) {
-            if (mainCarousel) mainCarousel.goToSlide(index);
-        }
-
-        function changeSLISlide(direction) {
-            if (sliCarousel) sliCarousel.changeSlide(direction);
-        }
-
-        function goToSLISlide(index) {
-            if (sliCarousel) sliCarousel.goToSlide(index);
-        }
-
-        function changeCostSlide(direction) {
-            if (costCarousel) costCarousel.changeSlide(direction);
-        }
-
-        function goToCostSlide(index) {
-            if (costCarousel) costCarousel.goToSlide(index);
-        }
-
-        // Fullscreen functionality with error handling
+        // Fullscreen functionality
         function openFullscreen(elementId) {
             const modal = document.getElementById('fullscreenModal');
             const fullscreenImg = document.getElementById('fullscreenImage');
@@ -1622,43 +1250,13 @@
             if (!modal || !fullscreenImg || !fullscreenCap) return;
 
             try {
-                if (elementId === 'carousel') {
-                    // Main carousel
-                    const img = mainCarousel ? mainCarousel.getActiveImage() : null;
-                    const caption = mainCarousel ? mainCarousel.getCurrentCaption() : null;
-                    if (img && caption) {
-                        fullscreenImg.src = img.src;
-                        fullscreenImg.alt = img.alt;
-                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
-                    }
-                } else if (elementId === 'sli-carousel') {
-                    // SLI carousel
-                    const img = sliCarousel ? sliCarousel.getActiveImage() : null;
-                    const caption = sliCarousel ? sliCarousel.getCurrentCaption() : null;
-                    if (img && caption) {
-                        fullscreenImg.src = img.src;
-                        fullscreenImg.alt = img.alt;
-                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
-                    }
-                } else if (elementId === 'cost-carousel') {
-                    // Cost carousel
-                    const img = costCarousel ? costCarousel.getActiveImage() : null;
-                    const caption = costCarousel ? costCarousel.getCurrentCaption() : null;
-                    if (img && caption) {
-                        fullscreenImg.src = img.src;
-                        fullscreenImg.alt = img.alt;
-                        fullscreenCap.innerHTML = `<strong>${caption.title}</strong><br>${caption.text}`;
-                    }
-                } else {
-                    // Regular diagram
-                    const img = document.getElementById(elementId);
-                    if (img) {
-                        fullscreenImg.src = img.src;
-                        fullscreenImg.alt = img.alt;
-                        const container = img.closest('.diagram-container');
-                        const caption = container ? container.querySelector('.diagram-caption') : null;
-                        fullscreenCap.innerHTML = caption ? caption.innerHTML : '';
-                    }
+                const img = document.getElementById(elementId);
+                if (img) {
+                    fullscreenImg.src = img.src;
+                    fullscreenImg.alt = img.alt;
+                    const container = img.closest('.diagram-container');
+                    const caption = container ? container.querySelector('.diagram-caption') : null;
+                    fullscreenCap.innerHTML = caption ? caption.innerHTML : '';
                 }
 
                 modal.classList.add('active');
