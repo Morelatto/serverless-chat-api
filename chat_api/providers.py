@@ -98,7 +98,7 @@ class GeminiProvider:
                 cost = litellm.completion_cost(completion_response=response)
                 if cost is not None:
                     typed_usage["cost_usd"] = Decimal(str(cost))
-            except (ValueError, KeyError, TypeError, Exception) as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug(f"Cost calculation not available for {response.model}: {e}")
 
         return LLMResponse(
@@ -154,7 +154,7 @@ class OpenRouterProvider:
                 cost = litellm.completion_cost(completion_response=response)
                 if cost is not None:
                     typed_usage["cost_usd"] = Decimal(str(cost))
-            except (ValueError, KeyError, TypeError, Exception) as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug(f"Cost calculation not available for {response.model}: {e}")
 
         return LLMResponse(

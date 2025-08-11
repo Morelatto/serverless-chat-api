@@ -146,7 +146,7 @@ class RedisCache:
                 logger.debug(f"Redis cache hit: {key}")
                 return result  # type: ignore[no-any-return]
             logger.debug(f"Redis cache miss: {key}")
-            return None
+            return None  # noqa: TRY300
         except (json.JSONDecodeError, ConnectionError, TimeoutError) as e:
             logger.error(f"Redis get error for key {key}: {e}")
             # Re-raise to make Redis problems visible
