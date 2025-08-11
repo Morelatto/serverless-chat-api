@@ -32,8 +32,8 @@ jobs:
       - name: Install and test
         run: |
           pip install -e ".[dev,test]"
-          ruff check src/
-          pytest tests/ --cov=src --cov-fail-under=70
+          ruff check chat_api/ tests/
+          pytest tests/ --cov=chat_api --cov-fail-under=70
 
       - name: Check AWS credentials
         id: check-aws
@@ -151,7 +151,7 @@ jobs:
         run: |
           sleep 10
           echo "Testing Lambda at: ${{ steps.get-url.outputs.function_url }}"
-          curl -f "${{ steps.get-url.outputs.function_url }}v1/health" || echo "Health check failed but continuing"
+          curl -f "${{ steps.get-url.outputs.function_url }}health" || echo "Health check failed but continuing"
 
   deploy-staging:
     if: github.event.inputs.environment == 'staging'
