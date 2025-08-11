@@ -390,10 +390,11 @@ class DynamoDBRepository:
 # ============== Factory Functions ==============
 def create_repository(database_url: str | None = None) -> Repository:
     """Create repository instance based on database URL."""
-    from .config import settings
+    from .config import get_settings
 
     # Use provided URL or get effective URL from settings
     if database_url is None:
+        settings = get_settings()
         url = settings.effective_database_url
         if settings.is_lambda_environment:
             logger.info(f"AWS Lambda detected, using DynamoDB: {settings.dynamodb_table}")
@@ -413,9 +414,10 @@ def create_repository(database_url: str | None = None) -> Repository:
 
 def create_cache(redis_url: str | None = None) -> Cache:
     """Create cache instance based on configuration."""
-    from .config import settings
+    from .config import get_settings
 
     # Try Redis if configured
+    settings = get_settings()
     url = redis_url or settings.redis_url
     if url:
         logger.info("Creating Redis cache")

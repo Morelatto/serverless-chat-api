@@ -83,6 +83,6 @@ class Settings(BaseSettings):
         env_prefix = "CHAT_"  # CHAT_PORT=8000
 
 
-# Module-level instance (for backward compatibility)
-# New code should use dependency injection instead
-settings = Settings()
+def get_settings() -> Settings:
+    """Get settings instance - dependency injection friendly."""
+    return Settings()

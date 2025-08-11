@@ -6,7 +6,7 @@ from typing import Any
 from loguru import logger
 
 from .chat import ChatService
-from .config import settings
+from .config import get_settings
 from .providers import create_llm_provider
 
 
@@ -20,6 +20,7 @@ class Environment(Enum):
 
 def detect_environment() -> Environment:
     """Detect current environment with explicit logic."""
+    settings = get_settings()
     if settings.is_lambda_environment:
         return Environment.LAMBDA
     if settings.redis_url and "docker" in settings.database_url:
@@ -57,6 +58,7 @@ class ServiceFactory:
     @staticmethod
     async def _create_repository(env: Environment) -> Any:
         """Create repository based on environment."""
+        settings = get_settings()
         if env == Environment.LAMBDA:
             # Lambda always uses DynamoDB
             from .storage import DynamoDBRepository
@@ -76,6 +78,7 @@ class ServiceFactory:
     @staticmethod
     async def _create_cache(env: Environment) -> Any:
         """Create cache based on environment."""
+        settings = get_settings()
         if env == Environment.LAMBDA:
             # Lambda uses in-memory cache only
             from .storage import InMemoryCache
@@ -94,6 +97,7 @@ class ServiceFactory:
     @staticmethod
     def _create_llm_provider() -> Any:
         """Create LLM provider based on configuration."""
+        settings = get_settings()
         # Get API key based on provider
         api_key = None
         if settings.llm_provider == "gemini":

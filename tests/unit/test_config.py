@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from chat_api.config import Settings, settings
+from chat_api.config import Settings, get_settings
 
 
 class TestSettings:
@@ -245,13 +245,18 @@ class TestEnvironmentDetection:
 
 
 class TestSettingsSingleton:
-    """Test settings module-level instance."""
+    """Test settings function access."""
 
-    def test_module_level_settings_available(self) -> None:
-        """Test that module-level settings instance is available."""
-        # Module level settings should be available
-        assert settings is not None
-        assert isinstance(settings, Settings)
+    def test_get_settings_function_available(self) -> None:
+        """Test that get_settings function is available."""
+        with patch.dict(
+            os.environ,
+            {"CHAT_OPENROUTER_API_KEY": "test-key"},
+            clear=True,
+        ):
+            settings = get_settings()
+            assert settings is not None
+            assert isinstance(settings, Settings)
 
 
 class TestConfigurationIntegration:

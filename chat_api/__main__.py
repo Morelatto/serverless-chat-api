@@ -3,11 +3,12 @@
 import uvicorn
 
 from .api import app
-from .config import settings
+from .config import get_settings
 
 
 def main() -> None:
     """Run the chat API server."""
+    settings = get_settings()
     uvicorn.run(app, host=settings.host, port=settings.port, log_level=settings.log_level.lower())
 
 

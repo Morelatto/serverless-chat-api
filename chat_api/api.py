@@ -15,35 +15,50 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from .chat import ChatMessage, ChatResponse, ChatService
-from .config import settings
+from .config import get_settings
 from .exceptions import ChatAPIError, LLMProviderError, StorageError, ValidationError
 from .factory import ServiceFactory
 from .middleware import add_request_id
 from .types import MessageRecord
 
-# Configure loguru
-logger.remove()
-logger.add(
-    sys.stderr,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level=settings.log_level,
-    serialize=False,
-)
-if settings.log_file:
+
+# Configure loguru - defer to runtime
+def configure_logging():
+    """Configure logging with current settings."""
+    settings = get_settings()
+    logger.remove()
     logger.add(
-        settings.log_file,
-        rotation="10 MB",
-        retention="7 days",
-        compression="zip",
+        sys.stderr,
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level=settings.log_level,
+        serialize=False,
+    )
+    if settings.log_file:
+        logger.add(
+            settings.log_file,
+            rotation="10 MB",
+            retention="7 days",
+            compression="zip",
+            level=settings.log_level,
+        )
+
+
+# Configure logging at module load
+configure_logging()
+
+
+# Rate limiter - defer to runtime
+def create_limiter():
+    """Create rate limiter with current settings."""
+    settings = get_settings()
+    return Limiter(
+        key_func=get_remote_address,
+        storage_uri=settings.redis_url or "memory://",
+        default_limits=[settings.rate_limit],
     )
 
-# Rate limiter
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=settings.redis_url or "memory://",
-    default_limits=[settings.rate_limit],
-)
+
+limiter = create_limiter()
 
 
 @asynccontextmanager
@@ -147,9 +162,14 @@ async def get_chat_service(request: Request) -> ChatService:
     return service
 
 
+def get_current_settings():
+    """Dependency to get current settings."""
+    return get_settings()
+
+
 # ============== Routes ==============
 @app.post("/chat", tags=["chat"])
-@limiter.limit(settings.rate_limit)
+@limiter.limit("60/minute")  # Default rate limit
 async def chat_endpoint(
     request: Request,
     message: ChatMessage,
@@ -199,6 +219,7 @@ async def health_endpoint(
     response: Response,
     detailed: bool = Query(False, description="Include detailed environment information"),
     service: ChatService = Depends(get_chat_service),
+    current_settings=Depends(get_current_settings),
 ) -> dict[str, Any]:
     """Check health status of all components.
 
@@ -223,8 +244,8 @@ async def health_endpoint(
     if detailed:
         result["version"] = "1.0.0"
         result["environment"] = {
-            "llm_provider": settings.llm_provider,
-            "rate_limit": settings.rate_limit,
+            "llm_provider": current_settings.llm_provider,
+            "rate_limit": current_settings.rate_limit,
         }
 
     return result
