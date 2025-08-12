@@ -55,8 +55,12 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
         usage={"total_tokens": 10},
     )
 
-    # Create ChatService with mocks and inject into app.state
-    app.state.chat_service = ChatService(mock_repository, mock_cache, mock_llm_provider)
+    # Create ChatService with mocks and inject into app.state AND the global
+    from chat_api import api
+
+    chat_service = ChatService(mock_repository, mock_cache, mock_llm_provider)
+    app.state.chat_service = chat_service
+    api._chat_service = chat_service  # Set the global variable too
 
     # Also store individual mocks for tests that need them
     app.state.repository = mock_repository

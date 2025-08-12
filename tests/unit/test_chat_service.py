@@ -275,7 +275,7 @@ async def test_process_message_with_usage_logging() -> None:
         assert "Token usage" in str(log_call[0][0])
         # The extra dict is in kwargs, not args
         extra = log_call.kwargs.get("extra", {})
-        assert extra["user_id"] == "user123..."
+        assert extra["user_id"] == "user123"
         assert extra["model"] == "gpt-4"
         assert extra["prompt_tokens"] == 15
         assert extra["completion_tokens"] == 25
