@@ -47,8 +47,11 @@ class TestRequestIDMiddleware:
         from types import SimpleNamespace
 
         request = Mock(spec=Request)
+        # Mock headers.get to make the default value be used
+        mock_headers = {}
         request.headers = Mock()
-        request.headers.get = Mock(return_value=None)
+        request.headers.get = lambda key, default=None: mock_headers.get(key, default)
+
         request.state = SimpleNamespace()
         request.method = "GET"
         request.url = Mock(path="/test")
@@ -61,22 +64,20 @@ class TestRequestIDMiddleware:
             response.status_code = 200
             return response
 
-        # Mock uuid generation
-        mock_uuid = Mock()
-        mock_uuid.__str__ = Mock(return_value="generated-uuid-456")
-        with patch("chat_api.middleware.uuid.uuid4", return_value=mock_uuid) as mock_uuid4:
-            # Call middleware
-            response = await add_request_id(request, mock_call_next)
+        # Mock uuid generation - patch uuid.uuid4 directly
+        with patch("chat_api.middleware.uuid.uuid4") as mock_uuid4:
+            # Create a mock UUID that returns our string when converted to str
+            mock_uuid = Mock()
+            mock_uuid4.return_value = mock_uuid
 
-            # Debug: check if UUID was called and what request_id is
-            assert mock_uuid4.called, "UUID generation should have been called"
-            print(f"request_id: {request.state.request_id}")
-            print(f"mock called: {mock_uuid4.called}")
-            print(f"str(mock_uuid): '{mock_uuid!s}'")
+            # Patch str() on the returned UUID object
+            with patch.object(mock_uuid, "__str__", return_value="generated-uuid-456"):
+                # Call middleware
+                response = await add_request_id(request, mock_call_next)
 
-            # Should generate new ID
-            assert request.state.request_id == "generated-uuid-456"
-            assert response.headers["X-Request-ID"] == "generated-uuid-456"
+                # Should generate new ID
+                assert request.state.request_id == "generated-uuid-456"
+                assert response.headers["X-Request-ID"] == "generated-uuid-456"
 
     @pytest.mark.asyncio
     async def test_add_request_id_propagates_to_response(self):
@@ -108,8 +109,11 @@ class TestRequestIDMiddleware:
         from types import SimpleNamespace
 
         request = Mock(spec=Request)
+        # Mock headers.get to make the default value be used
+        mock_headers = {}
         request.headers = Mock()
-        request.headers.get = Mock(return_value=None)
+        request.headers.get = lambda key, default=None: mock_headers.get(key, default)
+
         request.state = SimpleNamespace()
         request.method = "GET"
         request.url = Mock(path="/test")
@@ -118,15 +122,20 @@ class TestRequestIDMiddleware:
         async def mock_call_next(req):
             raise ValueError("Test error")
 
-        mock_uuid = Mock()
-        mock_uuid.__str__ = Mock(return_value="error-uuid-000")
-        with patch("chat_api.middleware.uuid.uuid4", return_value=mock_uuid):
-            # Should propagate the exception
-            with pytest.raises(ValueError, match="Test error"):
-                await add_request_id(request, mock_call_next)
+        # Mock uuid generation - patch uuid.uuid4 directly
+        with patch("chat_api.middleware.uuid.uuid4") as mock_uuid4:
+            # Create a mock UUID that returns our string when converted to str
+            mock_uuid = Mock()
+            mock_uuid4.return_value = mock_uuid
 
-            # But should still set request ID before exception
-            assert request.state.request_id == "error-uuid-000"
+            # Patch str() on the returned UUID object
+            with patch.object(mock_uuid, "__str__", return_value="error-uuid-000"):
+                # Should propagate the exception
+                with pytest.raises(ValueError, match="Test error"):
+                    await add_request_id(request, mock_call_next)
+
+                # But should still set request ID before exception
+                assert request.state.request_id == "error-uuid-000"
 
 
 class TestJWTAuthentication:

@@ -1,13 +1,27 @@
 """Tests for API endpoints and lifecycle."""
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from chat_api.chat import ChatService
 from chat_api.exceptions import LLMProviderError, StorageError, ValidationError
 from chat_api.middleware import create_token
+
+
+@asynccontextmanager
+async def mock_lifespan(app: FastAPI):
+    """Mock lifespan that doesn't initialize database."""
+    # Set a mock service to avoid initialization errors
+    from chat_api import api
+
+    mock_service = Mock(spec=ChatService)
+    api._chat_service = mock_service
+    yield
+    api._chat_service = None
 
 
 class TestLifespan:
@@ -100,15 +114,20 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_llm_error(self):
         """Test chat endpoint handles LLM provider errors."""
-        mock_service = Mock()
+        # Create mock service
+        mock_service = Mock(spec=ChatService)
         mock_service.process_message = AsyncMock(side_effect=LLMProviderError("Provider down"))
 
+        # Patch get_chat_service to return our mock
         with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
-
+            # Import app and create test client - use existing app
             from chat_api.api import app
 
-            with TestClient(app) as client:
+            # Override the lifespan to avoid real initialization
+            app_override = FastAPI()
+            app_override.router = app.router
+
+            with TestClient(app_override) as client:
                 token = create_token("test123")
                 response = client.post(
                     "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
@@ -119,60 +138,117 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_storage_error(self):
         """Test chat endpoint handles storage errors."""
-        mock_service = Mock()
+        # Import to get access to the module
+        import chat_api.api
+
+        # Create mock service that raises StorageError
+        mock_service = Mock(spec=ChatService)
         mock_service.process_message = AsyncMock(side_effect=StorageError("Database down"))
 
-        with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
+        # Save original and set mock
+        original_service = chat_api.api._chat_service
+        chat_api.api._chat_service = mock_service
 
-            from chat_api.api import app
+        try:
+            # Patch get_chat_service to return our mock
+            with patch("chat_api.api.get_chat_service", return_value=mock_service):
+                # Create minimal test app with no lifespan
+                from chat_api.api import app
 
-            with TestClient(app) as client:
-                token = create_token("test123")
-                response = client.post(
-                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
-                )
+                app_test = FastAPI()
+                # Copy just the routes we need
+                for route in app.routes:
+                    if hasattr(route, "path") and route.path == "/chat":
+                        app_test.router.routes.append(route)
+                        break
 
-                assert response.status_code == 503
-                assert "Storage service unavailable" in response.json()["detail"]
+                with TestClient(app_test) as client:
+                    token = create_token("test123")
+                    response = client.post(
+                        "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                    )
+
+                    assert response.status_code == 503
+                    assert "Storage service unavailable" in response.json()["detail"]
+        finally:
+            # Restore original
+            chat_api.api._chat_service = original_service
 
     def test_chat_endpoint_validation_error(self):
         """Test chat endpoint handles validation errors."""
-        mock_service = Mock()
+        # Import to get access to the module
+        import chat_api.api
+
+        # Create mock service that raises ValidationError
+        mock_service = Mock(spec=ChatService)
         mock_service.process_message = AsyncMock(side_effect=ValidationError("Invalid input"))
 
-        with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
+        # Save original and set mock
+        original_service = chat_api.api._chat_service
+        chat_api.api._chat_service = mock_service
 
-            from chat_api.api import app
+        try:
+            # Patch get_chat_service to return our mock
+            with patch("chat_api.api.get_chat_service", return_value=mock_service):
+                # Create minimal test app with no lifespan
+                from chat_api.api import app
 
-            with TestClient(app) as client:
-                token = create_token("test123")
-                response = client.post(
-                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
-                )
+                app_test = FastAPI()
+                # Copy just the routes we need
+                for route in app.routes:
+                    if hasattr(route, "path") and route.path == "/chat":
+                        app_test.router.routes.append(route)
+                        break
 
-                assert response.status_code == 400
-                assert "Invalid input" in response.json()["detail"]
+                with TestClient(app_test) as client:
+                    token = create_token("test123")
+                    response = client.post(
+                        "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                    )
+
+                    assert response.status_code == 400
+                    assert "Invalid input" in response.json()["detail"]
+        finally:
+            # Restore original
+            chat_api.api._chat_service = original_service
 
     def test_chat_endpoint_unexpected_error(self):
         """Test chat endpoint handles unexpected errors."""
-        mock_service = Mock()
+        # Import to get access to the module
+        import chat_api.api
+
+        # Create mock service that raises RuntimeError
+        mock_service = Mock(spec=ChatService)
         mock_service.process_message = AsyncMock(side_effect=RuntimeError("Unexpected"))
 
-        with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
+        # Save original and set mock
+        original_service = chat_api.api._chat_service
+        chat_api.api._chat_service = mock_service
 
-            from chat_api.api import app
+        try:
+            # Patch get_chat_service to return our mock
+            with patch("chat_api.api.get_chat_service", return_value=mock_service):
+                # Create minimal test app with no lifespan
+                from chat_api.api import app
 
-            with TestClient(app) as client:
-                token = create_token("test123")
-                response = client.post(
-                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
-                )
+                app_test = FastAPI()
+                # Copy just the routes we need
+                for route in app.routes:
+                    if hasattr(route, "path") and route.path == "/chat":
+                        app_test.router.routes.append(route)
+                        break
 
-                assert response.status_code == 500
-                assert "Internal server error" in response.json()["detail"]
+                with TestClient(app_test) as client:
+                    token = create_token("test123")
+                    response = client.post(
+                        "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                    )
+
+                    assert response.status_code == 500
+                    assert "Internal server error" in response.json()["detail"]
+        finally:
+            # Restore original
+            chat_api.api._chat_service = original_service
 
 
 class TestHistoryEndpoint:
@@ -184,11 +260,13 @@ class TestHistoryEndpoint:
         mock_service.get_history = AsyncMock(return_value=[])
 
         with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
-
             from chat_api.api import app
 
-            with TestClient(app) as client:
+            # Override the lifespan to avoid real initialization
+            app_override = FastAPI()
+            app_override.router = app.router
+
+            with TestClient(app_override) as client:
                 # Too long user ID
                 response = client.get(f"/history/{'x' * 101}")
                 assert response.status_code == 400
@@ -200,11 +278,13 @@ class TestHistoryEndpoint:
         mock_service.get_history = AsyncMock(return_value=[])
 
         with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
-
             from chat_api.api import app
 
-            with TestClient(app) as client:
+            # Override the lifespan to avoid real initialization
+            app_override = FastAPI()
+            app_override.router = app.router
+
+            with TestClient(app_override) as client:
                 # Limit too high
                 response = client.get("/history/test_user?limit=101")
                 assert response.status_code == 422  # Validation error
@@ -225,11 +305,13 @@ class TestHealthEndpoint:
         )
 
         with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
-
             from chat_api.api import app
 
-            with TestClient(app) as client:
+            # Override the lifespan to avoid real initialization
+            app_override = FastAPI()
+            app_override.router = app.router
+
+            with TestClient(app_override) as client:
                 response = client.get("/health")
                 assert response.status_code == 200
                 data = response.json()
@@ -238,22 +320,41 @@ class TestHealthEndpoint:
 
     def test_health_endpoint_partial_failure(self):
         """Test health endpoint when some services are unhealthy."""
+        # Import to get access to the module
+        import chat_api.api
+
+        # Create mock service
         mock_service = Mock()
         mock_service.health_check = AsyncMock(
             return_value={"storage": True, "llm": False, "cache": True}
         )
 
-        with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
+        # Save original and set mock
+        original_service = chat_api.api._chat_service
+        chat_api.api._chat_service = mock_service
 
-            from chat_api.api import app
+        try:
+            # Patch get_chat_service to return our mock
+            with patch("chat_api.api.get_chat_service", return_value=mock_service):
+                # Create minimal test app with no lifespan
+                from chat_api.api import app
 
-            with TestClient(app) as client:
-                response = client.get("/health")
-                assert response.status_code == 503
-                data = response.json()
-                assert data["status"] == "unhealthy"
-                assert data["services"]["llm"] is False
+                app_test = FastAPI()
+                # Copy just the routes we need
+                for route in app.routes:
+                    if hasattr(route, "path") and route.path == "/health":
+                        app_test.router.routes.append(route)
+                        break
+
+                with TestClient(app_test) as client:
+                    response = client.get("/health")
+                    assert response.status_code == 503
+                    data = response.json()
+                    assert data["status"] == "unhealthy"
+                    assert data["services"]["llm"] is False
+        finally:
+            # Restore original
+            chat_api.api._chat_service = original_service
 
     def test_health_endpoint_detailed(self):
         """Test health endpoint with detailed flag."""
@@ -263,11 +364,13 @@ class TestHealthEndpoint:
         )
 
         with patch("chat_api.api.get_chat_service", return_value=mock_service):
-            from fastapi.testclient import TestClient
-
             from chat_api.api import app
 
-            with TestClient(app) as client:
+            # Override the lifespan to avoid real initialization
+            app_override = FastAPI()
+            app_override.router = app.router
+
+            with TestClient(app_override) as client:
                 response = client.get("/health?detailed=true")
                 assert response.status_code == 200
                 data = response.json()

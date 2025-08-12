@@ -1,6 +1,5 @@
 """Tests for LLM provider functionality."""
 
-import os
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -203,17 +202,20 @@ class TestProviderFactory:
 
     def test_create_provider_with_env(self):
         """Test creating provider from environment variables."""
-        with patch.dict(
-            os.environ,
-            {"CHAT_LLM_PROVIDER": "openrouter", "CHAT_OPENROUTER_API_KEY": "test-key"},
-            clear=True,
-        ):
+        # Mock settings at the import location inside the function
+        with patch("chat_api.config.settings") as mock_settings:
+            mock_settings.gemini_api_key = None
+            mock_settings.openrouter_api_key = "test-key"
+            mock_settings.openrouter_model = "meta-llama/llama-3.2-1b"
+            mock_settings.openrouter_default_model = "meta-llama/llama-3.2-1b"
+            mock_settings.llm_timeout = 30
+
             provider = create_llm_provider()
             assert provider.config.api_key == "test-key"
 
     def test_create_provider_no_keys(self):
         """Test creating provider with no API keys raises error."""
-        with patch("chat_api.providers.settings") as mock_settings:
+        with patch("chat_api.config.settings") as mock_settings:
             mock_settings.gemini_api_key = None
             mock_settings.openrouter_api_key = None
 
@@ -222,7 +224,7 @@ class TestProviderFactory:
 
     def test_create_provider_gemini(self):
         """Test creating Gemini provider."""
-        with patch("chat_api.providers.settings") as mock_settings:
+        with patch("chat_api.config.settings") as mock_settings:
             mock_settings.gemini_api_key = "test-key"
             mock_settings.openrouter_api_key = None
             mock_settings.gemini_model = "gemini/gemini-1.5-flash"
@@ -234,10 +236,11 @@ class TestProviderFactory:
 
     def test_create_provider_openrouter(self):
         """Test creating OpenRouter provider."""
-        with patch("chat_api.providers.settings") as mock_settings:
+        with patch("chat_api.config.settings") as mock_settings:
             mock_settings.gemini_api_key = None
             mock_settings.openrouter_api_key = "test-key"
             mock_settings.openrouter_model = "meta-llama/llama-3.2-1b"
+            mock_settings.openrouter_default_model = "meta-llama/llama-3.2-1b"
             mock_settings.llm_timeout = 30
 
             provider = create_llm_provider()
