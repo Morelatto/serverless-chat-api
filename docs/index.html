@@ -891,7 +891,7 @@ async def chat_endpoint(
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-structure')">
-                    <img src="diagrams/python/01_system_overview.png" alt="System Overview - Production deployment" id="diagram-structure">
+                    <img src="diagrams/python/architecture/01_system_overview.png" alt="System Overview - Production deployment" id="diagram-structure">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-structure')" title="Fullscreen">⛶</button>
                     </div>
@@ -1022,7 +1022,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-flow')">
-                    <img src="diagrams/python/07_data_flow.png" alt="Request Processing Flow" id="diagram-flow">
+                    <img src="diagrams/python/architecture/07_data_flow.png" alt="Request Processing Flow" id="diagram-flow">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-flow')" title="Fullscreen">⛶</button>
                     </div>
@@ -1070,22 +1070,22 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-dependencies')">
-                    <img src="diagrams/python/04_component_dependencies.png" alt="Component Dependencies" id="diagram-dependencies">
+                    <img src="diagrams/python/flows/02_request_journey.png" alt="Request Journey" id="diagram-dependencies">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-dependencies')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 3:</strong> Protocol-based dependencies enabling clean swaps between SQLite/DynamoDB and Redis/Memory cache</p>
+                <p class="diagram-caption"><strong>Figure 3:</strong> Complete request journey showing validation, caching, LLM processing and response flow</p>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-protocols')">
-                    <img src="diagrams/python/03_protocol_pattern.png" alt="Protocol Pattern Implementation" id="diagram-protocols">
+                    <img src="diagrams/python/deployment/03_deployment_options.png" alt="Deployment Options" id="diagram-protocols">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-protocols')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 4:</strong> Python Protocol contracts ensuring interface compatibility across implementations</p>
+                <p class="diagram-caption"><strong>Figure 4:</strong> Three deployment options - Local development, Docker staging, and AWS Lambda production</p>
             </div>
 
             <div class="content-grid">
@@ -1120,7 +1120,7 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-errors')">
-                    <img src="diagrams/python/05_error_handling.png" alt="Error Handling Flow" id="diagram-errors">
+                    <img src="diagrams/python/operations/05_error_handling.png" alt="Error Handling Flow" id="diagram-errors">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-errors')" title="Fullscreen">⛶</button>
                     </div>
@@ -1261,7 +1261,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-deployments')">
-                    <img src="diagrams/python/02_deployment_flow.png" alt="Deployment Environments" id="diagram-deployments">
+                    <img src="diagrams/python/deployment/03_deployment_options.png" alt="Deployment Environments" id="diagram-deployments">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Fullscreen">⛶</button>
                     </div>
@@ -1271,7 +1271,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-aws')">
-                    <img src="diagrams/python/10_scaling_strategy.png" alt="Scaling Strategy" id="diagram-aws">
+                    <img src="diagrams/python/deployment/10_scaling_strategy.png" alt="Scaling Strategy" id="diagram-aws">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Fullscreen">⛶</button>
                     </div>
@@ -1383,7 +1383,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-1')">
-                    <img src="diagrams/python/06_authentication_flow.png" alt="Authentication Flow" id="diagram-sequence-1">
+                    <img src="diagrams/python/flows/06_authentication_flow.png" alt="Authentication Flow" id="diagram-sequence-1">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-1')" title="Fullscreen">⛶</button>
                     </div>
@@ -1393,7 +1393,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-2')">
-                    <img src="diagrams/python/08_cost_analysis.png" alt="Cost Analysis" id="diagram-sequence-2">
+                    <img src="diagrams/python/performance/08_cost_analysis.png" alt="Cost Analysis" id="diagram-sequence-2">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-2')" title="Fullscreen">⛶</button>
                     </div>
@@ -1403,12 +1403,22 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-3')">
-                    <img src="diagrams/python/09_startup_sequence.png" alt="Startup Sequence" id="diagram-sequence-3">
+                    <img src="diagrams/python/flows/09_startup_sequence.png" alt="Startup Sequence" id="diagram-sequence-3">
                     <div class="diagram-controls">
                         <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-3')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
                 <p class="diagram-caption"><strong>Figure 10:</strong> Startup Sequence - Parallel initialization achieving 50ms total startup time</p>
+            </div>
+
+            <div class="diagram-container">
+                <div class="diagram-wrapper" onclick="openFullscreen('diagram-caching')">
+                    <img src="diagrams/python/performance/04_caching_impact.png" alt="Caching Impact" id="diagram-caching">
+                    <div class="diagram-controls">
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-caching')" title="Fullscreen">⛶</button>
+                    </div>
+                </div>
+                <p class="diagram-caption"><strong>Figure 11:</strong> Caching Impact - 17ms cache hits vs 820ms LLM calls showing 90% hit rate optimization</p>
             </div>
 
         </section>
