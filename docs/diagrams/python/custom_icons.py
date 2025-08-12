@@ -3,7 +3,21 @@
 
 from pathlib import Path
 
-from diagrams import Node
+from diagrams.custom import Custom
+
+
+def get_icon_path(name: str) -> str:
+    """Get the path to an icon file, checking multiple extensions."""
+    icons_dir = Path("./icons")
+
+    # Check for different file extensions
+    for ext in [".svg", ".png", ".jpg", ".jpeg"]:
+        icon_path = icons_dir / f"{name}{ext}"
+        if icon_path.exists():
+            return str(icon_path)
+
+    # Fallback to placeholder if not found
+    return create_placeholder_icon(name)
 
 
 def create_placeholder_icon(name: str, color: str = "#4A5568") -> str:
@@ -20,118 +34,98 @@ def create_placeholder_icon(name: str, color: str = "#4A5568") -> str:
     icons_dir.mkdir(exist_ok=True)
 
     # Save placeholder
-    icon_path = icons_dir / f"{name.lower().replace(' ', '_')}.svg"
+    icon_path = icons_dir / f"{name}_placeholder.svg"
     icon_path.write_text(svg_content)
 
     return str(icon_path)
 
 
-class ProjectIcon(Node):
-    """Custom icon for project components."""
-
-    def __init__(self, label: str, icon_path: str | None = None, **kwargs):
-        if icon_path and Path(icon_path).exists():
-            super().__init__(label, image=icon_path, **kwargs)
-        else:
-            # Create placeholder if icon doesn't exist
-            placeholder = create_placeholder_icon(label.split("\n")[0])
-            super().__init__(label, image=placeholder, **kwargs)
-
-
-# Define project-specific icons with proper colors
-ICON_REGISTRY = {
-    # Core Framework
-    "fastapi": {"color": "#009688", "label": "FastAPI"},
-    "mangum": {"color": "#FF6B6B", "label": "Mangum"},
-    "pydantic": {"color": "#E92063", "label": "Pydantic"},
+# Icon mapping to actual downloaded files
+ICON_MAP = {
+    # Core Framework (downloaded from Simple Icons)
+    "fastapi": "fastapi",  # fastapi.svg
+    "python": "python",  # python.svg
+    "pydantic": "pydantic",  # pydantic.svg
+    "pytest": "pytest",  # pytest.svg
     # Authentication & Security
-    "jwt": {"color": "#000000", "label": "JWT"},
-    "jose": {"color": "#2E7D32", "label": "jose"},
-    "slowapi": {"color": "#FF9800", "label": "Slowapi"},
+    "jwt": "jwt",  # jwt.svg (JSON Web Tokens)
+    "jose": "jose",  # Using placeholder
+    # Rate Limiting (using Flaticon)
+    "slowapi": "slowapi",  # slowapi.png (lightning icon)
     # LLM Providers
-    "litellm": {"color": "#7C3AED", "label": "LiteLLM"},
-    "gemini": {"color": "#4285F4", "label": "Gemini"},
-    "openrouter": {"color": "#10B981", "label": "OpenRouter"},
+    "litellm": "litellm",  # litellm.svg (OpenAI logo as placeholder)
+    "gemini": "gemini",  # Failed download, will use placeholder
+    "openrouter": "openrouter",  # openrouter.svg (OpenAI logo)
     # Storage & Cache
-    "aiosqlite": {"color": "#003B57", "label": "aiosqlite"},
-    "dynamodb": {"color": "#FF9900", "label": "DynamoDB"},
-    "protocol": {"color": "#3776AB", "label": "Protocol"},
-    "dict": {"color": "#4B5563", "label": "Dict"},
-    "redis": {"color": "#DC382D", "label": "Redis"},
-    # Utilities
-    "tenacity": {"color": "#F59E0B", "label": "Tenacity"},
-    "loguru": {"color": "#00ACC1", "label": "Loguru"},
-    "pytest": {"color": "#0A9EDC", "label": "pytest"},
+    "aiosqlite": "sqlite",  # sqlite.svg
+    "sqlite": "sqlite",  # sqlite.svg
+    "dynamodb": "dynamodb",  # dynamodb.svg
+    "redis": "redis",  # redis.svg
+    "dict": "dict",  # dict.png (brackets icon)
+    # AWS Services
+    "lambda": "aws",  # aws.svg
+    "aws": "aws",  # aws.svg
+    # Utilities (using Flaticon)
+    "tenacity": "tenacity",  # tenacity.png (retry icon)
+    "loguru": "loguru",  # loguru.png (document icon)
+    "protocol": "protocol",  # protocol.png (plug icon)
     # Middleware & Handlers
-    "middleware": {"color": "#6366F1", "label": "Middleware"},
-    "handler": {"color": "#EF4444", "label": "Handler"},
-    "endpoint": {"color": "#059669", "label": "Endpoint"},
-    # Generic
-    "user": {"color": "#1F2937", "label": "User"},
-    "request": {"color": "#3B82F6", "label": "Request"},
-    "response": {"color": "#10B981", "label": "Response"},
+    "middleware": "middleware",  # Using placeholder
+    "handler": "handler",  # Using placeholder
+    "mangum": "mangum",  # Using placeholder
 }
 
 
-def get_icon(component: str, label: str | None = None) -> ProjectIcon:
-    """Get a project icon with automatic placeholder generation."""
-    config = ICON_REGISTRY.get(component, {"color": "#6B7280", "label": component})
-
-    # Check if actual icon exists
-    icon_path = f"./icons/{component}.png"
-    if not Path(icon_path).exists():
-        icon_path = f"./icons/{component}.svg"
-        if not Path(icon_path).exists():
-            # Create placeholder
-            icon_path = create_placeholder_icon(config["label"], config["color"])
-
-    return ProjectIcon(label or config["label"], icon_path)
+# Convenience functions for creating Custom nodes
+def FastAPI(label: str = "FastAPI") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("fastapi", "fastapi")))
 
 
-# Convenience functions for common components
-def FastAPI(label: str = "FastAPI") -> ProjectIcon:
-    return get_icon("fastapi", label)
+def JWT(label: str = "JWT") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("jwt", "jwt")))
 
 
-def JWT(label: str = "JWT") -> ProjectIcon:
-    return get_icon("jwt", label)
+def Jose(label: str = "python-jose") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("jose", "jose")))
 
 
-def Jose(label: str = "python-jose") -> ProjectIcon:
-    return get_icon("jose", label)
+def Slowapi(label: str = "Rate Limit") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("slowapi", "slowapi")))
 
 
-def Slowapi(label: str = "Rate Limit") -> ProjectIcon:
-    return get_icon("slowapi", label)
+def LiteLLM(label: str = "LiteLLM") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("litellm", "litellm")))
 
 
-def LiteLLM(label: str = "LiteLLM") -> ProjectIcon:
-    return get_icon("litellm", label)
+def Tenacity(label: str = "Retry") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("tenacity", "tenacity")))
 
 
-def Tenacity(label: str = "Retry") -> ProjectIcon:
-    return get_icon("tenacity", label)
+def Protocol(label: str = "Protocol") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("protocol", "protocol")))
 
 
-def Protocol(label: str = "Protocol") -> ProjectIcon:
-    return get_icon("protocol", label)
+def Pydantic(label: str = "Validate") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("pydantic", "pydantic")))
 
 
-def Pydantic(label: str = "Validate") -> ProjectIcon:
-    return get_icon("pydantic", label)
+def Loguru(label: str = "Logger") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("loguru", "loguru")))
 
 
-def Loguru(label: str = "Logger") -> ProjectIcon:
-    return get_icon("loguru", label)
+def DictCache(label: str = "Memory") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("dict", "dict")))
 
 
-def DictCache(label: str = "Memory") -> ProjectIcon:
-    return get_icon("dict", label)
+def Handler(label: str = "Handler") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("handler", "handler")))
 
 
-def Handler(label: str = "Handler") -> ProjectIcon:
-    return get_icon("handler", label)
+def Middleware(label: str = "Middleware") -> Custom:
+    return Custom(label, get_icon_path(ICON_MAP.get("middleware", "middleware")))
 
 
-def Middleware(label: str = "Middleware") -> ProjectIcon:
-    return get_icon("middleware", label)
+def get_icon(component: str, label: str | None = None) -> Custom:
+    """Get a custom icon for any component."""
+    icon_name = ICON_MAP.get(component, component)
+    return Custom(label or component, get_icon_path(icon_name))
