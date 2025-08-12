@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlparse
 
-from databases import Database
+import aiosqlite
 from loguru import logger
 
 from .config import settings
@@ -158,18 +158,23 @@ class RedisCache:
 
 
 class SQLiteRepository:
-    """SQLite repository with connection pooling."""
+    """SQLite repository with async aiosqlite."""
 
     def __init__(self, database_url: str) -> None:
-        self.database_url = database_url
-        self.database = Database(database_url)
-        logger.info(f"SQLite repository configured: {database_url}")
+        # Extract the file path from the URL
+        if "///" in database_url:
+            self.db_path = database_url.split("///")[1]
+        else:
+            self.db_path = database_url.replace("sqlite+aiosqlite://", "").replace("sqlite://", "")
+        self.connection: aiosqlite.Connection | None = None
+        logger.info(f"SQLite repository configured: {self.db_path}")
 
     async def startup(self) -> None:
         """Initialize database connection and create tables."""
-        await self.database.connect()
+        self.connection = await aiosqlite.connect(self.db_path)
+        self.connection.row_factory = aiosqlite.Row
 
-        await self.database.execute("""
+        async with self.connection.execute("""
             CREATE TABLE IF NOT EXISTS chat_history (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -179,50 +184,64 @@ class SQLiteRepository:
                 usage TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+""") as cursor:
+            await cursor.close()
 
-        await self.database.execute("""
+        async with self.connection.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_id
             ON chat_history(user_id, timestamp)
-        """)
+        """) as cursor:
+            await cursor.close()
 
+        await self.connection.commit()
         logger.info("SQLite repository initialized")
 
     async def shutdown(self) -> None:
         """Close database connection."""
-        await self.database.disconnect()
+        if self.connection:
+            await self.connection.close()
+            self.connection = None
 
     async def save(self, **kwargs) -> None:
         """Save message to database."""
+        if not self.connection:
+            raise StorageError("Database connection not initialized")
+
         usage_json = json.dumps(kwargs.get("usage", {})) if kwargs.get("usage") else None
 
-        await self.database.execute(
+        async with self.connection.execute(
             """
             INSERT INTO chat_history (id, user_id, content, response, model, usage)
-            VALUES (:id, :user_id, :content, :response, :model, :usage)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            {
-                "id": kwargs["id"],
-                "user_id": kwargs["user_id"],
-                "content": kwargs["content"],
-                "response": kwargs["response"],
-                "model": kwargs.get("model"),
-                "usage": usage_json,
-            },
-        )
+            (
+                kwargs["id"],
+                kwargs["user_id"],
+                kwargs["content"],
+                kwargs["response"],
+                kwargs.get("model"),
+                usage_json,
+            ),
+        ) as cursor:
+            await cursor.close()
+        await self.connection.commit()
 
     async def get_history(self, user_id: str, limit: int = 10) -> list[MessageRecord]:
         """Get chat history for a user."""
-        rows = await self.database.fetch_all(
+        if not self.connection:
+            raise StorageError("Database connection not initialized")
+
+        async with self.connection.execute(
             """
             SELECT id, user_id, content, response, model, usage, timestamp
             FROM chat_history
-            WHERE user_id = :user_id
+            WHERE user_id = ?
             ORDER BY timestamp DESC
-            LIMIT :limit
+            LIMIT ?
             """,
-            {"user_id": user_id, "limit": limit},
-        )
+            (user_id, limit),
+        ) as cursor:
+            rows = await cursor.fetchall()
 
         results: list[MessageRecord] = []
         for row in rows:
@@ -244,9 +263,13 @@ class SQLiteRepository:
 
     async def health_check(self) -> bool:
         """Check database health."""
+        if not self.connection:
+            return False
+
         try:
-            await self.database.execute("SELECT 1")
-        except (ConnectionError, TimeoutError, OSError) as e:
+            async with self.connection.execute("SELECT 1") as cursor:
+                await cursor.fetchone()
+        except (ConnectionError, TimeoutError, OSError, aiosqlite.Error) as e:
             logger.error(f"Database health check failed: {e}")
             return False
         else:
