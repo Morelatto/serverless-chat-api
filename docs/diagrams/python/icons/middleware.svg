@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-    <rect width="100" height="100" fill="#6366F1" rx="10"/>
-    <text x="50" y="55" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">
-        Middlewa
-    </text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="#6366f1" d="m23 12l-4-4v3h-4.18C14.4 9.84 13.3 9 12 9s-2.4.84-2.82 2H5L2 8v8l3-3h4.18c.42 1.16 1.52 2 2.82 2s2.4-.84 2.82-2H19v3z"/></svg>
