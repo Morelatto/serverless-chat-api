@@ -92,7 +92,7 @@ data "aws_subnets" "default" {
 }
 
 # DynamoDB table for chat history storage
-resource "aws_dynamodb_table" "chat_history" {
+resource "aws_dynamodb_table" "main" {
   name         = "${var.project_name}-chat-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"  # No idle costs!
   hash_key     = "user_id"
@@ -214,8 +214,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           "dynamodb:BatchWriteItem"
         ]
         Resource = [
-          aws_dynamodb_table.chat_history.arn,
-          "${aws_dynamodb_table.chat_history.arn}/index/*"
+          aws_dynamodb_table.main.arn,
+          "${aws_dynamodb_table.main.arn}/index/*"
         ]
       }
     ]
@@ -243,8 +243,8 @@ resource "aws_lambda_function" "api" {
       CHAT_LOG_LEVEL   = var.log_level
 
       # Database
-      CHAT_DATABASE_URL = "dynamodb://${aws_dynamodb_table.chat_history.name}"
-      AWS_REGION        = var.aws_region
+      CHAT_DATABASE_URL = "dynamodb://${aws_dynamodb_table.main.name}"
+      # AWS_REGION is automatically set by Lambda environment
 
       # Cache (if enabled)
       CHAT_REDIS_URL = var.enable_cache ? "redis://${aws_elasticache_serverless_cache.redis[0].endpoint[0].address}" : ""
@@ -345,7 +345,7 @@ output "lambda_function_url" {
 
 output "dynamodb_table_name" {
   description = "Name of the DynamoDB table"
-  value       = aws_dynamodb_table.chat_history.name
+  value       = aws_dynamodb_table.main.name
 }
 
 output "ecr_repository_url" {
