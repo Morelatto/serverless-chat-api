@@ -31,6 +31,11 @@ class Settings(BaseSettings):
 
     rate_limit: str = "60/minute"
 
+    # JWT settings
+    secret_key: str = "your-secret-key-change-in-production"  # noqa: S105
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_minutes: int = 30
+
     # Cache settings
     cache_ttl_seconds: int = 3600
     cache_max_size: int = 1000

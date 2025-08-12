@@ -36,6 +36,7 @@ dependencies = [
     "boto3>=1.35.0",  # For DynamoDB support
     "aioboto3>=13.0.0",  # For async DynamoDB operations
     "mangum>=0.17.0",  # For Lambda deployment
+    "python-jose[cryptography]>=3.3.0",  # For JWT authentication
 ]
 
 [project.optional-dependencies]

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,10 +14,10 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from .chat import ChatMessage, ChatResponse, ChatService
+from .chat import ChatResponse, ChatService
 from .config import settings
 from .exceptions import ChatAPIError, LLMProviderError, StorageError, ValidationError
-from .middleware import add_request_id
+from .middleware import add_request_id, create_token, get_current_user
 from .providers import create_llm_provider
 from .storage import create_cache, create_repository
 from .types import MessageRecord
@@ -168,12 +168,13 @@ def get_chat_service() -> ChatService:
 @limiter.limit(settings.rate_limit)
 async def chat_endpoint(
     request: Request,
-    message: ChatMessage,
     service: Annotated[ChatService, Depends(get_chat_service)],
+    content: str = Body(..., min_length=1, max_length=10000),
+    user_id: str = Depends(get_current_user),
 ) -> ChatResponse:
     """Process a chat message."""
     try:
-        result = await service.process_message(message.user_id, message.content)
+        result = await service.process_message(user_id, content)
 
         return ChatResponse(
             id=result["id"],
@@ -285,9 +286,24 @@ async def root_endpoint(response: Response) -> dict[str, str]:
     }
 
 
+@app.post("/login", tags=["auth"])
+async def login_endpoint(user_id: str = Body(..., min_length=3, max_length=100)) -> dict[str, str]:
+    """Demo login endpoint for testing JWT.
+
+    Args:
+        user_id: User identifier to generate token for.
+
+    Returns:
+        Dictionary with access_token and token_type.
+    """
+    token = create_token(user_id)
+    return {"access_token": token, "token_type": "bearer"}
+
+
 app.openapi_tags = [
     {"name": "chat", "description": "Chat operations"},
     {"name": "health", "description": "Health checks"},
+    {"name": "auth", "description": "Authentication"},
 ]
 
 

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from chat_api.chat import ChatService
 from chat_api.exceptions import LLMProviderError, StorageError, ValidationError
+from chat_api.middleware import create_token
 
 
 class TestLifespan:
@@ -108,7 +109,10 @@ class TestChatEndpoint:
             from chat_api.api import app
 
             with TestClient(app) as client:
-                response = client.post("/chat", json={"user_id": "test123", "content": "Hello"})
+                token = create_token("test123")
+                response = client.post(
+                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                )
 
                 assert response.status_code == 503
                 assert "Service temporarily unavailable" in response.json()["detail"]
@@ -124,7 +128,10 @@ class TestChatEndpoint:
             from chat_api.api import app
 
             with TestClient(app) as client:
-                response = client.post("/chat", json={"user_id": "test123", "content": "Hello"})
+                token = create_token("test123")
+                response = client.post(
+                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                )
 
                 assert response.status_code == 503
                 assert "Storage service unavailable" in response.json()["detail"]
@@ -140,7 +147,10 @@ class TestChatEndpoint:
             from chat_api.api import app
 
             with TestClient(app) as client:
-                response = client.post("/chat", json={"user_id": "test123", "content": "Hello"})
+                token = create_token("test123")
+                response = client.post(
+                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                )
 
                 assert response.status_code == 400
                 assert "Invalid input" in response.json()["detail"]
@@ -156,7 +166,10 @@ class TestChatEndpoint:
             from chat_api.api import app
 
             with TestClient(app) as client:
-                response = client.post("/chat", json={"user_id": "test123", "content": "Hello"})
+                token = create_token("test123")
+                response = client.post(
+                    "/chat", json="Hello", headers={"Authorization": f"Bearer {token}"}
+                )
 
                 assert response.status_code == 500
                 assert "Internal server error" in response.json()["detail"]
