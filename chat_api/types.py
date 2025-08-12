@@ -1,7 +1,8 @@
 """Type definitions for the Chat API."""
 
 from decimal import Decimal
-from typing import TypedDict
+
+from typing_extensions import TypedDict
 
 
 class TokenUsage(TypedDict, total=False):
