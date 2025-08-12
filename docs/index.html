@@ -122,7 +122,7 @@
         }
 
         .nav a {
-            color: var(--gray);
+            color: var(--text-secondary);
             text-decoration: none;
             font-weight: 500;
             transition: color 0.3s;
@@ -158,12 +158,13 @@
         }
 
         .hero {
-            background: white;
+            background: var(--bg-primary);
             border-radius: 12px;
             padding: 3rem;
             margin-bottom: 3rem;
             box-shadow: var(--shadow-lg);
             text-align: center;
+            transition: background-color 0.3s ease;
         }
 
         .hero h2 {
@@ -175,7 +176,7 @@
 
         .hero .subtitle {
             font-size: 1.25rem;
-            color: var(--gray);
+            color: var(--text-secondary);
             margin-bottom: 2rem;
         }
 
@@ -188,9 +189,10 @@
 
         .highlight-card {
             padding: 1.5rem;
-            background: var(--light);
+            background: var(--bg-secondary);
             border-radius: 8px;
             border-left: 4px solid var(--secondary-orange);
+            transition: background-color 0.3s ease;
         }
 
         .highlight-card .number {
@@ -200,7 +202,7 @@
         }
 
         .highlight-card .label {
-            color: var(--gray);
+            color: var(--text-secondary);
             font-size: 0.9rem;
             margin-top: 0.5rem;
         }
@@ -221,7 +223,7 @@
             gap: 1rem;
             margin-bottom: 2rem;
             padding-bottom: 1rem;
-            border-bottom: 2px solid var(--light);
+            border-bottom: 2px solid var(--border-color);
         }
 
         .section-number {
@@ -247,12 +249,13 @@
         .diagram-container {
             margin: 2rem auto;
             text-align: center;
-            background: white;
+            background: var(--bg-primary);
             border-radius: 12px;
             padding: 1.5rem;
             box-shadow: var(--shadow-md);
             max-width: 1200px;
             position: relative;
+            transition: background-color 0.3s ease;
         }
 
         .diagram-wrapper {
@@ -269,9 +272,9 @@
             max-height: 500px;
             object-fit: contain;
             border-radius: 8px;
-            background: var(--light);
+            background: var(--bg-secondary);
             padding: 1rem;
-            transition: transform 0.3s;
+            transition: transform 0.3s, background-color 0.3s ease;
         }
 
         .diagram-container:hover img {
@@ -290,7 +293,7 @@
         .diagram-btn {
             width: 40px;
             height: 40px;
-            background: white;
+            background: var(--bg-primary);
             border: 2px solid var(--secondary-orange);
             border-radius: 8px;
             display: flex;
@@ -313,8 +316,8 @@
         .diagram-caption {
             margin-top: 1rem;
             padding-top: 1rem;
-            border-top: 1px solid var(--light);
-            color: var(--gray);
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
             font-size: 0.9rem;
             font-style: italic;
         }
@@ -358,7 +361,7 @@
             max-height: 85vh;
             object-fit: contain;
             border-radius: 8px;
-            background: white;
+            background: var(--bg-primary);
             padding: 1rem;
             animation: scaleIn 0.3s;
         }
@@ -376,14 +379,14 @@
             right: 2rem;
             width: 50px;
             height: 50px;
-            background: white;
+            background: var(--bg-primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             font-size: 1.5rem;
-            color: var(--dark);
+            color: var(--text-primary);
             transition: all 0.3s;
             z-index: 10000;
         }
@@ -431,7 +434,7 @@
         }
 
         .feature-card p {
-            color: var(--gray);
+            color: var(--text-secondary);
             line-height: 1.8;
         }
 
@@ -464,6 +467,10 @@
             font-weight: 500;
         }
 
+        [data-theme="dark"] .tech-badge {
+            background: #0052cc;
+        }
+
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -485,6 +492,18 @@
 
         .metric-card.green {
             background: linear-gradient(135deg, var(--success) 0%, #0ea570 100%);
+        }
+
+        [data-theme="dark"] .metric-card {
+            background: linear-gradient(135deg, #cc5200 0%, #ff6600 100%);
+        }
+
+        [data-theme="dark"] .metric-card.blue {
+            background: linear-gradient(135deg, #0052cc 0%, #0066ff 100%);
+        }
+
+        [data-theme="dark"] .metric-card.green {
+            background: linear-gradient(135deg, #0d8050 0%, #10B981 100%);
         }
 
         .metric-value {
@@ -512,6 +531,7 @@
             bottom: 0;
             width: 2px;
             background: var(--secondary-orange);
+            opacity: 0.6;
         }
 
         .timeline-item {
@@ -528,7 +548,7 @@
             height: 12px;
             background: var(--secondary-orange);
             border-radius: 50%;
-            border: 3px solid white;
+            border: 3px solid var(--bg-primary);
             box-shadow: var(--shadow-sm);
         }
 
@@ -539,7 +559,7 @@
         }
 
         .timeline-item p {
-            color: var(--gray);
+            color: var(--text-secondary);
             line-height: 1.8;
         }
 
@@ -553,7 +573,7 @@
         .comparison-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid var(--light);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .comparison-table th {
@@ -562,8 +582,16 @@
             font-weight: 600;
         }
 
+        [data-theme="dark"] .comparison-table th {
+            background: #0052CC;
+        }
+
+        [data-theme="dark"] .comparison-table td {
+            color: var(--text-primary);
+        }
+
         .comparison-table tr:hover {
-            background: var(--light);
+            background: var(--bg-secondary);
         }
 
         .check {
@@ -583,6 +611,7 @@
             margin: 1.5rem 0;
             overflow: hidden;
             box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
         }
 
         .code-block h4 {
@@ -610,7 +639,7 @@
 
         .terminal-block {
             background: #0d1117;
-            border: 1px solid #30363d;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             margin: 1.5rem 0;
             overflow: hidden;
@@ -862,12 +891,12 @@ async def chat_endpoint(
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-structure')">
-                    <img src="assets/diagrams/01_static_structure.png" alt="Estrutura Estática dos Componentes" id="diagram-structure">
+                    <img src="diagrams/python/01_system_overview.png" alt="System Overview - Production deployment" id="diagram-structure">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-structure')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-structure')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 1:</strong> Simple architecture: API → Service → LLM/Cache/DB</p>
+                <p class="diagram-caption"><strong>Figure 1:</strong> Production architecture with 90% cache hit dominance - AWS Lambda + DynamoDB + ElastiCache</p>
             </div>
 
             <div class="content-grid">
@@ -993,39 +1022,39 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-flow')">
-                    <img src="assets/diagrams/02_request_flow.png" alt="Fluxo de Requisições" id="diagram-flow">
+                    <img src="diagrams/python/07_data_flow.png" alt="Request Processing Flow" id="diagram-flow">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-flow')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-flow')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 2:</strong> Request → Validate → Cache → LLM → Save → Response</p>
+                <p class="diagram-caption"><strong>Figure 2:</strong> Horizontal request flow showing 90% cache hit (thick line) vs 10% LLM miss (thin dashed)</p>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estratégia de Cache Multi-Camada</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Multi-Layer Cache Strategy</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>Geração de Cache Key</h5>
-                    <p>Hash SHA-256 truncado do user_id + content para identificação única.
-                    Garante consistência de cache mesmo com conteúdo idêntico.</p>
+                    <h5>Cache Key Generation</h5>
+                    <p>Truncated SHA-256 hash of user_id + content for unique identification.
+                    Ensures cache consistency even with identical content.</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>Cache Lookup</h5>
-                    <p>Busca primária no Redis (produção) ou dict em memória (desenvolvimento).
-                    Retorno imediato se hit, evitando chamada custosa ao LLM.</p>
+                    <p>Primary lookup in Redis (production) or in-memory dict (development).
+                    Immediate return on hit, avoiding expensive LLM call.</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>LLM Processing</h5>
-                    <p>Em cache miss, chama provider LLM com retry automático.
-                    Parseamento da resposta e extração de metadados de uso.</p>
+                    <p>On cache miss, calls LLM provider with automatic retry.
+                    Response parsing and usage metadata extraction.</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>Cache Store</h5>
-                    <p>Armazena resposta processada no cache para futuras consultas.
-                    TTL configurável baseado no tipo de conteúdo.</p>
+                    <p>Stores processed response in cache for future queries.
+                    Configurable TTL based on content type.</p>
                 </div>
             </div>
         </section>
@@ -1041,62 +1070,62 @@ curl localhost:8000/health  # ✅ {"status": "healthy"}</code></pre>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-dependencies')">
-                    <img src="assets/diagrams/06_runtime_dependencies.png" alt="Dependências Runtime" id="diagram-dependencies">
+                    <img src="diagrams/python/04_component_dependencies.png" alt="Component Dependencies" id="diagram-dependencies">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-dependencies')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-dependencies')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 4:</strong> Runtime dependencies - Injection and configuration</p>
+                <p class="diagram-caption"><strong>Figure 3:</strong> Protocol-based dependencies enabling clean swaps between SQLite/DynamoDB and Redis/Memory cache</p>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-protocols')">
-                    <img src="assets/diagrams/08_protocol_pattern.png" alt="Padrão de Protocolos" id="diagram-protocols">
+                    <img src="diagrams/python/03_protocol_pattern.png" alt="Protocol Pattern Implementation" id="diagram-protocols">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-protocols')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-protocols')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 5:</strong> Protocol Pattern - Flexibility and testability</p>
+                <p class="diagram-caption"><strong>Figure 4:</strong> Python Protocol contracts ensuring interface compatibility across implementations</p>
             </div>
 
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🏗️</div>
-                    <h4>Funções no Nível do Módulo</h4>
-                    <p>Core business logic implementado como funções assíncronas simples,
-                    não classes. Facilita testes e reduz boilerplate.</p>
+                    <h4>Module-Level Functions</h4>
+                    <p>Core business logic implemented as simple async functions,
+                    not classes. Simplifies testing and reduces boilerplate.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚙️</div>
                     <h4>Settings Singleton</h4>
-                    <p>Configuração carregada uma vez no nível do módulo.
-                    Todas as variáveis usam prefixo CHAT_ para organização.</p>
+                    <p>Configuration loaded once at module level.
+                    All variables use CHAT_ prefix for organization.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔌</div>
                     <h4>Dependency Injection</h4>
-                    <p>Repository e Cache injetados via app.state no FastAPI.
-                    Permite diferentes implementações por ambiente.</p>
+                    <p>Repository and Cache injected via app.state in FastAPI.
+                    Allows different implementations per environment.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h4>Type Safety</h4>
-                    <p>Protocolo Python para contratos claros.
-                    MyPy validation garante type safety sem overhead runtime.</p>
+                    <p>Python Protocol for clear contracts.
+                    MyPy validation ensures type safety without runtime overhead.</p>
                 </div>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-errors')">
-                    <img src="assets/diagrams/05_error_handling.png" alt="Tratamento de Erros" id="diagram-errors">
+                    <img src="diagrams/python/05_error_handling.png" alt="Error Handling Flow" id="diagram-errors">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-errors')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-errors')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 6:</strong> Error handling - Failures and recovery</p>
+                <p class="diagram-caption"><strong>Figure 5:</strong> Unified error handling - All error sources converge to centralized handler with proper HTTP responses</p>
             </div>
         </section>
 
@@ -1140,75 +1169,75 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🧪</div>
-                    <h4>Testes Unitários</h4>
-                    <p><strong>test_core.py:</strong> Lógica de negócio<br>
-                    <strong>test_models.py:</strong> Validação Pydantic<br>
-                    <strong>test_storage.py:</strong> Persistência e cache</p>
+                    <h4>Unit Tests</h4>
+                    <p><strong>test_core.py:</strong> Business logic<br>
+                    <strong>test_models.py:</strong> Pydantic validation<br>
+                    <strong>test_storage.py:</strong> Persistence and cache</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🌐</div>
-                    <h4>Testes de Integração</h4>
-                    <p><strong>test_handlers.py:</strong> Endpoints HTTP<br>
-                    <strong>test_e2e.py:</strong> Fluxos completos<br>
-                    Mocking de dependências externas</p>
+                    <h4>Integration Tests</h4>
+                    <p><strong>test_handlers.py:</strong> HTTP endpoints<br>
+                    <strong>test_e2e.py:</strong> Complete flows<br>
+                    Mocking of external dependencies</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h4>Cobertura e Métricas</h4>
-                    <p><strong>Coverage:</strong> 80.12% atual<br>
-                    <strong>Target:</strong> >75% obrigatório<br>
-                    <strong>Relatórios:</strong> HTML + terminal</p>
+                    <h4>Coverage and Metrics</h4>
+                    <p><strong>Coverage:</strong> 82% current<br>
+                    <strong>Target:</strong> >75% required<br>
+                    <strong>Reports:</strong> HTML + terminal</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
-                    <h4>Qualidade de Código</h4>
+                    <h4>Code Quality</h4>
                     <p><strong>Ruff:</strong> Linting + formatting<br>
                     <strong>MyPy:</strong> Type checking<br>
                     <strong>Bandit:</strong> Security scanning</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Comandos de Desenvolvimento</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Development Commands</h4>
 
             <table class="comparison-table">
                 <thead>
                     <tr>
-                        <th>Comando</th>
-                        <th>Descrição</th>
-                        <th>Uso</th>
+                        <th>Command</th>
+                        <th>Description</th>
+                        <th>Usage</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><code>uv run python -m pytest tests/ -v</code></td>
-                        <td>Executa todos os testes</td>
+                        <td>Run all tests</td>
                         <td>CI/CD Pipeline</td>
                     </tr>
                     <tr>
                         <td><code>ruff check . --fix</code></td>
-                        <td>Lint e correção automática</td>
+                        <td>Lint and auto-fix</td>
                         <td>Pre-commit hooks</td>
                     </tr>
                     <tr>
                         <td><code>mypy chat_api/</code></td>
-                        <td>Verificação de tipos</td>
-                        <td>Validação estática</td>
+                        <td>Type checking</td>
+                        <td>Static validation</td>
                     </tr>
                     <tr>
                         <td><code>uv run python -m chat_api</code></td>
-                        <td>Executa API localmente</td>
-                        <td>Desenvolvimento</td>
+                        <td>Run API locally</td>
+                        <td>Development</td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">80.12%</div>
-                    <div class="metric-label">Cobertura de Testes</div>
+                    <div class="metric-value">82%</div>
+                    <div class="metric-label">Test Coverage</div>
                 </div>
                 <div class="metric-card blue">
                     <div class="metric-value">100%</div>
@@ -1216,7 +1245,7 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 </div>
                 <div class="metric-card green">
                     <div class="metric-value">Zero</div>
-                    <div class="metric-label">Issues de Segurança</div>
+                    <div class="metric-label">Security Issues</div>
                 </div>
             </div>
         </section>
@@ -1232,53 +1261,53 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-deployments')">
-                    <img src="assets/diagrams/03_deployment_environments.png" alt="Ambientes de Deploy" id="diagram-deployments">
+                    <img src="diagrams/python/02_deployment_flow.png" alt="Deployment Environments" id="diagram-deployments">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-deployments')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 7:</strong> Deployment environments - Local, Docker and AWS</p>
+                <p class="diagram-caption"><strong>Figure 6:</strong> Three deployment modes - Local SQLite development, Docker staging, AWS Lambda production</p>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-aws')">
-                    <img src="assets/diagrams/07_aws_infrastructure.png" alt="Infraestrutura AWS" id="diagram-aws">
+                    <img src="diagrams/python/10_scaling_strategy.png" alt="Scaling Strategy" id="diagram-aws">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-aws')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 8:</strong> AWS Infrastructure - Complete serverless</p>
+                <p class="diagram-caption"><strong>Figure 7:</strong> Progressive scaling journey - From 1 user local to infinite users on Lambda auto-scale</p>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Estratégias de Deployment</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Deployment Strategies</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
                     <h5>Local Development</h5>
-                    <p><strong>Python + SQLite:</strong> Setup rápido com uv sync --dev<br>
-                    <strong>Docker:</strong> Ambiente isolado com docker-compose<br>
-                    <strong>Hot Reload:</strong> FastAPI com --reload para desenvolvimento</p>
+                    <p><strong>Python + SQLite:</strong> Quick setup with uv sync --dev<br>
+                    <strong>Docker:</strong> Isolated environment with docker-compose<br>
+                    <strong>Hot Reload:</strong> FastAPI with --reload for development</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>AWS Lambda Production</h5>
-                    <p><strong>Serverless:</strong> Zero manutenção de servidor<br>
-                    <strong>Auto-scaling:</strong> 0 a 1000 execuções concorrentes<br>
-                    <strong>Cost-effective:</strong> Pague apenas pelo que usar</p>
+                    <p><strong>Serverless:</strong> Zero server maintenance<br>
+                    <strong>Auto-scaling:</strong> 0 to 1000 concurrent executions<br>
+                    <strong>Cost-effective:</strong> Pay only for what you use</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>Infrastructure as Code</h5>
-                    <p><strong>Terraform:</strong> Infraestrutura versionada<br>
-                    <strong>Make targets:</strong> Deploy automatizado<br>
+                    <p><strong>Terraform:</strong> Versioned infrastructure<br>
+                    <strong>Make targets:</strong> Automated deployment<br>
                     <strong>Environment configs:</strong> dev/staging/prod</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>CI/CD Pipeline</h5>
-                    <p><strong>Pre-commit hooks:</strong> Qualidade garantida<br>
-                    <strong>GitHub Actions ready:</strong> Deploy automatizado<br>
-                    <strong>Health checks:</strong> Validação pós-deploy</p>
+                    <p><strong>Pre-commit hooks:</strong> Guaranteed quality<br>
+                    <strong>GitHub Actions ready:</strong> Automated deployment<br>
+                    <strong>Health checks:</strong> Post-deploy validation</p>
                 </div>
             </div>
 
@@ -1286,29 +1315,29 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
                 <div class="feature-card">
                     <div class="feature-icon">🐳</div>
                     <h4>Docker Multi-stage</h4>
-                    <p>Build otimizado com imagem distroless.
-                    Redução de 80% no tamanho final da imagem.</p>
+                    <p>Optimized build with distroless image.
+                    80% reduction in final image size.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h4>Lambda Cold Start</h4>
-                    <p>Otimizações para cold start &lt;500ms.
-                    Mangum adapter para compatibilidade ASGI.</p>
+                    <p>Optimizations for cold start &lt;500ms.
+                    Mangum adapter for ASGI compatibility.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🏗️</div>
                     <h4>Terraform IaC</h4>
-                    <p>Infraestrutura completa como código.
-                    API Gateway + Lambda + DynamoDB automatizado.</p>
+                    <p>Complete infrastructure as code.
+                    API Gateway + Lambda + DynamoDB automated.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h4>Observabilidade</h4>
+                    <h4>Observability</h4>
                     <p>CloudWatch Logs + X-Ray tracing.
-                    Métricas customizadas para monitoramento.</p>
+                    Custom metrics for monitoring.</p>
                 </div>
             </div>
         </section>
@@ -1316,91 +1345,82 @@ async def test_chat_endpoint(client: AsyncClient, sample_message: dict):
         <section class="section">
             <div class="section-header">
                 <div class="section-number">6</div>
-                <h3>Arquitetura Técnica Detalhada</h3>
+                <h3>Detailed Technical Architecture</h3>
             </div>
 
-            <p>Visão completa dos diagramas de sequência mostrando interações temporais
-            entre componentes em diferentes cenários de uso.</p>
+            <p>Complete view of architecture diagrams showing component interactions
+            across different usage scenarios with optimized visual hierarchy.</p>
 
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h4>Happy Path</h4>
-                    <p>Fluxo normal de requisição com cache miss,
-                    chamada LLM e persistência bem-sucedida.</p>
+                    <h4>Authentication Flow</h4>
+                    <p>JWT authentication lifecycle with login,
+                    token generation and API request verification.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h4>Cache Hit</h4>
-                    <p>Resposta rápida com dados em cache,
-                    evitando chamada custosa ao LLM.</p>
+                    <h4>Data Flow</h4>
+                    <p>Request processing with 90% cache hits,
+                    avoiding expensive LLM calls.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔄</div>
-                    <h4>Error Recovery</h4>
-                    <p>Tratamento de falhas com fallback
-                    entre providers LLM diferentes.</p>
+                    <h4>Error Handling</h4>
+                    <p>Unified error handling with centralized
+                    error response generation.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
-                    <h4>Application Startup</h4>
-                    <p>Inicialização da aplicação com
-                    factory pattern e dependency injection.</p>
+                    <h4>Startup Sequence</h4>
+                    <p>50ms application initialization with
+                    parallel component setup.</p>
                 </div>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-1')">
-                    <img src="assets/diagrams/09_happy_path_sequence.png" alt="Sequência Happy Path" id="diagram-sequence-1">
+                    <img src="diagrams/python/06_authentication_flow.png" alt="Authentication Flow" id="diagram-sequence-1">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-1')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-1')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 9:</strong> Happy Path - Complete success flow</p>
+                <p class="diagram-caption"><strong>Figure 8:</strong> JWT Authentication - Clear three-cluster design for login, token, and API request flows</p>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-2')">
-                    <img src="assets/diagrams/10_cache_hit_sequence.png" alt="Sequência Cache Hit" id="diagram-sequence-2">
+                    <img src="diagrams/python/08_cost_analysis.png" alt="Cost Analysis" id="diagram-sequence-2">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-2')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-2')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 10:</strong> Cache Hit - Optimized cache response</p>
+                <p class="diagram-caption"><strong>Figure 9:</strong> Cost Analysis - 85% reduction from $2000/day to $290/day with caching strategy</p>
             </div>
 
             <div class="diagram-container">
                 <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-3')">
-                    <img src="assets/diagrams/11_error_sequence.png" alt="Sequência Error Recovery" id="diagram-sequence-3">
+                    <img src="diagrams/python/09_startup_sequence.png" alt="Startup Sequence" id="diagram-sequence-3">
                     <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-3')" title="Tela cheia">⛶</button>
+                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-3')" title="Fullscreen">⛶</button>
                     </div>
                 </div>
-                <p class="diagram-caption"><strong>Figure 11:</strong> Error Recovery - Fallback between providers</p>
+                <p class="diagram-caption"><strong>Figure 10:</strong> Startup Sequence - Parallel initialization achieving 50ms total startup time</p>
             </div>
 
-            <div class="diagram-container">
-                <div class="diagram-wrapper" onclick="openFullscreen('diagram-sequence-4')">
-                    <img src="assets/diagrams/12_startup_sequence.png" alt="Sequência Startup" id="diagram-sequence-4">
-                    <div class="diagram-controls">
-                        <button class="diagram-btn" onclick="event.stopPropagation(); openFullscreen('diagram-sequence-4')" title="Tela cheia">⛶</button>
-                    </div>
-                </div>
-                <p class="diagram-caption"><strong>Figure 12:</strong> Application Startup - Initialization and configuration</p>
-            </div>
         </section>
 
         <section class="section">
             <div class="section-header">
                 <div class="section-number">7</div>
-                <h3>Capacidades e Performance</h3>
+                <h3>Capabilities and Performance</h3>
             </div>
 
-            <p>A arquitetura atual oferece uma solução robusta e escalável para processamento de chat com LLMs,
-            otimizada para performance, custos e manutenabilidade em ambiente de produção.</p>
+            <p>The current architecture provides a robust and scalable solution for chat processing with LLMs,
+            optimized for performance, costs, and maintainability in production environments.</p>
 
             <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Numbers Don't Lie</h4>
 
@@ -1461,145 +1481,145 @@ Running 30s test @ http://localhost:8000/chat
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>Auto-Scaling Instantâneo</h5>
-                    <p>AWS Lambda escala automaticamente de 0 a 1000 execuções concorrentes em segundos.
-                    Suporta picos súbitos de tráfego sem configuração prévia ou warming.</p>
+                    <h5>Instant Auto-Scaling</h5>
+                    <p>AWS Lambda automatically scales from 0 to 1000 concurrent executions in seconds.
+                    Handles sudden traffic spikes without prior configuration or warming.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Cache Multi-Camada Inteligente</h5>
-                    <p>Redis para produção, dict em memória para desenvolvimento.
-                    Cache key baseado em hash SHA-256 para consistência e performance.</p>
+                    <h5>Intelligent Multi-Layer Cache</h5>
+                    <p>Redis for production, in-memory dict for development.
+                    Cache key based on SHA-256 hash for consistency and performance.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Fallback Resiliente</h5>
-                    <p>Sistema dual Gemini (primário) + OpenRouter (fallback) com retry
-                    exponencial. Garante alta disponibilidade mesmo com falha de provider.</p>
+                    <h5>Resilient Fallback</h5>
+                    <p>Dual system Gemini (primary) + OpenRouter (fallback) with exponential
+                    retry. Ensures high availability even with provider failure.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Storage Otimizado</h5>
-                    <p>DynamoDB com latência single-digit milliseconds e capacidade
-                    ilimitada. SQLite para desenvolvimento com interface transparente.</p>
+                    <h5>Optimized Storage</h5>
+                    <p>DynamoDB with single-digit millisecond latency and unlimited
+                    capacity. SQLite for development with transparent interface.</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Funcionalidades Implementadas</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Implemented Features</h4>
 
             <div class="content-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h4>API REST Completa</h4>
-                    <p>Endpoints para chat, histórico e health checks.
-                    Rate limiting, validação Pydantic e documentação OpenAPI automática.</p>
+                    <h4>Complete REST API</h4>
+                    <p>Endpoints for chat, history and health checks.
+                    Rate limiting, Pydantic validation and automatic OpenAPI documentation.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🤖</div>
                     <h4>Multi-Provider LLM</h4>
-                    <p>Integração com Gemini e OpenRouter via litellm.
-                    Fallback automático, retry inteligente e tracking de uso.</p>
+                    <p>Integration with Gemini and OpenRouter via litellm.
+                    Automatic fallback, intelligent retry and usage tracking.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">💾</div>
-                    <h4>Storage Flexível</h4>
-                    <p>Repository Pattern com Protocol Python.
-                    SQLite (dev) e DynamoDB (prod) com interface unificada.</p>
+                    <h4>Flexible Storage</h4>
+                    <p>Repository Pattern with Python Protocol.
+                    SQLite (dev) and DynamoDB (prod) with unified interface.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
-                    <h4>Deploy Automatizado</h4>
-                    <p>Makefile com targets para local, Docker e AWS Lambda.
-                    Terraform IaC para infraestrutura completa como código.</p>
+                    <h4>Automated Deployment</h4>
+                    <p>Makefile with targets for local, Docker and AWS Lambda.
+                    Terraform IaC for complete infrastructure as code.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🔍</div>
-                    <h4>Observabilidade Completa</h4>
-                    <p>Logs estruturados com Loguru, request tracking via X-Request-ID.
-                    Health checks proativos e métricas de performance.</p>
+                    <h4>Complete Observability</h4>
+                    <p>Structured logs with Loguru, request tracking via X-Request-ID.
+                    Proactive health checks and performance metrics.</p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
-                    <h4>Qualidade Garantida</h4>
-                    <p>80%+ cobertura de testes, MyPy type checking,
-                    Ruff linting e security scanning com Bandit.</p>
+                    <h4>Guaranteed Quality</h4>
+                    <p>82%+ test coverage, MyPy type checking,
+                    Ruff linting and security scanning with Bandit.</p>
                 </div>
             </div>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Arquitetura de Custos</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Cost Architecture</h4>
 
             <table class="comparison-table">
                 <thead>
                     <tr>
-                        <th>Componente</th>
-                        <th>Modelo de Cobrança</th>
-                        <th>Custo Base</th>
-                        <th>Otimização</th>
+                        <th>Component</th>
+                        <th>Pricing Model</th>
+                        <th>Base Cost</th>
+                        <th>Optimization</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>AWS Lambda</td>
                         <td>Pay-per-request</td>
-                        <td>1M requests grátis/mês</td>
+                        <td>1M requests free/month</td>
                         <td class="check">Zero idle cost</td>
                     </tr>
                     <tr>
                         <td>DynamoDB</td>
                         <td>On-demand</td>
-                        <td>25GB grátis</td>
+                        <td>25GB free</td>
                         <td class="check">Auto-scaling</td>
                     </tr>
                     <tr>
                         <td>API Gateway</td>
                         <td>Por chamada</td>
-                        <td>1M calls grátis/mês</td>
-                        <td class="check">Cache integrado</td>
+                        <td>1M calls free/month</td>
+                        <td class="check">Integrated cache</td>
                     </tr>
                     <tr>
                         <td>LLM APIs</td>
-                        <td>Por token</td>
-                        <td>Variável por provider</td>
-                        <td class="check">Cache agressivo</td>
+                        <td>Per token</td>
+                        <td>Variable per provider</td>
+                        <td class="check">Aggressive cache</td>
                     </tr>
                 </tbody>
             </table>
 
-            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Próximas Otimizações Planejadas</h4>
+            <h4 style="color: var(--primary-blue); margin: 2rem 0 1rem;">Planned Optimizations</h4>
 
             <div class="timeline">
                 <div class="timeline-item">
-                    <h5>Streaming de Respostas</h5>
-                    <p>Server-Sent Events para respostas LLM em tempo real.
-                    Melhora significativa na percepção de performance para prompts longos.</p>
+                    <h5>Response Streaming</h5>
+                    <p>Server-Sent Events for real-time LLM responses.
+                    Significant improvement in perceived performance for long prompts.</p>
                 </div>
 
                 <div class="timeline-item">
-                    <h5>Sistema de API Keys</h5>
-                    <p>Autenticação robusta com rate limiting personalizado.
-                    Tracking de uso por cliente e billing automatizado.</p>
+                    <h5>API Keys System</h5>
+                    <p>Robust authentication with custom rate limiting.
+                    Per-client usage tracking and automated billing.</p>
                 </div>
 
                 <div class="timeline-item">
                     <h5>Edge Deployment</h5>
-                    <p>CloudFront Edge Functions para latência ultra-baixa.
-                    Cache distribuído globalmente para respostas frequentes.</p>
+                    <p>CloudFront Edge Functions for ultra-low latency.
+                    Globally distributed cache for frequent responses.</p>
                 </div>
             </div>
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">80.12%</div>
+                    <div class="metric-value">82%</div>
                     <div class="metric-label">Test Coverage</div>
                 </div>
                 <div class="metric-card blue">
                     <div class="metric-value">Serverless</div>
-                    <div class="metric-label">Zero Manutenção</div>
+                    <div class="metric-label">Zero Maintenance</div>
                 </div>
                 <div class="metric-card green">
                     <div class="metric-value">Multi-Cloud</div>
@@ -1611,8 +1631,8 @@ Running 30s test @ http://localhost:8000/chat
 
     <footer class="footer">
         <div class="footer-content">
-            <p>© 2025 Chat API | Arquitetura Cloud Native</p>
-            <p style="margin-top: 1rem; opacity: 0.8;">Documentação técnica do projeto - Python idiomático e padrões modernos</p>
+            <p>© 2025 Chat API | Cloud Native Architecture</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">Technical project documentation - Idiomatic Python and modern patterns</p>
         </div>
     </footer>
 
