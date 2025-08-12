@@ -26,6 +26,9 @@ jobs:
           ruff check chat_api/ tests/
 
       - name: Run tests
+        env:
+          CHAT_PROVIDER: gemini
+          CHAT_GEMINI_API_KEY: test-api-key-for-ci
         run: |
           pytest tests/ --cov=chat_api --cov-report=term-missing
 
