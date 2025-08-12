@@ -6,9 +6,9 @@ from diagrams.aws.compute import Lambda
 from diagrams.aws.database import Dynamodb
 from diagrams.aws.ml import Sagemaker
 from diagrams.generic.compute import Rack
+from diagrams.generic.database import SQL
 from diagrams.generic.storage import Storage
 from diagrams.onprem.client import Client
-from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.inmemory import Redis
 from diagrams.programming.framework import FastAPI
 from diagrams.programming.language import Python
@@ -59,7 +59,7 @@ with Diagram(
             cache_interface = Storage("Cache\nProtocol")
 
         with Cluster("Implementations"):
-            sqlite_impl = PostgreSQL("SQLite\n(aiosqlite)")
+            sqlite_impl = SQL("SQLite\n(aiosqlite)")
             dynamo_impl = Dynamodb("DynamoDB\n(aioboto3)")
             redis_impl = Redis("Redis\nCache")
             memory_impl = Storage("In-Memory\nCache")

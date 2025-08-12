@@ -3,7 +3,7 @@
 
 from diagrams import Cluster, Diagram, Edge
 from diagrams.aws.database import Dynamodb
-from diagrams.onprem.database import PostgreSQL
+from diagrams.generic.database import SQL
 from diagrams.onprem.inmemory import Redis
 from diagrams.programming.flowchart import (
     Action,
@@ -56,7 +56,7 @@ with Diagram(
         sqlite_init = PredefinedProcess(
             "SQLite Init:\n• aiosqlite.connect()\n• Create tables\n• Create indexes"
         )
-        sqlite_db = PostgreSQL("SQLite\nDatabase")
+        sqlite_db = SQL("SQLite\nDatabase")
 
         dynamo_init = PredefinedProcess(
             "DynamoDB Init:\n• aioboto3 session\n• Check table exists\n• Configure TTL"

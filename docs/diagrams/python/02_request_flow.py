@@ -3,7 +3,7 @@
 
 from diagrams import Cluster, Diagram, Edge
 from diagrams.aws.ml import Sagemaker
-from diagrams.onprem.database import PostgreSQL
+from diagrams.generic.database import SQL
 from diagrams.onprem.inmemory import Redis
 from diagrams.programming.flowchart import (
     Action,
@@ -67,7 +67,7 @@ with Diagram(
     # External systems
     with Cluster("External Systems"):
         cache = Redis("Redis/Memory\nCache")
-        database = PostgreSQL("SQLite/DynamoDB")
+        database = SQL("SQLite/DynamoDB")
         llm = Sagemaker("LLM Provider")
 
     # Main success flow

@@ -6,11 +6,11 @@ from diagrams.aws.compute import Lambda
 from diagrams.aws.database import Dynamodb
 from diagrams.aws.network import APIGateway, CloudFront
 from diagrams.aws.storage import S3
+from diagrams.generic.database import SQL
 from diagrams.generic.os import Ubuntu
 from diagrams.onprem.client import Client
 from diagrams.onprem.compute import Server
 from diagrams.onprem.container import Docker
-from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.inmemory import Redis
 from diagrams.programming.framework import FastAPI
 
@@ -45,7 +45,7 @@ with Diagram(
         with Cluster("Python Environment"):
             venv = Server("Virtual Env\n(.venv)")
             local_app = FastAPI("FastAPI\nuvicorn")
-            local_sqlite = PostgreSQL("SQLite\nFile DB")
+            local_sqlite = SQL("SQLite\nFile DB")
             local_cache = Server("In-Memory\nCache")
 
         with Cluster("Development Tools"):
@@ -66,7 +66,7 @@ with Diagram(
 
         with Cluster("Container Stack"):
             docker_app = FastAPI("FastAPI\nContainer")
-            docker_sqlite = PostgreSQL("SQLite\nVolume")
+            docker_sqlite = SQL("SQLite\nVolume")
             docker_redis = Redis("Redis\nContainer")
 
         with Cluster("Docker Config"):
