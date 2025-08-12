@@ -68,9 +68,18 @@ jobs:
           # Use new state path to avoid conflicts with old state
           terraform init -reconfigure -backend-config="key=serverless/terraform.tfstate"
 
-          # Import existing resources if they exist
-          terraform import aws_ecr_repository.lambda serverless-chat-api-dev 2>/dev/null || true
-          terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || true
+      - name: Clean up existing resources
+        if: steps.check-aws.outputs.has_aws == 'true'
+        continue-on-error: true
+        run: |
+          # Delete existing Lambda function and related resources
+          aws lambda delete-function --function-name serverless-chat-api-dev 2>/dev/null || true
+          aws logs delete-log-group --log-group-name /aws/lambda/serverless-chat-api-dev 2>/dev/null || true
+          aws iam detach-role-policy --role-name serverless-chat-api-lambda-dev --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole 2>/dev/null || true
+          aws iam delete-role-policy --role-name serverless-chat-api-lambda-dev --policy-name serverless-chat-api-lambda-policy 2>/dev/null || true
+          aws iam delete-role --role-name serverless-chat-api-lambda-dev 2>/dev/null || true
+          # Keep ECR repository as it has our images
+          # Keep DynamoDB table to preserve data
 
       - name: Terraform Apply (Infrastructure Only)
         if: steps.check-aws.outputs.has_aws == 'true'
