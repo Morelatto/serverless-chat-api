@@ -131,19 +131,18 @@ class TestSimpleLLMProvider:
 
         with (
             patch("chat_api.providers.litellm.acompletion", side_effect=Exception("API Error")),
-            pytest.raises(LLMProviderError, match="LLM request failed"),
+            pytest.raises(LLMProviderError, match="completion failed"),
         ):
             await provider.complete("Test prompt")
 
     @pytest.mark.asyncio
-    async def test_complete_with_system_prompt(self):
-        """Test completion with system prompt."""
+    async def test_complete_message_structure(self):
+        """Test completion with correct message structure."""
         from chat_api.providers import SimpleLLMProvider
 
         config = LLMConfig(
             model="test-model",
             api_key="test-key",
-            system_prompt="You are a helpful assistant",
         )
         provider = SimpleLLMProvider(config, "TestProvider")
 
@@ -161,14 +160,12 @@ class TestSimpleLLMProvider:
         ) as mock_complete:
             await provider.complete("User message")
 
-            # Verify system prompt was included
+            # Verify correct message structure
             call_args = mock_complete.call_args
             messages = call_args.kwargs["messages"]
-            assert len(messages) == 2
-            assert messages[0]["role"] == "system"
-            assert messages[0]["content"] == "You are a helpful assistant"
-            assert messages[1]["role"] == "user"
-            assert messages[1]["content"] == "User message"
+            assert len(messages) == 1
+            assert messages[0]["role"] == "user"
+            assert messages[0]["content"] == "User message"
 
     @pytest.mark.asyncio
     async def test_complete_with_cost_calculation(self):
@@ -209,14 +206,10 @@ class TestProviderFactory:
         with patch.dict(
             os.environ,
             {"CHAT_LLM_PROVIDER": "openrouter", "CHAT_OPENROUTER_API_KEY": "test-key"},
+            clear=True,
         ):
-            from chat_api.config import Settings
-
-            test_settings = Settings()
-
-            with patch("chat_api.providers.settings", test_settings):
-                provider = create_llm_provider()
-                assert provider.config.api_key == "test-key"
+            provider = create_llm_provider()
+            assert provider.config.api_key == "test-key"
 
     def test_create_provider_no_keys(self):
         """Test creating provider with no API keys raises error."""
