@@ -68,6 +68,10 @@ jobs:
           # Use new state path to avoid conflicts with old state
           terraform init -reconfigure -backend-config="key=serverless/terraform.tfstate"
 
+          # Import existing resources if they exist
+          terraform import aws_ecr_repository.lambda serverless-chat-api-dev 2>/dev/null || true
+          terraform import aws_iam_role.lambda serverless-chat-api-lambda-dev 2>/dev/null || true
+
       - name: Terraform Apply (Infrastructure Only)
         if: steps.check-aws.outputs.has_aws == 'true'
         working-directory: iac/terraform
