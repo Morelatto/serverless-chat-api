@@ -1,60 +1,41 @@
 #!/usr/bin/env python3
-"""Data Flow - Clean architecture layers."""
+"""Data Flow - Simplified horizontal request processing."""
 
 import sys
 
 sys.path.append("../shared")
 from custom_icons import DictCache, LiteLLM, Pydantic, get_icon
 from diagram_styles import COLORS
-from diagrams import Cluster, Diagram, Edge
+from diagrams import Diagram, Edge
 
 with Diagram(
-    "Data Flow Architecture",
+    "Request Processing Flow",
     filename="07_data_flow",
     show=False,
-    direction="TB",
+    direction="LR",
     graph_attr={
         "fontsize": "14",
         "bgcolor": "white",
         "pad": "0.5",
-        "rankdir": "TB",
+        "rankdir": "LR",
         "dpi": "150",
+        "nodesep": "0.8",
     },
 ):
-    # Input layer
-    with Cluster("Input Layer", graph_attr={"bgcolor": "#E3F2FD"}):
-        json_in = get_icon("data", "JSON\nRequest")
-        pydantic_in = Pydantic("ChatRequest\nModel")
+    # Main flow components
+    json_in = get_icon("input", "JSON")
+    validate = Pydantic("Validate")
+    cache = DictCache("Cache")
+    llm = LiteLLM("LLM")
+    response = get_icon("output", "Response")
 
-    # Business layer
-    with Cluster("Business Layer", graph_attr={"bgcolor": "#FFF9E6"}):
-        service = get_icon("state", "Chat\nService")
-        cache_key = get_icon("hash", "MD5\nHash")
-        cache_check = DictCache("Cache\nLookup")
+    # Main flow - VERY THICK for 90% cached path
+    json_in >> Edge(color=COLORS["api"], penwidth="2") >> validate
+    validate >> Edge(color=COLORS["info"], penwidth="2") >> cache
 
-    # External layer
-    with Cluster("External Layer", graph_attr={"bgcolor": "#FFE6F0"}):
-        llm_request = LiteLLM("LLM\nAdapter")
-        provider = get_icon("openai", "OpenAI\nAnthropic\nGoogle")
+    # Cache hit - SUPER THICK (90% of traffic)
+    cache >> Edge(label="90% HIT", color=COLORS["success"], penwidth="7") >> response
 
-    # Output layer
-    with Cluster("Output Layer", graph_attr={"bgcolor": "#E8F5E9"}):
-        pydantic_out = Pydantic("ChatResponse\nModel")
-        json_out = get_icon("data", "JSON\nResponse")
-
-    # Data flow with transformations
-    json_in >> Edge(label="Parse", color=COLORS["validate"]) >> pydantic_in
-    pydantic_in >> Edge(label="Validate", color=COLORS["validate"]) >> service
-
-    # Cache path
-    service >> Edge(label="Generate key", color=COLORS["info"]) >> cache_key
-    cache_key >> cache_check
-    cache_check >> Edge(label="HIT", color=COLORS["success"], penwidth="3") >> pydantic_out
-
-    # LLM path
-    cache_check >> Edge(label="MISS", color=COLORS["warning"], style="dashed") >> llm_request
-    llm_request >> Edge(label="Transform", color=COLORS["external"]) >> provider
-    provider >> Edge(label="Response", color=COLORS["external"]) >> pydantic_out
-
-    # Output
-    pydantic_out >> Edge(label="Serialize", color=COLORS["success"]) >> json_out
+    # Cache miss - THIN (10% of traffic)
+    cache >> Edge(label="10% MISS", color=COLORS["external"], penwidth="1", style="dashed") >> llm
+    llm >> Edge(color=COLORS["external"], penwidth="1") >> response

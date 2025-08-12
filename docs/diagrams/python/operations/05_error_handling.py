@@ -1,58 +1,43 @@
 #!/usr/bin/env python3
-"""Error Handling - What could go wrong?"""
+"""Error Handling - Unified error response strategy."""
 
 import sys
 
 sys.path.append("../shared")
-from custom_icons import FastAPI, Jose, LiteLLM, Pydantic, Slowapi, StatusCode
-from diagrams import Cluster, Diagram, Edge
+from custom_icons import FastAPI, Pydantic, Slowapi, get_icon
+from diagram_styles import COLORS
+from diagrams import Diagram, Edge
 
 with Diagram(
-    "Error Handling",
+    "Error Handling Strategy",
     filename="05_error_handling",
     show=False,
-    direction="TB",
+    direction="LR",
     graph_attr={
         "fontsize": "14",
         "bgcolor": "white",
         "pad": "0.5",
-        "rankdir": "TB",
+        "rankdir": "LR",
         "dpi": "150",
     },
 ):
-    # Error sources grouped by type
-    with Cluster("Auth Errors"):
-        auth_errors = Jose("JWT\nErrors")
+    # Error sources
+    auth_err = get_icon("jwt", "Auth\nFailed")
+    rate_err = Slowapi("Rate\nLimit")
+    validate_err = Pydantic("Invalid\nData")
+    external_err = get_icon("litellm", "LLM\nDown")
 
-    with Cluster("Rate Limits"):
-        rate_errors = Slowapi("Too Many\nRequests")
+    # Central handler
+    handler = FastAPI("Error\nHandler")
 
-    with Cluster("Validation"):
-        validation_errors = Pydantic("Invalid\nInput")
+    # Client response with proper badges
+    client = get_icon("user", "Client")
 
-    with Cluster("External"):
-        external_errors = LiteLLM("Service\nFailure")
+    # Error flows to handler - thin lines for errors
+    auth_err >> Edge(label="401", color="#ef4444", penwidth="1") >> handler
+    rate_err >> Edge(label="429", color="#f59e0b", penwidth="1") >> handler
+    validate_err >> Edge(label="422", color="#f59e0b", penwidth="1") >> handler
+    external_err >> Edge(label="503", color="#8b5cf6", penwidth="1") >> handler
 
-    # Central handler (the funnel)
-    handler = FastAPI("Exception\nMiddleware")
-
-    # HTTP responses with proper status code icons
-    with Cluster("Client Errors", graph_attr={"bgcolor": "#FFEBEE"}):
-        resp_401 = StatusCode(401, "401\nUnauthorized")
-        resp_422 = StatusCode(422, "422\nValidation")
-        resp_429 = StatusCode(429, "429\nRate Limited")
-
-    with Cluster("Server Errors", graph_attr={"bgcolor": "#F3E5F5"}):
-        resp_503 = StatusCode(503, "503\nUnavailable")
-
-    # All errors flow to handler
-    auth_errors >> Edge(color="#ef4444") >> handler  # Red for auth
-    rate_errors >> Edge(color="#f59e0b") >> handler  # Orange for rate limit
-    validation_errors >> Edge(color="#f59e0b") >> handler  # Orange for validation
-    external_errors >> Edge(color="#8b5cf6") >> handler  # Purple for server errors
-
-    # Handler returns appropriate response with semantic colors
-    handler >> Edge(color="#ef4444") >> resp_401
-    handler >> Edge(color="#f59e0b") >> resp_422
-    handler >> Edge(color="#f59e0b") >> resp_429
-    handler >> Edge(color="#8b5cf6") >> resp_503
+    # Unified response - thicker for main path
+    handler >> Edge(label="HTTP Error\nResponse", color=COLORS["error"], penwidth="3") >> client
