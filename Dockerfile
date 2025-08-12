@@ -4,12 +4,17 @@ ARG TARGET=local
 # Base stage for Lambda
 FROM public.ecr.aws/lambda/python:3.11 AS lambda-base
 COPY pyproject.toml README.md ${LAMBDA_TASK_ROOT}/
+# Install dependencies including mangum for Lambda adapter
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir mangum && \
     pip install --no-cache-dir ${LAMBDA_TASK_ROOT}
 COPY chat_api/ ${LAMBDA_TASK_ROOT}/chat_api/
+
+# Create the handler file inline - cleaner than complex CMD
+RUN echo "from mangum import Mangum\nfrom chat_api.api import app\nhandler = Mangum(app, lifespan='off')" > ${LAMBDA_TASK_ROOT}/handler.py
+
 ENV PYTHONPATH="${LAMBDA_TASK_ROOT}:${PYTHONPATH}"
-# Note: Lambda handler would need to be implemented in chat_api for serverless
-CMD ["chat_api.lambda_handler.handler"]
+CMD ["handler.handler"]
 
 # Base stage for local development
 FROM python:3.11-slim AS local-base

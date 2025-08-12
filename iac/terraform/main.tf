@@ -1,9 +1,9 @@
 terraform {
-  required_version = ">= 1.0"
+  required_version = ">= 1.5"
 
   backend "s3" {
     bucket         = "serverless-chat-api-terraform-state"
-    key            = "container/terraform.tfstate"
+    key            = "serverless/terraform.tfstate"  # Changed key to avoid state conflicts
     region         = "us-east-1"
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
@@ -24,7 +24,111 @@ provider "aws" {
     tags = {
       Project     = var.project_name
       Environment = var.environment
+      ManagedBy   = "Terraform"
     }
+  }
+}
+
+# ElastiCache Serverless for Redis caching (pay per use, no idle costs!)
+resource "aws_elasticache_serverless_cache" "redis" {
+  count = var.enable_cache ? 1 : 0
+
+  name        = "${var.project_name}-cache-${var.environment}"
+  engine      = "redis"
+  description = "Serverless Redis cache for chat responses"
+
+  # Security
+  security_group_ids = [aws_security_group.cache[0].id]
+  subnet_ids         = data.aws_subnets.default.ids
+
+  # Optional: Set cache usage limits to control costs
+  cache_usage_limits {
+    data_storage {
+      maximum = 1  # GB
+      unit    = "GB"
+    }
+    ecpu_per_second {
+      maximum = 5000  # ElastiCache Processing Units
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-cache"
+  }
+}
+
+# Security group for ElastiCache (if enabled)
+resource "aws_security_group" "cache" {
+  count = var.enable_cache ? 1 : 0
+
+  name        = "${var.project_name}-cache-${var.environment}"
+  description = "Security group for ElastiCache Serverless"
+
+  ingress {
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Get default VPC data
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# DynamoDB table for chat history storage
+resource "aws_dynamodb_table" "chat_history" {
+  name         = "${var.project_name}-chat-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"  # No idle costs!
+  hash_key     = "user_id"
+  range_key    = "timestamp"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "N"
+  }
+
+  attribute {
+    name = "message_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "message_id_index"
+    hash_key        = "message_id"
+    projection_type = "ALL"
+  }
+
+  point_in_time_recovery {
+    enabled = var.enable_point_in_time_recovery
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-chat-history"
   }
 }
 
@@ -40,6 +144,33 @@ resource "aws_ecr_repository" "lambda" {
   force_delete = true
 }
 
+# ECR lifecycle policy to keep only last 5 images
+resource "aws_ecr_lifecycle_policy" "lambda" {
+  repository = aws_ecr_repository.lambda.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep last 5 images"
+      selection = {
+        tagStatus     = "any"
+        countType     = "imageCountMoreThan"
+        countNumber   = 5
+      }
+      action = {
+        type = "expire"
+      }
+    }]
+  })
+}
+
+# CloudWatch log group for Lambda
+resource "aws_cloudwatch_log_group" "lambda" {
+  name              = "/aws/lambda/${var.project_name}-${var.environment}"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_id
+}
+
 # IAM role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda-${var.environment}"
@@ -47,8 +178,8 @@ resource "aws_iam_role" "lambda" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
       Principal = {
         Service = "lambda.amazonaws.com"
       }
@@ -56,37 +187,42 @@ resource "aws_iam_role" "lambda" {
   })
 }
 
+# Attach basic Lambda execution policy
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Policy for DynamoDB access
 resource "aws_iam_role_policy" "lambda_dynamodb" {
-  name = "${var.project_name}-lambda-policy"
+  name = "${var.project_name}-lambda-dynamodb-${var.environment}"
   role = aws_iam_role.lambda.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:PutItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:DescribeTable"
-      ]
-      Resource = [
-        aws_dynamodb_table.main.arn,
-        "${aws_dynamodb_table.main.arn}/index/*"
-      ]
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem"
+        ]
+        Resource = [
+          aws_dynamodb_table.chat_history.arn,
+          "${aws_dynamodb_table.chat_history.arn}/index/*"
+        ]
+      }
+    ]
   })
 }
 
-# Lambda function using container image
+# Lambda function
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-${var.environment}"
   role          = aws_iam_role.lambda.arn
@@ -95,140 +231,130 @@ resource "aws_lambda_function" "api" {
   package_type = "Image"
   image_uri    = "${aws_ecr_repository.lambda.repository_url}:latest"
 
+  # Performance configuration
   memory_size = var.lambda_memory_size
   timeout     = var.lambda_timeout
 
+  # Environment variables
   environment {
     variables = {
-      # Use CHAT_ prefix to match our application
-      CHAT_HOST = "0.0.0.0"
-      CHAT_PORT = "8000"
-      CHAT_LOG_LEVEL = var.log_level
+      # Application settings
+      CHAT_ENVIRONMENT = var.environment
+      CHAT_LOG_LEVEL   = var.log_level
 
-      # Database configuration - DynamoDB URL format
-      CHAT_DATABASE_URL = "dynamodb://${aws_dynamodb_table.main.name}?region=${var.aws_region}"
+      # Database
+      CHAT_DATABASE_URL = "dynamodb://${aws_dynamodb_table.chat_history.name}"
+      AWS_REGION        = var.aws_region
 
-      # LLM configuration
-      CHAT_LLM_PROVIDER = var.llm_provider
-      CHAT_GEMINI_API_KEY = var.gemini_api_key
+      # Cache (if enabled)
+      CHAT_REDIS_URL = var.enable_cache ? "redis://${aws_elasticache_serverless_cache.redis[0].endpoint[0].address}" : ""
+
+      # LLM Configuration
+      CHAT_LLM_PROVIDER      = var.llm_provider
+      CHAT_GEMINI_API_KEY    = var.gemini_api_key
       CHAT_OPENROUTER_API_KEY = var.openrouter_api_key
-      CHAT_MODEL_NAME = var.openrouter_model_name
+      CHAT_OPENROUTER_MODEL  = var.openrouter_model_name
 
-      # Rate limiting
-      CHAT_RATE_LIMIT = "60/minute"
-      CHAT_CACHE_TTL = "3600"
+      # Security
+      CHAT_SECRET_KEY = var.jwt_secret_key != "" ? var.jwt_secret_key : random_password.jwt_secret[0].result
+      CHAT_REQUIRE_API_KEY = tostring(var.require_api_key)
+      CHAT_API_KEY = var.api_key != "" ? var.api_key : random_password.api_key[0].result
 
-      # Environment
-      ENVIRONMENT = var.environment
+      # CORS
+      CHAT_CORS_ORIGINS = join(",", var.cors_origins)
     }
   }
 
   depends_on = [
-    aws_ecr_repository.lambda
+    aws_iam_role_policy_attachment.lambda_logs,
+    aws_cloudwatch_log_group.lambda,
   ]
 }
 
-# Lambda Function URL
+# Lambda Function URL for HTTP access
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
-  authorization_type = "NONE"
+  authorization_type = "NONE"  # We handle auth in the app
 
   cors {
-    allow_origins = var.cors_origins
-    allow_methods = ["*"]
-    allow_headers = ["*"]
-    max_age       = 3600
+    allow_origins     = var.cors_origins
+    allow_methods     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers     = ["*"]
+    expose_headers    = ["*"]
+    max_age           = 3600
+    allow_credentials = true
   }
 }
 
-# DynamoDB table for session storage and caching
-resource "aws_dynamodb_table" "main" {
-  name           = "${var.project_name}-${var.environment}"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "pk"
-  range_key      = "sk"
+# Generate random JWT secret if not provided
+resource "random_password" "jwt_secret" {
+  count   = var.jwt_secret_key == "" ? 1 : 0
+  length  = 64
+  special = true
+}
 
-  attribute {
-    name = "pk"
-    type = "S"
-  }
+# Generate random API key if not provided
+resource "random_password" "api_key" {
+  count   = var.api_key == "" ? 1 : 0
+  length  = 32
+  special = false  # Easier to copy/paste
+}
 
-  attribute {
-    name = "sk"
-    type = "S"
-  }
+# CloudWatch alarms (optional, for monitoring)
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  count = var.enable_monitoring ? 1 : 0
 
-  attribute {
-    name = "user_id"
-    type = "S"
-  }
+  alarm_name          = "${var.project_name}-${var.environment}-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "10"
+  alarm_description   = "This metric monitors lambda errors"
 
-  attribute {
-    name = "created_at"
-    type = "S"
-  }
-
-  global_secondary_index {
-    name            = "user-index"
-    hash_key        = "user_id"
-    range_key       = "created_at"
-    projection_type = "ALL"
-  }
-
-  ttl {
-    attribute_name = "ttl"
-    enabled        = true
-  }
-
-  point_in_time_recovery {
-    enabled = var.enable_point_in_time_recovery
-  }
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}"
-    Environment = var.environment
+  dimensions = {
+    FunctionName = aws_lambda_function.api.function_name
   }
 }
 
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "lambda" {
-  name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
-  retention_in_days = var.log_retention_days
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
+  count = var.enable_monitoring ? 1 : 0
 
-  kms_key_id = var.kms_key_id
+  alarm_name          = "${var.project_name}-${var.environment}-throttles"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors lambda throttles"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.api.function_name
+  }
 }
 
 # Outputs
-output "ecr_repository_url" {
-  description = "ECR repository URL"
-  value       = aws_ecr_repository.lambda.repository_url
-}
-
 output "lambda_function_url" {
-  description = "Lambda Function URL"
+  description = "URL of the Lambda function"
   value       = aws_lambda_function_url.api.function_url
 }
 
-output "lambda_function_name" {
-  description = "Lambda function name"
-  value       = aws_lambda_function.api.function_name
-}
-
 output "dynamodb_table_name" {
-  description = "DynamoDB table name"
-  value       = aws_dynamodb_table.main.name
+  description = "Name of the DynamoDB table"
+  value       = aws_dynamodb_table.chat_history.name
 }
 
-output "deployment_commands" {
-  description = "Commands to deploy the container"
-  value = <<-EOT
-    # Build and push Docker image:
-    aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.lambda.repository_url}
-    docker build --build-arg TARGET=lambda -t ${var.project_name} ../..
-    docker tag ${var.project_name}:latest ${aws_ecr_repository.lambda.repository_url}:latest
-    docker push ${aws_ecr_repository.lambda.repository_url}:latest
+output "ecr_repository_url" {
+  description = "URL of the ECR repository"
+  value       = aws_ecr_repository.lambda.repository_url
+}
 
-    # Update Lambda function:
-    aws lambda update-function-code --function-name ${aws_lambda_function.api.function_name} --image-uri ${aws_ecr_repository.lambda.repository_url}:latest
-  EOT
+output "api_key" {
+  description = "API key for authentication (if generated)"
+  value       = var.api_key != "" ? var.api_key : try(random_password.api_key[0].result, "not-generated")
+  sensitive   = true
 }
