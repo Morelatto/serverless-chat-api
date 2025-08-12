@@ -7,24 +7,14 @@ from diagrams.custom import Custom
 
 
 def get_icon_path(name: str) -> str:
-    """Get the absolute path to an icon file (PNG preferred for compatibility)."""
+    """Get the absolute path to a PNG icon file."""
     # Use absolute path to ensure diagrams can find the icons
     icons_dir = Path(__file__).parent / "icons"
 
-    # Try PNG first (better compatibility with graphviz)
+    # PNG files only (Graphviz doesn't support SVG)
     png_path = icons_dir / f"{name}.png"
     if png_path.exists():
         return str(png_path.absolute())
-
-    # Fall back to SVG
-    svg_path = icons_dir / f"{name}.svg"
-    if svg_path.exists():
-        return str(svg_path.absolute())
-
-    # Check for placeholder
-    placeholder_path = icons_dir / f"{name}_placeholder.png"
-    if placeholder_path.exists():
-        return str(placeholder_path.absolute())
 
     # Create placeholder if needed
     return create_placeholder_icon(name)
