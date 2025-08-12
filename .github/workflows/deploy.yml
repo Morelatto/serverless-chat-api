@@ -30,6 +30,9 @@ jobs:
           cache: pip
 
       - name: Install and test
+        env:
+          CHAT_LLM_PROVIDER: gemini
+          CHAT_GEMINI_API_KEY: test-api-key-for-ci
         run: |
           pip install -e ".[dev,test]"
           ruff check chat_api/ tests/
